@@ -26,7 +26,7 @@ class SupportedModels(Enum):
 
     def __str__(self):
         return self.value
-
+    
 
 class ASTModelWrapper(pl.LightningModule):
     loggers: list[TensorBoardLogger]
@@ -90,15 +90,14 @@ class ASTModelWrapper(pl.LightningModule):
         out: SequenceClassifierOutput = self.backbone.forward(x, output_attentions=True, return_dict=True, labels=y)
         return out.loss, out.logits
 
-    def forward(self, audio: torch.Tensor, labels: torch.Tensor, sampling_rate=config_defaults.DEFAULT_SAMPLING_RATE):
-        features = self.feature_extractor(audio, sampling_rate=sampling_rate, return_tensors="pt")
-        out: SequenceClassifierOutput = self.backbone.forward(features["input_values"], output_attentions=True, return_dict=True, labels=labels)  # type: ignore
+    def forward(self, audio: torch.Tensor, labels: torch.Tensor):
+        out: SequenceClassifierOutput = self.backbone.forward(audio, output_attentions=True, return_dict=True, labels=labels)  # type: ignore
         return out.loss, out.logits
 
     def training_step(self, batch, batch_idx):
         audio, y = batch
-        loss, y_pred = self.forward(audio, y)
-
+        
+        loss, y_pred = self.forward(audio, labels=y)
         hamming_acc = self.hamming_distance(y, y_pred)
 
         data_dict = {
@@ -226,13 +225,13 @@ class ASTModelWrapper(pl.LightningModule):
         )
         return config_dict
 
-    # def lr_scheduler_step(self, scheduler, optimizer_idx, metric):
-    #     if self.current_epoch < self.unfreeze_at_epoch:
-    #         return
-    #     if metric is None:
-    #         scheduler.step()  # type: ignore
-    #     else:
-    #         scheduler.step(metric)
+    def lr_scheduler_step(self, scheduler, optimizer_idx, metric):
+        # if self.current_epoch < self.unfreeze_at_epoch:
+        #     return
+        if metric is None:
+            scheduler.step()  # type: ignore
+        else:
+            scheduler.step(metric)
 
 
 def get_model(args):
@@ -251,4 +250,5 @@ def get_model(args):
 
 
 if __name__ == "__main__":
-    ASTModelWrapper().forward()
+    pass
+    # ASTModelWrapper().forward()

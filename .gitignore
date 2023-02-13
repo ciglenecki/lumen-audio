@@ -1,21 +1,22 @@
-# /*/
-# !data/raw/*sample*
-# !Dockerfile
-# !LICENSE
-# !README.md
-# !configs
-# !imgs
-# !logs
-# !nerfstudio
-# !outputs
-# !references
-# !reports
-# !src
+/*/
+!data/raw/*sample*
+!Dockerfile
+!LICENSE
+!README.md
+!configs
+!imgs
+!logs
+!nerfstudio
+!outputs
+!references
+!reports
+!src
 
-# !models/.gitkeep
-# !exports/.gitkeep
+!models/.gitkeep
+!exports/.gitkeep
 
 
-# *ignoreme*
+*ignoreme*
+
 __pycache__
 venv

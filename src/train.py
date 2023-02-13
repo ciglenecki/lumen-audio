@@ -1,12 +1,8 @@
-import argparse
 import os
 from pathlib import Path
 from pprint import pprint
 
-import hydra
 import pytorch_lightning as pl
-import torch
-from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import (
     EarlyStopping,
@@ -22,9 +18,9 @@ from callbacks import (
     OverrideEpochMetricCallback,
 )
 from datamodule import IRMASDataModule
-from src.audio_transform import AudioAugmentation
-from src.model import SupportedModels, get_model
+from model import get_model
 from train_args import parse_args_train
+from utils_audio import AudioAugmentation, AudioTransforms
 from utils_functions import (
     add_prefix_to_keys,
     get_timestamp,
@@ -36,9 +32,10 @@ from utils_train import SchedulerType
 if __name__ == "__main__":
     args, pl_args = parse_args_train()
     output_report = args.output_report
-    num_classes = args.num_classes
+    num_labels = args.num_labels
     batch_size = args.batch_size
     sampling_rate = args.sampling_rate
+    print(args.audio_transform)
 
     timestamp = get_timestamp()
     experiment_codeword = random_codeword()
@@ -53,7 +50,7 @@ if __name__ == "__main__":
     print("Configs:")
     pprint([vars(args), vars(pl_args)])
 
-    audio_transform = AudioAugmentation()
+    audio_transform = AudioTransforms(args.audio)
 
     datamodule = IRMASDataModule(
         batch_size=batch_size,

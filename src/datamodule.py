@@ -11,16 +11,21 @@ from torch.utils.data import DataLoader, Dataset, SubsetRandomSampler
 from tqdm import tqdm
 
 from dataset import IRMASDatasetTest, IRMASDatasetTrain
+from utils_audio import AudioTransform, AudioTransformAST
 
 
 class IRMASDataModule(pl.LightningDataModule):
+    train_size: int
+    val_size: int
+    test_size: int
+
     def __init__(
         self,
         batch_size: int,
         num_workers: int,
         dataset_fraction: int,
         drop_last_sample: bool,
-        audio_transform: list[torch.nn.Module] = [],
+        audio_transform: AudioTransform
     ):
         self.train_dataset = IRMASDatasetTrain(audio_transform=audio_transform)
         self.test_dataset = IRMASDatasetTest()
@@ -29,19 +34,29 @@ class IRMASDataModule(pl.LightningDataModule):
         self.num_workers = num_workers
         self.dataset_fraction = dataset_fraction
         self.drop_last_sample = drop_last_sample
+        self.audio_transform: AudioTransform = AudioTransformAST()
 
     def setup(self, stage: str | None = None):
-
         train_indices = np.arange(len(self.train_dataset))
         val_indices = np.array([])  # TODO: handle
         test_indices = np.arange(len(self.test_dataset))
 
         if self.dataset_fraction != 1:
             train_indices = np.random.choice(
-                train_indices, int(self.dataset_fraction * len(train_indices)), replace=False
+                train_indices,
+                int(self.dataset_fraction * len(train_indices)),
+                replace=False,
             )
-            val_indices = np.random.choice(val_indices, int(self.dataset_fraction * len(val_indices)), replace=False)
-            test_indices = np.random.choice(test_indices, int(self.dataset_fraction * len(test_indices)), replace=False)
+            val_indices = np.random.choice(
+                val_indices,
+                int(self.dataset_fraction * len(val_indices)),
+                replace=False,
+            )
+            test_indices = np.random.choice(
+                test_indices,
+                int(self.dataset_fraction * len(test_indices)),
+                replace=False,
+            )
 
         self._sanity_check_indices(train_indices, val_indices)
 
@@ -63,12 +78,14 @@ class IRMASDataModule(pl.LightningDataModule):
         val_indices: np.ndarray,
     ):
         for ind_a, ind_b in combinations([train_indices, val_indices], 2):
-            assert len(np.intersect1d(ind_a, ind_b)) == 0, "Some indices share an index {}".format(
-                np.intersect1d(ind_a, ind_b)
-            )
+            assert (
+                len(np.intersect1d(ind_a, ind_b)) == 0
+            ), "Some indices share an index {}".format(np.intersect1d(ind_a, ind_b))
         set_ind = set(train_indices)
         set_ind.update(val_indices)
-        assert len(set_ind) == (len(train_indices) + len(val_indices)), "Some indices might contain non-unqiue values"
+        assert len(set_ind) == (
+            len(train_indices) + len(val_indices)
+        ), "Some indices might contain non-unqiue values"
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(

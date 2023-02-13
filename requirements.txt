@@ -2,16 +2,11 @@ torch
 numpy
 matplotlib
 pandas
-
-# --------- pytorch --------- #
-torch
+transformers
 torchaudio
 pytorch-lightning
 torchmetrics
-
-# --------- hydra --------- #
-hydra-core
-hydra-colorlog
+scipy
 
 # --------- others --------- #
 pyrootutils     # standardizing the project root setup

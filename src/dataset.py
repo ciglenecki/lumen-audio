@@ -3,8 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
-import torch
-import torchaudio.backend.sox_io_backend
+from utils_audio import AudioTransform, AudioTransformAST, stereo_to_mono
+import torchaudio
 import torchaudio.transforms
 from torch.utils.data import Dataset
 from tqdm import tqdm
@@ -13,14 +13,15 @@ import config_defaults
 from utils_dataset import multi_hot_indices
 
 
+
 class IRMASDatasetTrain(Dataset):
     def __init__(
         self,
-        dataset_dirs: list[Path] = [config_default.PATH_TRAIN],
-        audio_transform: list[torch.nn.Module] = [],
-        num_classes=len(config_default.INSTRUMENT_TO_FULLNAME),
+        dataset_dirs: list[Path] = [config_defaults.PATH_TRAIN],
+        audio_transform: AudioTransform = AudioTransformAST(),
+        num_classes=len(config_defaults.INSTRUMENT_TO_FULLNAME),
         sanity_checks=True,
-        sampling_rate=config_default.DEFAULT_SAMPLING_RATE,
+        sampling_rate=config_defaults.DEFAULT_SAMPLING_RATE,
     ):
         """_summary_
 
@@ -51,40 +52,40 @@ class IRMASDatasetTrain(Dataset):
             for audio_file in tqdm(dataset_dir.rglob("*.wav")):
                 name = str(audio_file.stem)
                 instrument_indices = []
-                for instrument in config_default.INSTRUMENT_TO_IDX.keys():
+                for instrument in config_defaults.INSTRUMENT_TO_IDX.keys():
                     if f"[{instrument}]" in name:
-                        instrument_indices.append(config_default.INSTRUMENT_TO_IDX[instrument])
-                label = multi_hot_indices(instrument_indices, len(config_default.INSTRUMENT_TO_IDX))
+                        instrument_indices.append(
+                            config_defaults.INSTRUMENT_TO_IDX[instrument]
+                        )
+                label = multi_hot_indices(
+                    instrument_indices, len(config_defaults.INSTRUMENT_TO_IDX)
+                )
                 self.dataset.append((audio_file, label))
 
         if sanity_checks:
             assert (
-                len(self.dataset) == config_default.IRMAS_TRAIN_SIZE
-            ), f"IRMAS train set should contain {config_default.IRMAS_TRAIN_SIZE} samples"
+                len(self.dataset) == config_defaults.DEFAULT_IRMAS_TRAIN_SIZE
+            ), f"IRMAS train set should contain {config_defaults.DEFAULT_IRMAS_TRAIN_SIZE} samples"
 
     def __len__(self) -> int:
         return len(self.dataset)
 
     def __getitem__(self, index):
-        # TODO:
-        audio_path, label = self.dataset[index]
-
-        audio = torchaudio.backend.sox_io_backend.load(audio_path)
-        audio = audio.sum(axis=1) / 2
-
-        if self.audio_transform:
-            pass
-        return audio, label
+        # TODO: fix
+        audio_path, labels = self.dataset[index]
+        audio, sampling_rate = torchaudio.load(audio_path)
+        return self.audio_transform.process(
+            audio, labels=labels, sampling_rate=sampling_rate
+        )
 
 
 class IRMASDatasetTest(Dataset):
     def __init__(
         self,
-        dataset_dirs: list[Path] = [config_default.PATH_TRAIN],
-        num_classes=len(config_default.INSTRUMENT_TO_FULLNAME),
+        dataset_dirs: list[Path] = [config_defaults.PATH_TRAIN],
+        num_classes=len(config_defaults.INSTRUMENT_TO_FULLNAME),
         sanity_checks=True,
     ):
-
         self.num_classes = num_classes
 
         self.dataset: list[tuple[Path, np.ndarray]] = []
@@ -93,16 +94,20 @@ class IRMASDatasetTest(Dataset):
             for audio_file in tqdm(dataset_dir.rglob("*.wav")):
                 name = str(audio_file.stem)
                 instrument_indices = []
-                for instrument in config_default.INSTRUMENT_TO_IDX.keys():
+                for instrument in config_defaults.INSTRUMENT_TO_IDX.keys():
                     if f"[{instrument}]" in name:
-                        instrument_indices.append(config_default.INSTRUMENT_TO_IDX[instrument])
-                label = multi_hot_indices(instrument_indices, len(config_default.INSTRUMENT_TO_IDX))
+                        instrument_indices.append(
+                            config_defaults.INSTRUMENT_TO_IDX[instrument]
+                        )
+                label = multi_hot_indices(
+                    instrument_indices, len(config_defaults.INSTRUMENT_TO_IDX)
+                )
                 self.dataset.append((audio_file, label))
 
         if sanity_checks:
             assert (
-                len(self.dataset) == config_default.IRMAS_TRAIN_SIZE
-            ), f"IRMAS train set should contain {config_default.IRMAS_TRAIN_SIZE} samples"
+                len(self.dataset) == config_defaults.DEFAULT_IRMAS_TRAIN_SIZE
+            ), f"IRMAS train set should contain {config_defaults.DEFAULT_IRMAS_TRAIN_SIZE} samples"
 
     def __len__(self) -> int:
         return len(self.dataset)
@@ -111,8 +116,6 @@ class IRMASDatasetTest(Dataset):
         # TODO:
         audio_path, label = self.dataset[index]
 
-        if self.audio_transform:
-            pass
         return "TODO", label
 
 

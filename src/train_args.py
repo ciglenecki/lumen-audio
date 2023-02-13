@@ -10,6 +10,7 @@ from typing import Dict, Tuple
 import pytorch_lightning as pl
 
 import config_defaults
+from src.utils_audio import AudioTransforms
 import utils_functions
 from model import SupportedModels
 from utils_train import MetricMode, OptimizeMetric, OptimizerType, SchedulerType
@@ -41,10 +42,24 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         help="Number of workers",
     )
     user_group.add_argument(
+        "--num-labels",
+        metavar="int",
+        default=config_defaults.DEFAULT_NUM_CLASSES,
+        type=utils_functions.is_positive_int,
+        help="Total number of possible lables",
+    )
+    user_group.add_argument(
         "--model",
         default=SupportedModels.ast,
         type=SupportedModels,
         choices=list(SupportedModels),
+        help="Models used for training. resnext101_32x8d is recommend. We not guarantee that other models will work out the box",
+    )
+    user_group.add_argument(
+        "--audio-transform",
+        default=AudioTransforms.ast,
+        type=AudioTransforms,
+        choices=list(AudioTransforms),
         help="Models used for training. resnext101_32x8d is recommend. We not guarantee that other models will work out the box",
     )
 
@@ -141,7 +156,7 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         default=config_defaults.DEFAULT_BATCH_SIZE,
     )
     user_group.add_argument(
-        "--sampling-freq",
+        "--sampling-rate",
         type=int,
         default=config_defaults.DEFAULT_SAMPLING_RATE,
     )
