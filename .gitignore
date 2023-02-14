@@ -17,6 +17,7 @@ data/**
 
 !docs
 !figures
+!img
 !models
 models/**
 !references
