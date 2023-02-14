@@ -1,38 +1,26 @@
-from enum import Enum
-
 import torch
 
+from utils_functions import EnumStr
 
-class SchedulerType(Enum):
+
+class SchedulerType(EnumStr):
     ONECYCLE = "onecycle"
     PLATEAU = "plateau"
     AUTO_LR = "auto_lr"
 
-    def __str__(self):
-        return self.value
 
-
-class OptimizerType(Enum):
+class OptimizerType(EnumStr):
     ADAM = "adam"
     ADAMW = "adamw"
 
-    def __str__(self):
-        return self.value
 
-
-class MetricMode(Enum):
+class MetricMode(EnumStr):
     min = "min"
     max = "max"
 
-    def __str__(self):
-        return self.value
 
-
-class OptimizeMetric(Enum):
+class OptimizeMetric(EnumStr):
     VAL_HAMMING = "val/hamming_acc"
-
-    def __str__(self):
-        return self.value
 
 
 def multi_acc(y_pred_log, y_test):

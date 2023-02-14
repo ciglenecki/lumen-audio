@@ -10,6 +10,7 @@ from transformers import ASTConfig, ASTFeatureExtractor, ASTForAudioClassificati
 from transformers.modeling_outputs import SequenceClassifierOutput
 
 import config_defaults
+from utils_functions import EnumStr
 from utils_train import MetricMode, OptimizeMetric, OptimizerType, SchedulerType
 
 
@@ -21,12 +22,13 @@ class UnsupportedScheduler(ValueError):
     pass
 
 
-class SupportedModels(Enum):
-    ast = "ast"
+class UnsupportedModel(ValueError):
+    pass
 
-    def __str__(self):
-        return self.value
-    
+
+class SupportedModels(EnumStr):
+    AST = "ast"
+
 
 class ASTModelWrapper(pl.LightningModule):
     loggers: list[TensorBoardLogger]
@@ -78,10 +80,9 @@ class ASTModelWrapper(pl.LightningModule):
         self.backbone: ASTForAudioClassification = ASTForAudioClassification.from_pretrained(model_name, config=config, ignore_mismatched_sizes=True)  # type: ignore
         self.hamming_distance = HammingDistance(task="multilabel", num_labels=num_labels)
 
-        print(type(self.backbone))
         self.save_hyperparameters()
 
-    def _fake_forward(self):
+    def _test_forward(self):
         sampling_rate, audio = wavfile.read("data/raw/train/cel/[cel][cla]0001__1.wav")
         audio = audio.sum(axis=1) / 2
         features = self.feature_extractor(audio, sampling_rate=sampling_rate, return_tensors="pt")
@@ -96,8 +97,9 @@ class ASTModelWrapper(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         audio, y = batch
-        
-        loss, y_pred = self.forward(audio, labels=y)
+
+        loss, logits_pred = self.forward(audio, labels=y)
+        y_pred = torch.sigmoid(logits_pred) > (1 / self.num_labels)
         hamming_acc = self.hamming_distance(y, y_pred)
 
         data_dict = {
@@ -114,7 +116,8 @@ class ASTModelWrapper(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         audio, y = batch
-        loss, y_pred = self.forward(audio, y)
+        loss, logits_pred = self.forward(audio, labels=y)
+        y_pred = torch.sigmoid(logits_pred) > (1 / self.num_labels)
 
         hamming_acc = self.hamming_distance(y, y_pred)
 
@@ -132,7 +135,9 @@ class ASTModelWrapper(pl.LightningModule):
 
     def test_step(self, batch, batch_idx):
         audio, y = batch
-        loss, y_pred = self.forward(audio, y)  # same as self.forward
+
+        loss, logits_pred = self.forward(audio, labels=y)
+        y_pred = torch.sigmoid(logits_pred) > (1 / self.num_labels)
 
         hamming_acc = self.hamming_distance(y, y_pred)
 
@@ -235,18 +240,20 @@ class ASTModelWrapper(pl.LightningModule):
 
 
 def get_model(args):
-    if args.model == SupportedModels.ast.value and args.pretrained:
+    model_enum = args.model
+    if model_enum == SupportedModels.AST and args.pretrained:
         model = ASTModelWrapper(
             pretrained=args.pretrained,
             lr=args.lr,
             batch_size=args.batch_size,
-            scheduler_type=SchedulerType[args.scheduler_type],
-            max_epochs=args.max_epochs,
-            optimizer_type=OptimizerType[args.optimizer_type],
-            model_name=args.model_name,
+            scheduler_type=args.scheduler,
+            max_epochs=args.epochs,
+            optimizer_type=args.optimizer,
+            model_name=config_defaults.DEFAULT_AST_PRETRAINED_TAG,
             num_labels=args.num_labels,
         )
         return model
+    raise UnsupportedModel(f"Model {model_enum.value} is not supported")
 
 
 if __name__ == "__main__":

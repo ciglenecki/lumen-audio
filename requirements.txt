@@ -7,6 +7,8 @@ torchaudio
 pytorch-lightning
 torchmetrics
 scipy
+tensorboardX
+librosa
 
 # --------- others --------- #
 pyrootutils     # standardizing the project root setup

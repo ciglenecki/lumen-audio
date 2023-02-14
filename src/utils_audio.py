@@ -12,10 +12,9 @@ from torchaudio.transforms import (
     TimeStretch,
 )
 from transformers import ASTFeatureExtractor
-from aenum import MultiValueEnum
-import src.config_defaults as config_defaults
-from src.utils_functions import MultiEnum
 
+import config_defaults as config_defaults
+from utils_functions import MultiEnum
 
 
 class SpectogramAugmentation(torch.nn.Module):
@@ -24,19 +23,14 @@ class SpectogramAugmentation(torch.nn.Module):
 
 def stereo_to_mono(audio: torch.Tensor | np.ndarray):
     if isinstance(audio, torch.Tensor):
-        return audio.sum(dim=-1) / 2
+        return audio.sum(dim=1) / 2
     elif isinstance(audio, np.ndarray):
         return audio.sum(axis=-1) / 2
 
 
 class AudioTransformBase(ABC):
     @abstractmethod
-    def process(
-        self,
-        audio: torch.Tensor | np.ndarray,
-        labels: torch.Tensor | np.ndarray,
-        sampling_rate: int,
-    ):
+    def process(self, audio: torch.Tensor | np.ndarray, labels: torch.Tensor | np.ndarray, sampling_rate: int):
         pass
 
 
@@ -53,11 +47,8 @@ class AudioTransformAST(AudioTransformBase):
         labels: torch.Tensor | np.ndarray,
         sampling_rate: int,
     ):
-        audio = stereo_to_mono(audio)
-        features = self.feature_extractor(
-            audio, sampling_rate=sampling_rate, return_tensors="pt"
-        )
-        spectogram = features["input_values"]  # mel filter banks
+        features = self.feature_extractor(audio, sampling_rate=sampling_rate, return_tensors="pt")
+        spectogram = features["input_values"].squeeze(dim=0)  # mel filter banks
         return spectogram, labels
 
 
@@ -103,7 +94,9 @@ class AudioAugmentation(torch.nn.Module):
         mel = self.mel_scale(spec)
 
         return mel
-    
+
+
 class AudioTransforms(MultiEnum):
-    ast = AudioTransformAST, 'ast'
-    
+    """enumname = AudioTransformBase class, 'key'"""
+
+    AST = AudioTransformAST(ast_pretrained_tag=config_defaults.DEFAULT_AST_PRETRAINED_TAG), "ast"

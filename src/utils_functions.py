@@ -1,10 +1,11 @@
 import argparse
-from enum import Enum
+import json
 import os
 import random
 import sys
 import time
 from datetime import datetime
+from enum import Enum
 from math import floor
 from pathlib import Path
 from typing import TypeVar
@@ -12,6 +13,7 @@ from typing import TypeVar
 import numpy as np
 import pandas as pd
 import torch
+import yaml
 from torch.utils.data import Dataset
 
 
@@ -203,6 +205,12 @@ def timeit(func):
 
     return timed
 
+
+class EnumStr(Enum):
+    def __str__(self):
+        return self.value
+
+
 class MultiEnum(Enum):
     def __new__(cls, *values):
         obj = object.__new__(cls)
@@ -210,15 +218,22 @@ class MultiEnum(Enum):
         obj._value_ = values[0]
         for other_value in values[1:]:
             cls._value2member_map_[other_value] = obj
-        obj._all_values = values # type: ignore
+        obj._all_values = values  # type: ignore
         return obj
+
     def __repr__(self):
-        return '<%s.%s: %s>' % (
-                self.__class__.__name__,
-                self._name_,
-                ', '.join([repr(v) for v in self._all_values]),
-                ) 
-        
+        return "<{}.{}: {}>".format(
+            self.__class__.__name__,
+            self._name_,
+            ", ".join([repr(v) for v in self._all_values]),  # type: ignore
+        )
+
+
+def to_yaml(data):
+    # return json.dumps(data, indent=2)
+    return yaml.dump(data, allow_unicode=True, default_flow_style=False)
+
+
 nato_alphabet = [
     "Alpha",
     "Bravo",

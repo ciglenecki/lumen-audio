@@ -20,14 +20,15 @@ from callbacks import (
 from datamodule import IRMASDataModule
 from model import get_model
 from train_args import parse_args_train
-from utils_audio import AudioAugmentation, AudioTransforms
+from utils_audio import AudioAugmentation, AudioTransformBase, AudioTransforms
 from utils_functions import (
     add_prefix_to_keys,
     get_timestamp,
     random_codeword,
     stdout_to_file,
+    to_yaml,
 )
-from utils_train import SchedulerType
+from utils_train import MetricMode, OptimizeMetric, SchedulerType
 
 if __name__ == "__main__":
     args, pl_args = parse_args_train()
@@ -35,7 +36,8 @@ if __name__ == "__main__":
     num_labels = args.num_labels
     batch_size = args.batch_size
     sampling_rate = args.sampling_rate
-    print(args.audio_transform)
+    metric_mode_str = MetricMode(args.metric_mode).value
+    optimizer_metric_str = OptimizeMetric(args.metric).value
 
     timestamp = get_timestamp()
     experiment_codeword = random_codeword()
@@ -47,10 +49,10 @@ if __name__ == "__main__":
 
     stdout_to_file(filename_report)
     print(str(filename_report))
-    print("Configs:")
-    pprint([vars(args), vars(pl_args)])
+    print("Config:", to_yaml(vars(args)), sep="\n")
+    print("Config PyTorch Lightning:", to_yaml(vars(pl_args)), sep="\n")
 
-    audio_transform = AudioTransforms(args.audio)
+    audio_transform: AudioTransformBase = AudioTransforms(args.audio_transform).value
 
     datamodule = IRMASDataModule(
         batch_size=batch_size,
@@ -59,6 +61,8 @@ if __name__ == "__main__":
         drop_last_sample=args.drop_last,
         audio_transform=audio_transform,
     )
+    # datamodule.prepare_data()
+    datamodule.setup()
 
     train_dataloader_size = len(datamodule.train_dataloader())
 
@@ -71,16 +75,16 @@ if __name__ == "__main__":
     }
 
     callback_early_stopping = EarlyStopping(
-        monitor=args.metrics,
-        mode=args.metric_mode,
+        monitor=optimizer_metric_str,
+        mode=metric_mode_str,
         patience=args.patience,
         check_on_train_epoch_end=args.check_on_train_epoch_end,
         verbose=True,
     )
 
     callback_checkpoint = ModelCheckpoint(
-        monitor=args.metric,
-        mode=args.metric_mode,
+        monitor=optimizer_metric_str,
+        mode=metric_mode_str,
         filename="_".join(
             [
                 experiment_name,
@@ -93,7 +97,7 @@ if __name__ == "__main__":
         verbose=True,
     )
 
-    bar_refresh_rate = int(train_dataloader_size / pl_args.log_every_n_steps)
+    bar_refresh_rate = int(train_dataloader_size / args.bar_update)
 
     callbacks = [
         callback_checkpoint,
@@ -115,14 +119,14 @@ if __name__ == "__main__":
         log_graph=True,
     )
 
-    tensorboard_logger.log_hyperparams(log_dictionary)
+    # tensorboard_logger.log_hyperparams(log_dictionary)
 
     trainer: pl.Trainer = pl.Trainer.from_argparse_args(
         pl_args,
         logger=[tensorboard_logger],
         default_root_dir=output_report,
         callbacks=callbacks,
-        auto_lr_find=args.scheduler == SchedulerType.AUTO_LR.value,
+        auto_lr_find=args.scheduler == SchedulerType.AUTO_LR,
     )
 
     if args.scheduler == SchedulerType.AUTO_LR.value:
@@ -142,5 +146,5 @@ if __name__ == "__main__":
         print(new_lr)
         exit(1)
 
-    trainer.fit(model, datamodule, ckpt_path=args.ckpt)
+    trainer.fit(model, datamodule=datamodule, ckpt_path=args.ckpt)
     trainer.test(model, datamodule)

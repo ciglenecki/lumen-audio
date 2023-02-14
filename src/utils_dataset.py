@@ -1,4 +1,7 @@
+from typing import Literal
+
 import numpy as np
+import torch
 
 
 def multi_hot_instruments(instruments: list[str], instrument_to_idx: dict[str, int]):

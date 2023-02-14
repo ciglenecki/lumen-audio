@@ -42,3 +42,7 @@ Normazlie spectograms (mean/std)
 ## Augmentation
 
 white nose before going to spectral dimension
+
+## AST
+
+Also, please note that we use 16kHz audios for the pretrained model, so if you want to use the pretrained model, please prepare your data in 16kHz.

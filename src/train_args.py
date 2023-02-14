@@ -10,9 +10,9 @@ from typing import Dict, Tuple
 import pytorch_lightning as pl
 
 import config_defaults
-from src.utils_audio import AudioTransforms
 import utils_functions
 from model import SupportedModels
+from utils_audio import AudioTransforms
 from utils_train import MetricMode, OptimizeMetric, OptimizerType, SchedulerType
 
 ARGS_GROUP_NAME = "General arguments"
@@ -50,14 +50,14 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
     )
     user_group.add_argument(
         "--model",
-        default=SupportedModels.ast,
+        default=SupportedModels.AST,
         type=SupportedModels,
         choices=list(SupportedModels),
         help="Models used for training. resnext101_32x8d is recommend. We not guarantee that other models will work out the box",
     )
     user_group.add_argument(
         "--audio-transform",
-        default=AudioTransforms.ast,
+        default=AudioTransforms.AST,
         type=AudioTransforms,
         choices=list(AudioTransforms),
         help="Models used for training. resnext101_32x8d is recommend. We not guarantee that other models will work out the box",
@@ -180,6 +180,12 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         default=config_defaults.DEFAULT_EPOCHS,
         type=utils_functions.is_positive_int,
         help="Maximum number epochs. Default number of epochs in other cases is 1000.",
+    )
+    user_group.add_argument(
+        "--bar-update",
+        default=config_defaults.DEFUALT_TQDM_REFRESH,
+        type=utils_functions.is_positive_int,
+        help="Number of TQDM updates in one epoch.",
     )
 
     args = parser.parse_args()
