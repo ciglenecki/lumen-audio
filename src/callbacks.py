@@ -31,7 +31,6 @@ class LogMetricsAsHyperparams(pl.Callback):
         }
 
     def on_fit_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule) -> None:
-
         if pl_module.loggers:
             for logger in pl_module.loggers:  # type: ignore
                 logger: pl_loggers.TensorBoardLogger
@@ -41,11 +40,16 @@ class LogMetricsAsHyperparams(pl.Callback):
 class OnTrainEpochStartLogCallback(pl.Callback):
     """Logs metrics."""
 
-    def on_train_epoch_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule) -> None:
-
+    def on_train_epoch_start(
+        self, trainer: pl.Trainer, pl_module: pl.LightningModule
+    ) -> None:
         total_params = int(sum(p.numel() for p in pl_module.parameters()))
-        trainable_params = int(sum(p.numel() for p in pl_module.parameters() if p.requires_grad))
-        non_trainable_params = int(sum(p.numel() for p in pl_module.parameters() if not p.requires_grad))
+        trainable_params = int(
+            sum(p.numel() for p in pl_module.parameters() if p.requires_grad)
+        )
+        non_trainable_params = int(
+            sum(p.numel() for p in pl_module.parameters() if not p.requires_grad)
+        )
 
         data_dict = {
             "total_params/epoch": total_params,  # type: ignore
@@ -65,7 +69,13 @@ class OnTrainEpochStartLogCallback(pl.Callback):
         # pl_module.log("val/haversine_distance_epoch", 100000)
 
     def on_train_batch_end(
-        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", outputs, batch, batch_idx: int, unused: int = 0
+        self,
+        trainer: "pl.Trainer",
+        pl_module: "pl.LightningModule",
+        outputs,
+        batch,
+        batch_idx: int,
+        unused: int = 0,
     ) -> None:
         data_dict = {
             "current_lr/step": trainer.optimizers[0].param_groups[0]["lr"],

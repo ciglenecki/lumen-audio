@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-from pprint import pprint
 
 import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
@@ -12,27 +11,27 @@ from pytorch_lightning.callbacks import (
     TQDMProgressBar,
 )
 
-from callbacks import (
+from src.callbacks import (
     LogMetricsAsHyperparams,
     OnTrainEpochStartLogCallback,
     OverrideEpochMetricCallback,
 )
-from datamodule import IRMASDataModule
-from model import get_model
-from train_args import parse_args_train
-from utils_audio import AudioAugmentation, AudioTransformBase, AudioTransforms
-from utils_functions import (
+from src.datamodule import IRMASDataModule
+from src.model import SupportedModels, get_model
+from src.train_args import parse_args_train
+from src.utils_audio import AudioTransformBase, AudioTransforms, get_audio_transform
+from src.utils_functions import (
     add_prefix_to_keys,
     get_timestamp,
     random_codeword,
     stdout_to_file,
     to_yaml,
 )
-from utils_train import MetricMode, OptimizeMetric, SchedulerType
+from src.utils_train import MetricMode, OptimizeMetric, SchedulerType
 
 if __name__ == "__main__":
     args, pl_args = parse_args_train()
-    output_report = args.output_report
+    output_dir = args.output_dir
     num_labels = args.num_labels
     batch_size = args.batch_size
     sampling_rate = args.sampling_rate
@@ -43,26 +42,24 @@ if __name__ == "__main__":
     experiment_codeword = random_codeword()
     experiment_name = f"{timestamp}_{experiment_codeword}_{args.model}"
 
-    os.makedirs(output_report, exist_ok=True)
-
-    filename_report = Path(output_report, experiment_name + ".txt")
+    os.makedirs(output_dir, exist_ok=True)
+    filename_report = Path(output_dir, experiment_name + ".txt")
 
     stdout_to_file(filename_report)
     print(str(filename_report))
     print("Config:", to_yaml(vars(args)), sep="\n")
     print("Config PyTorch Lightning:", to_yaml(vars(pl_args)), sep="\n")
 
-    audio_transform: AudioTransformBase = AudioTransforms(args.audio_transform).value
+    audio_transform: AudioTransformBase = get_audio_transform(args.audio_transform)
 
     datamodule = IRMASDataModule(
         batch_size=batch_size,
         num_workers=args.num_workers,
         dataset_fraction=args.dataset_fraction,
         drop_last_sample=args.drop_last,
-        audio_transform=audio_transform,
+        train_audio_transform=audio_transform,
+        val_audio_transform=audio_transform,
     )
-    # datamodule.prepare_data()
-    datamodule.setup()
 
     train_dataloader_size = len(datamodule.train_dataloader())
 
@@ -101,36 +98,38 @@ if __name__ == "__main__":
 
     callbacks = [
         callback_checkpoint,
-        # callback_early_stopping,
+        callback_early_stopping,
         TQDMProgressBar(refresh_rate=bar_refresh_rate),
-        ModelSummary(max_depth=3),
+        ModelSummary(max_depth=4),
         LogMetricsAsHyperparams(),
         OverrideEpochMetricCallback(),
         OnTrainEpochStartLogCallback(),
         LearningRateMonitor(log_momentum=True),
     ]
 
-    model = get_model(args)
+    model = get_model(args, pl_args)
 
     tensorboard_logger = pl_loggers.TensorBoardLogger(
-        save_dir=str(output_report),
+        save_dir=str(output_dir),
         name=experiment_name,
         default_hp_metric=False,  # default_hp_metric should be turned off unless you log hyperparameters (logger.log_hyperparams(dict)) before the module starts with training
         log_graph=True,
     )
 
-    # tensorboard_logger.log_hyperparams(log_dictionary)
+    tensorboard_logger.log_hyperparams(log_dictionary)
 
     trainer: pl.Trainer = pl.Trainer.from_argparse_args(
         pl_args,
         logger=[tensorboard_logger],
-        default_root_dir=output_report,
+        default_root_dir=output_dir,
         callbacks=callbacks,
         auto_lr_find=args.scheduler == SchedulerType.AUTO_LR,
     )
 
     if args.scheduler == SchedulerType.AUTO_LR.value:
-        lr_finder = trainer.tuner.lr_find(model, datamodule=datamodule, num_training=100)
+        lr_finder = trainer.tuner.lr_find(
+            model, datamodule=datamodule, num_training=100
+        )
         if lr_finder is None:
             print("Cant find best learning rate")
             exit(1)

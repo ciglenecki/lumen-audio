@@ -1,0 +1,9 @@
+[flake8]
+ignore = E203, E402, E501, F401, F841, F403
+exclude =
+	logs/*
+	data/*
+	venv
+	build
+	dist
+	__pycache__

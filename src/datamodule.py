@@ -2,23 +2,34 @@ from __future__ import annotations
 
 from itertools import combinations
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import pytorch_lightning as pl
-import torch
-from torch.utils.data import DataLoader, Dataset, SubsetRandomSampler
-from tqdm import tqdm
+from torch.utils.data import DataLoader, SubsetRandomSampler
 
-from dataset import IRMASDatasetTest, IRMASDatasetTrain
-from utils_audio import AudioTransformAST, AudioTransformBase
-from utils_functions import split_by_ratio
+import src.config_defaults as config_defaults
+from src.dataset import IRMASDatasetTest, IRMASDatasetTrain
+from src.utils_audio import AudioTransformAST, AudioTransformBase
+from src.utils_functions import split_by_ratio
 
 
 class IRMASDataModule(pl.LightningDataModule):
     train_size: int
     val_size: int
     test_size: int
+    train_dataset: IRMASDatasetTrain
+    test_dataset: IRMASDatasetTest
+    train_sampler: SubsetRandomSampler
+    val_sampler: SubsetRandomSampler
+    test_sampler: SubsetRandomSampler
+
+    """
+    IRMASDataModule is responsible for efficiently creating datasets creating a
+    indexing strategy (SubsetRandomSampler) for each dataset.
+    Any preprocessing which requires aggregation of data,
+    such as caculating the mean and standard deviation of the dataset
+    should be performed here.
+    """
 
     def __init__(
         self,
@@ -26,27 +37,40 @@ class IRMASDataModule(pl.LightningDataModule):
         num_workers: int,
         dataset_fraction: int,
         drop_last_sample: bool,
-        audio_transform: AudioTransformBase,
+        train_audio_transform: AudioTransformAST,
+        val_audio_transform: AudioTransformAST,
+        train_dirs: list[Path] = [config_defaults.PATH_TRAIN],
+        val_dirs: list[Path] = [config_defaults.PATH_VAL],
+        test_dirs: list[Path] = [config_defaults.PATH_TEST],
     ):
-
         super().__init__()
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.dataset_fraction = dataset_fraction
         self.drop_last_sample = drop_last_sample
-        self.audio_transform: AudioTransformBase = audio_transform
+        self.train_audio_transform: AudioTransformAST = train_audio_transform
+        self.val_audio_transform: AudioTransformAST = val_audio_transform
         self.prepare_data_per_node = False
-        self.has_teardown_None = False
+        self.train_dirs = train_dirs
+        self.val_dirs = val_dirs
+        self.test_dirs = test_dirs
+        self.setup()
 
     def prepare_data(self) -> None:
         """Has to be implemented to avoid object has no attribute 'prepare_data_per_node' error."""
-        pass
 
     def setup(self, stage=None):
         super().setup(stage)
 
-        self.train_dataset = IRMASDatasetTrain(audio_transform=self.audio_transform)
-        self.test_dataset = IRMASDatasetTest()
+        self.train_dataset = IRMASDatasetTrain(
+            dataset_dirs=self.train_dirs,
+            audio_transform=self.train_audio_transform,
+        )
+
+        self.test_dataset = IRMASDatasetTest(
+            dataset_dirs=self.test_dirs,
+            audio_transform=self.val_audio_transform,
+        )
 
         train_indices = np.arange(len(self.train_dataset))
         val_test_indices = np.arange(len(self.test_dataset))
@@ -75,26 +99,48 @@ class IRMASDataModule(pl.LightningDataModule):
         self.val_size = len(val_indices)
         self.test_size = len(test_indices)
 
-        print("Train size", self.train_size, "indices:", train_indices[0:5], train_indices[-5:])
-        print("Val size", self.val_size, "indices:", val_indices[0:5], val_indices[-5:])
-        print("Test size", self.test_size, "indices:", test_indices[0:5], test_indices[-5:])
+        print(
+            "Train size",
+            self.train_size,
+            "indices:",
+            train_indices[0:5],
+            train_indices[-5:],
+        )
+        print(
+            "Val size",
+            self.val_size,
+            "indices:",
+            val_indices[0:5],
+            val_indices[-5:],
+        )
+        print(
+            "Test size",
+            self.test_size,
+            "indices:",
+            test_indices[0:5],
+            test_indices[-5:],
+        )
 
-        self.train_sampler = SubsetRandomSampler(train_indices)
-        self.val_sampler = SubsetRandomSampler(val_indices)
-        self.test_sampler = SubsetRandomSampler(test_indices)
+        self.train_sampler = SubsetRandomSampler(train_indices.tolist())
+        self.val_sampler = SubsetRandomSampler(val_indices.tolist())
+        self.test_sampler = SubsetRandomSampler(test_indices.tolist())
 
     def _sanity_check_indices(
         self,
         val_indices: np.ndarray,
         test_indices: np.ndarray,
     ):
+        """Checks if there are overlaping val and test indicies to avoid data leakage."""
+
         for ind_a, ind_b in combinations([val_indices, test_indices], 2):
-            assert len(np.intersect1d(ind_a, ind_b)) == 0, "Some indices share an index {}".format(
-                np.intersect1d(ind_a, ind_b)
-            )
+            assert (
+                len(np.intersect1d(ind_a, ind_b)) == 0
+            ), f"Some indices share an index {np.intersect1d(ind_a, ind_b)}"
         set_ind = set(val_indices)
         set_ind.update(test_indices)
-        assert len(set_ind) == (len(val_indices) + len(test_indices)), "Some indices might contain non-unqiue values"
+        assert len(set_ind) == (
+            len(val_indices) + len(test_indices)
+        ), "Some indices might contain non-unqiue values"
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(
@@ -106,7 +152,10 @@ class IRMASDataModule(pl.LightningDataModule):
         )
 
     def val_dataloader(self) -> DataLoader:
-        """Uses train dataset but validation sampler."""
+
+        """Uses test dataset files but sampler takes care that validation and test get different
+        files."""
+
         return DataLoader(
             self.test_dataset,
             batch_size=self.batch_size,

@@ -1,17 +1,16 @@
-from enum import Enum
 from typing import Any, Optional
 
 import pytorch_lightning as pl
 import torch
+import torchmetrics
 from pytorch_lightning.loggers import TensorBoardLogger
 from scipy.io import wavfile
-from torchmetrics import HammingDistance
 from transformers import ASTConfig, ASTFeatureExtractor, ASTForAudioClassification
 from transformers.modeling_outputs import SequenceClassifierOutput
 
-import config_defaults
-from utils_functions import EnumStr
-from utils_train import MetricMode, OptimizeMetric, OptimizerType, SchedulerType
+import src.config_defaults as config_defaults
+from src.utils_functions import EnumStr
+from src.utils_train import MetricMode, OptimizeMetric, OptimizerType, SchedulerType
 
 
 class UnsupportedOptimizer(ValueError):
@@ -44,7 +43,7 @@ class ASTModelWrapper(pl.LightningModule):
         max_epochs: Optional[int] = None,
         optimizer_type: OptimizerType = OptimizerType.ADAM,
         model_name: str = config_defaults.DEFAULT_AST_PRETRAINED_TAG,
-        num_labels: int = config_defaults.DEFAULT_NUM_CLASSES,
+        num_labels: int = config_defaults.DEFAULT_NUM_LABELS,
         optimization_metric: OptimizeMetric = config_defaults.DEFAULT_OPTIMIZE_METRIC,
         weight_decay: float = config_defaults.DEFAULT_WEIGHT_DECAY,
         metric_mode: MetricMode = config_defaults.DEFAULT_METRIC_MODE,
@@ -76,23 +75,42 @@ class ASTModelWrapper(pl.LightningModule):
             finetuning_task="audio-classification",
         )
 
-        ### Hug version
-        self.backbone: ASTForAudioClassification = ASTForAudioClassification.from_pretrained(model_name, config=config, ignore_mismatched_sizes=True)  # type: ignore
-        self.hamming_distance = HammingDistance(task="multilabel", num_labels=num_labels)
+        self.backbone: ASTForAudioClassification = (
+            ASTForAudioClassification.from_pretrained(
+                model_name,
+                config=config,
+                ignore_mismatched_sizes=True,
+            )
+        )  # type: ignore
+        self.hamming_distance = torchmetrics.HammingDistance(
+            task="multilabel", num_labels=num_labels
+        )
 
         self.save_hyperparameters()
 
     def _test_forward(self):
         sampling_rate, audio = wavfile.read("data/raw/train/cel/[cel][cla]0001__1.wav")
         audio = audio.sum(axis=1) / 2
-        features = self.feature_extractor(audio, sampling_rate=sampling_rate, return_tensors="pt")
+        features = self.feature_extractor(
+            audio, sampling_rate=sampling_rate, return_tensors="pt"
+        )
         x = features["input_values"]
         y = torch.rand((1, 11))
-        out: SequenceClassifierOutput = self.backbone.forward(x, output_attentions=True, return_dict=True, labels=y)
+        out: SequenceClassifierOutput = self.backbone.forward(
+            x,
+            output_attentions=True,
+            return_dict=True,
+            labels=y,
+        )  # type: ignore
         return out.loss, out.logits
 
     def forward(self, audio: torch.Tensor, labels: torch.Tensor):
-        out: SequenceClassifierOutput = self.backbone.forward(audio, output_attentions=True, return_dict=True, labels=labels)  # type: ignore
+        out: SequenceClassifierOutput = self.backbone.forward(
+            audio,
+            output_attentions=True,
+            return_dict=True,
+            labels=labels,
+        )  # type: ignore
         return out.loss, out.logits
 
     def training_step(self, batch, batch_idx):
@@ -153,13 +171,11 @@ class ASTModelWrapper(pl.LightningModule):
 
         return data_dict
 
-    def predict_step(self, batch: torch.Tensor, batch_idx: int, dataloader_idx: int = 0) -> Any:
+    def predict_step(
+        self, batch: torch.Tensor, batch_idx: int, dataloader_idx: int = 0
+    ) -> Any:
+        # TODO:
         pass
-        return
-        audio, y = batch
-        with torch.no_grad():
-            loss, y_pred = self.forward(audio, y)  # same as self.forward
-        return y_pred
 
     def configure_optimizers(self):
         print("\n", self.__class__.__name__, "Configure optimizers\n")
@@ -177,7 +193,10 @@ class ASTModelWrapper(pl.LightningModule):
                 weight_decay=self.weight_decay,
             )
         else:
-            raise UnsupportedOptimizer(f"Optimizer {self.optimizer_type} is not implemented", self.optimizer_type)
+            raise UnsupportedOptimizer(
+                f"Optimizer {self.optimizer_type} is not implemented",
+                self.optimizer_type,
+            )
 
         if self.scheduler_type is SchedulerType.AUTO_LR:
             """SchedulerType.AUTO_LR sets it's own scheduler.
@@ -220,7 +239,10 @@ class ASTModelWrapper(pl.LightningModule):
             )
             interval = "epoch"
         else:
-            raise UnsupportedScheduler(f"Scheduler {self.scheduler_type} is not implemented", self.scheduler_type)
+            raise UnsupportedScheduler(
+                f"Scheduler {self.scheduler_type} is not implemented",
+                self.scheduler_type,
+            )
 
         config_dict["lr_scheduler"].update(
             {
@@ -239,7 +261,7 @@ class ASTModelWrapper(pl.LightningModule):
             scheduler.step(metric)
 
 
-def get_model(args):
+def get_model(args, pl_args):
     model_enum = args.model
     if model_enum == SupportedModels.AST and args.pretrained:
         model = ASTModelWrapper(
@@ -247,7 +269,7 @@ def get_model(args):
             lr=args.lr,
             batch_size=args.batch_size,
             scheduler_type=args.scheduler,
-            max_epochs=args.epochs,
+            max_epochs=pl_args.max_epochs,
             optimizer_type=args.optimizer,
             model_name=config_defaults.DEFAULT_AST_PRETRAINED_TAG,
             num_labels=args.num_labels,
@@ -258,4 +280,3 @@ def get_model(args):
 
 if __name__ == "__main__":
     pass
-    # ASTModelWrapper().forward()

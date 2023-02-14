@@ -5,28 +5,24 @@ from pathlib import Path
 
 import librosa
 import numpy as np
-import torch
-import torchaudio
-import torchaudio.functional as F
-import torchaudio.transforms
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-import config_defaults
-from utils_audio import AudioTransformAST, AudioTransformBase, stereo_to_mono
-from utils_dataset import multi_hot_indices
+import src.config_defaults as config_defaults
+from src.utils_audio import AudioTransformAST, AudioTransformBase
+from src.utils_dataset import multi_hot_indices
 
-
-def instrument_indices_to_torch(indices: list[int]):
-    return torch.tensor(multi_hot_indices(indices, len(config_defaults.INSTRUMENT_TO_IDX)))
+# '*.(wav|mp3|flac)'
+# glob_expression = f"*\.({'|'.join(config_defaults.DEFAULT_AUDIO_EXTENSIONS)})"
+glob_expression = "*.wav"
 
 
 class IRMASDatasetTrain(Dataset):
     def __init__(
         self,
         dataset_dirs: list[Path] = [config_defaults.PATH_TRAIN],
-        audio_transform: AudioTransformBase = AudioTransformAST(),
-        num_classes=len(config_defaults.INSTRUMENT_TO_FULLNAME),
+        audio_transform: AudioTransformAST = AudioTransformAST(),
+        num_classes=config_defaults.DEFAULT_NUM_LABELS,
         sanity_checks=config_defaults.DEFAULT_SANITY_CHECKS,
         sampling_rate=config_defaults.DEFAULT_SAMPLING_RATE,
     ):
@@ -44,91 +40,120 @@ class IRMASDatasetTrain(Dataset):
                 ├── cla
                 ...
                 └── voi
-
-            audio_transform: _description_..
-            num_classes: _description_..
-            sanity_checks: _description_..
         """
+
+        self.dataset: list[tuple[Path, np.ndarray]] = []
+        self.dataset_dirs = dataset_dirs
         self.sampling_rate = sampling_rate
         self.audio_transform = audio_transform
         self.num_classes = num_classes
-
-        self.dataset: list[tuple[Path, torch.Tensor]] = []
-
-        for dataset_dir in dataset_dirs:
-            for audio_file in tqdm(dataset_dir.rglob("*.wav")):
-                name = str(audio_file.stem)
-                instrument_indices = []
-                for instrument in config_defaults.INSTRUMENT_TO_IDX.keys():
-                    if f"[{instrument}]" in name:
-                        instrument_indices.append(config_defaults.INSTRUMENT_TO_IDX[instrument])
-                label = instrument_indices_to_torch(instrument_indices)
-                self.dataset.append((audio_file, label))
+        self._populate_dataset()
 
         if sanity_checks:
             assert (
                 len(self.dataset) == config_defaults.DEFAULT_IRMAS_TRAIN_SIZE
             ), f"IRMAS train set should contain {config_defaults.DEFAULT_IRMAS_TRAIN_SIZE} samples"
 
+    def _populate_dataset(self):
+        """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)"""
+
+        for dataset_dir in self.dataset_dirs:
+            for audio_path in tqdm(dataset_dir.rglob(glob_expression)):
+                filename = str(audio_path.stem)
+                instrument_indices = []
+                for instrument in config_defaults.INSTRUMENT_TO_IDX.keys():
+                    if f"[{instrument}]" in filename:
+                        instrument_indices.append(
+                            config_defaults.INSTRUMENT_TO_IDX[instrument]
+                        )
+                labels = multi_hot_indices(
+                    instrument_indices,
+                    config_defaults.DEFAULT_NUM_LABELS,
+                )
+                self.dataset.append((audio_path, labels))
+
     def __len__(self) -> int:
         return len(self.dataset)
 
     def __getitem__(self, index):
-        # TODO: fix
-        audio_path, labels = self.dataset[index]
-        labels = labels.float()
 
-        audio, sampling_rate = librosa.load(audio_path, sr=config_defaults.DEFAULT_SAMPLING_RATE, mono=True)
-        audio = torch.tensor(audio)
-        return self.audio_transform.process(audio=audio, labels=labels, sampling_rate=sampling_rate)
+        audio_path, labels = self.dataset[index]
+        audio, orig_sampling_rate = librosa.load(audio_path, sr=None)
+        spectrogram, labels = self.audio_transform.process(
+            audio=audio,
+            labels=labels,
+            orig_sampling_rate=orig_sampling_rate,
+            sampling_rate=self.sampling_rate,
+        )
+
+        labels = labels.float()  # avoid errors in loss function
+        return spectrogram, labels
 
 
 class IRMASDatasetTest(Dataset):
     def __init__(
         self,
         dataset_dirs: list[Path] = [config_defaults.PATH_TEST],
-        num_classes=len(config_defaults.INSTRUMENT_TO_FULLNAME),
+        num_classes=config_defaults.DEFAULT_NUM_LABELS,
         sanity_checks=config_defaults.DEFAULT_SANITY_CHECKS,
-        audio_transform: AudioTransformBase = AudioTransformAST(),
+        audio_transform: AudioTransformAST = AudioTransformAST(),
+        sampling_rate=config_defaults.DEFAULT_SAMPLING_RATE,
     ):
         self.num_classes = num_classes
         self.audio_transform = audio_transform
-        self.dataset: list[tuple[Path, torch.Tensor]] = []
-
-        for dataset_dir in dataset_dirs:
-            for audio_file in tqdm(dataset_dir.rglob("*.wav")):
-                path_without_ext = os.path.splitext(audio_file)[0]
-                txt_filename = Path(path_without_ext + ".txt")
-
-                if not txt_filename.is_file():
-                    raise FileNotFoundError(f"File {txt_filename} doesn't exist.")
-
-                instrument_indices = []
-                with open(txt_filename) as f:
-                    for line in f:
-                        instrument = line.rstrip("\n").replace("\t", "")
-                        instrument_indices.append(config_defaults.INSTRUMENT_TO_IDX[instrument])
-
-                label = instrument_indices_to_torch(instrument_indices)
-                self.dataset.append((audio_file, label))
+        self.dataset: list[tuple[Path, np.ndarray]] = []
+        self.dataset_dirs = dataset_dirs
+        self.sampling_rate = sampling_rate
+        self._populate_dataset()
 
         if sanity_checks:
             assert (
                 len(self.dataset) == config_defaults.DEFAULT_IRMAS_TEST_SIZE
             ), f"IRMAS test set should contain {config_defaults.DEFAULT_IRMAS_TEST_SIZE} samples"
 
+    def _populate_dataset(self):
+        """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)"""
+        for dataset_dir in self.dataset_dirs:
+            for audio_file in tqdm(dataset_dir.rglob(glob_expression)):
+
+                path_without_ext = os.path.splitext(audio_file)[0]
+                txt_path = Path(path_without_ext + ".txt")
+
+                if not txt_path.is_file():
+                    raise FileNotFoundError(
+                        f"File {audio_file} doesn't have label file {txt_path}."
+                    )
+
+                instrument_indices = []
+                with open(txt_path) as f:
+                    for line in f:
+                        instrument = line.rstrip("\n").replace("\t", "")
+                        instrument_indices.append(
+                            config_defaults.INSTRUMENT_TO_IDX[instrument]
+                        )
+
+                labels = multi_hot_indices(
+                    instrument_indices,
+                    config_defaults.DEFAULT_NUM_LABELS,
+                )
+
+                self.dataset.append((audio_file, labels))
+
     def __len__(self) -> int:
         return len(self.dataset)
 
     def __getitem__(self, index):
-        # TODO:
         audio_path, labels = self.dataset[index]
-        labels = labels.float()
+        audio, orig_sampling_rate = librosa.load(audio_path, sr=None)
+        spectrogram, labels = self.audio_transform.process(
+            audio=audio,
+            labels=labels,
+            orig_sampling_rate=orig_sampling_rate,
+            sampling_rate=self.sampling_rate,
+        )
 
-        audio, sampling_rate = librosa.load(audio_path, sr=config_defaults.DEFAULT_SAMPLING_RATE, mono=True)
-        audio = torch.tensor(audio)
-        # audio = audio.unsqueeze(dim=-1)
-        return self.audio_transform.process(audio=audio, labels=labels, sampling_rate=sampling_rate)
+        labels = labels.float()  # avoid errors in loss function
+        return spectrogram, labels
 
 
 class InstrumentInference(Dataset):

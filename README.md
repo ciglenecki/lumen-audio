@@ -1,6 +1,10 @@
 # lumen-audio
 
-## Terminologija
+# Modeli
+
+## AST
+
+- They used 16kHz audios for the pretrained model, so if you want to use the pretrained model, please prepare your data in 16kHz.
 
 Pristup spektogram CNN:
 
@@ -36,13 +40,9 @@ Test set (ours) contains only information about presence of the instruments, gen
 ## Preprocess
 
 to one channel
-input to model: Mel-spectogram
-Normazlie spectograms (mean/std)
+input to model: Mel-spectrogram
+Normazlie spectrograms (mean/std)
 
 ## Augmentation
 
 white nose before going to spectral dimension
-
-## AST
-
-Also, please note that we use 16kHz audios for the pretrained model, so if you want to use the pretrained model, please prepare your data in 16kHz.

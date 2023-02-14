@@ -1,10 +1,10 @@
+"""To override any configs, set variables in "config_local.py" which is your own config file."""
+
 from pathlib import Path
 
 import pyrootutils
 
-from utils_train import MetricMode, OptimizeMetric
-
-"""To override any configs, set variables in "config_local.py" which is your own config file."""
+from src.utils_train import MetricMode, OptimizeMetric
 
 # ===============
 # PATHS START
@@ -12,10 +12,11 @@ from utils_train import MetricMode, OptimizeMetric
 
 PATH_WORK_DIR = pyrootutils.find_root(search_from=__file__, indicator=".project-root")
 PATH_DATA = Path(PATH_WORK_DIR, "data")
-PATH_TRAIN = Path(PATH_DATA, "raw", "train")
-PATH_VAL = Path(PATH_DATA, "raw", "val")
-PATH_TEST = Path(PATH_DATA, "raw", "test")
-PATH_REPORT = Path(PATH_WORK_DIR, "report")
+PATH_TRAIN = Path(PATH_DATA, "irmas", "train")
+PATH_VAL = Path(PATH_DATA, "irmas", "val")
+PATH_TEST = Path(PATH_DATA, "irmas", "test")
+PATH_MODELS = Path(PATH_WORK_DIR, "models")
+
 # ===============
 # PATHS END
 # ===============
@@ -28,7 +29,7 @@ DEFAULT_LOG_EVERY_N_STEPS = 100
 DEFAULT_DATASET_FRACTION = 1.0
 DEFAULT_LR = 1e-5
 DEFAULT_PRETRAINED = True
-DEFAULT_EPOCHS = 1000
+DEFAULT_EPOCHS = 2000
 DEFAULT_EARLY_STOPPING_NO_IMPROVEMENT_EPOCHS = 5
 DEFAULT_CHECK_ON_TRAIN_EPOCH_END = False
 DEFAULT_SAVE_ON_TRAIN_EPOCH_END = False
@@ -40,6 +41,7 @@ DEFAULT_WEIGHT_DECAY = 1e-5
 DEFAULT_LR_PLATEAU_FACTOR = 0.5
 DEFAULT_SANITY_CHECKS = False
 DEFUALT_TQDM_REFRESH = 20
+DEFAULT_AUDIO_EXTENSIONS = ["wav"]
 
 INSTRUMENT_TO_IDX = {
     "cel": 0,
@@ -79,7 +81,15 @@ ADDITIONAL_FEATURES = {
     "pop-roc": 4,
     "lat-sou": 5,
 }
+ADDITIONAL_FEATURES_TO_FULLNAME = {
+    "dru": "drums",
+    "nod": "no drums",
+    "cou-fol": "country folk",
+    "cla": "classical music",
+    "pop-roc": "pop rock",
+    "lat-sou": "latino soul",
+}
 
-DEFAULT_NUM_CLASSES = len(INSTRUMENT_TO_IDX)
+DEFAULT_NUM_LABELS = len(INSTRUMENT_TO_IDX)
 
-from config_local import *
+from src.config_local import *

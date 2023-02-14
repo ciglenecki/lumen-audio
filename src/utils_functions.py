@@ -26,7 +26,11 @@ T = TypeVar("T")
 
 def get_dirs_only(path: Path):
     """Return only top level directories in the path."""
-    return [d for d in (os.path.join(path, d1) for d1 in os.listdir(path)) if os.path.isdir(d)]
+    return [
+        d
+        for d in (os.path.join(path, d1) for d1 in os.listdir(path))
+        if os.path.isdir(d)
+    ]
 
 
 def tensor_sum_of_elements_to_one(tensor: torch.Tensor, dim):
@@ -34,7 +38,9 @@ def tensor_sum_of_elements_to_one(tensor: torch.Tensor, dim):
     return tensor / torch.sum(tensor, dim=dim, keepdim=True)
 
 
-def split_by_ratio(array: np.ndarray, *ratios, use_whole_array=False) -> list[np.ndarray]:
+def split_by_ratio(
+    array: np.ndarray, *ratios, use_whole_array=False
+) -> list[np.ndarray]:
     """Splits the ndarray for given ratios.
 
     Arguments:
@@ -63,35 +69,15 @@ def split_by_ratio(array: np.ndarray, *ratios, use_whole_array=False) -> list[np
         ratios = ratios / ratios.sum()
         ratios = np.around(ratios, 3)
     ind = np.add.accumulate(np.array(ratios) * len(array)).astype(int)
-    return [x.tolist() for x in np.split(array, ind)][: len(ratios)]
+    return [x for x in np.split(array, ind)][: len(ratios)]
 
 
-def get_train_test_indices(dataset: Dataset, test_size, dataset_frac=1.0, shuffle=True):
-    dataset_size = floor(
-        len(dataset) * dataset_frac
-    )  # type: ignore # - dataseta has length only __len__ is implemented
-    dataset_indices = np.arange(dataset_size)
-
-    if shuffle:
-        np.random.shuffle(dataset_indices)
-
-    test_split_index = int(np.floor(test_size * dataset_size))
-    train_indices, test_indices = (
-        dataset_indices[test_split_index:],
-        dataset_indices[:test_split_index],
-    )
-
-    train_len = test_split_index
-    test_len = len(dataset_indices) - test_split_index
-    return
+def get_timestamp(format="%m-%d-%H-%M-%S"):
+    return datetime.today().strftime(format)
 
 
-def get_timestamp():
-    return datetime.today().strftime("%m-%d-%H-%M-%S")
-
-
-def one_hot_encode(index: int, length: int):
-    zeros = np.zeros(shape=length)
+def one_hot_encode(index: int, size: int):
+    zeros = np.zeros(shape=size)
     zeros[index] = 1
     return zeros
 
@@ -109,13 +95,15 @@ def np_set_default_printoptions():
     )
 
 
-def npy_to_image(npy, y_true, y_pred=None):
+def npy_to_image(npy):
     return npy.transpose((1, 2, 0))
 
 
 def is_valid_dataset_split(array):
     if len(array) != 3 or sum(array) != 1:
-        raise argparse.ArgumentError(array, "There has to be 3 fractions (train, val, test) that sum to 1")
+        raise argparse.ArgumentError(
+            array, "There has to be 3 fractions (train, val, test) that sum to 1"
+        )
     return array
 
 
@@ -143,6 +131,9 @@ def is_valid_dir(arg):
 
 
 class SocketConcatenator:
+    """Merges multiple sockets (files) into one enabling writing to multiple sockets/files as
+    once."""
+
     def __init__(self, *files):
         self.files = files
 
@@ -157,7 +148,7 @@ class SocketConcatenator:
 
 
 def stdout_to_file(file: Path):
-    """Pipes standard input to standard input and to a file."""
+    """Pipes standard input to standard input and to a new file."""
     print("Standard output piped to file:")
     f = open(Path(file), "w")
     sys.stdout = SocketConcatenator(sys.stdout, f)
@@ -165,16 +156,28 @@ def stdout_to_file(file: Path):
 
 
 def reset_sockets():
+    """Reset stdout and stderr sockets."""
     sys.stdout = sys.__stdout__
     sys.stderr = sys.__stderr__
 
 
-def add_prefix_to_keys(dict: dict, prefix):
+def add_prefix_to_keys(dict: dict, prefix) -> dict:
+    """
+    Example:
+        dict = {"a": 1, "b": 2}
+        prefix = "text_"
+        returns {"text_a": 1, "text_b": 2}
+    """
     return {prefix + k: v for k, v in dict.items()}
 
 
-def flatten(t):
-    return [item for sublist in t for item in sublist]
+def flatten(list):
+    """
+    Example:
+        list = [[1, 2], [3, 4]]
+        returns [1, 2, 3, 4]
+    """
+    return [item for sublist in list for item in sublist]
 
 
 def print_df_sample(df: pd.DataFrame):
@@ -207,11 +210,30 @@ def timeit(func):
 
 
 class EnumStr(Enum):
-    def __str__(self):
-        return self.value
+    @classmethod
+    def keys(cls):
+        return [elem.value for elem in list(cls)]
+
+    @classmethod
+    def from_string(cls, s):
+        try:
+            return cls(s)
+        except KeyError:
+            raise ValueError()
 
 
 class MultiEnum(Enum):
+    """
+    Enum which accepts multiple values instead of a single value. This is useful alternative to dict key-value pairs.
+    Example:
+
+        class MyCubes(MultiEnum):
+            GREEN = GreenCube(), 'green'
+
+        MyCubes('green').value  # returns instance of GreenCube
+        MyCubes.GREEN.value     # returns instance of GreenCube
+    """
+
     def __new__(cls, *values):
         obj = object.__new__(cls)
         # first value is canonical value
@@ -219,7 +241,20 @@ class MultiEnum(Enum):
         for other_value in values[1:]:
             cls._value2member_map_[other_value] = obj
         obj._all_values = values  # type: ignore
+        if len(values) > 1:
+            obj.key = values[1]
         return obj
+
+    @classmethod
+    def keys(cls):
+        return [elem.key for elem in list(cls)]
+
+    @classmethod
+    def from_string(cls, s):
+        try:
+            return cls(s)
+        except KeyError:
+            raise ValueError()
 
     def __repr__(self):
         return "<{}.{}: {}>".format(
@@ -230,7 +265,6 @@ class MultiEnum(Enum):
 
 
 def to_yaml(data):
-    # return json.dumps(data, indent=2)
     return yaml.dump(data, allow_unicode=True, default_flow_style=False)
 
 

@@ -22,3 +22,7 @@ exclude_lines = [
 [tool.bandit]
 # tests = ["B201", "B301"]
 skips = ["B101", "B601", "B311"]
+
+[tool.pylint.'MESSAGES CONTROL']
+disable = ["C0301", "W0614"]
+generated-members = ["numpy.*", "torch.*"]
