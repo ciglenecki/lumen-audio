@@ -43,11 +43,11 @@ models/**
 
 
 # =============================================
-# Ignore anything with "ignoreme"
+# Ignore anything with:
 # =============================================
 *ignoreme*
 *.wav
-
+.directory
 
 # =============================================
 # https://raw.githubusercontent.com/github/gitignore/main/Python.gitignore
