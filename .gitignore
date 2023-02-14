@@ -12,8 +12,12 @@
 
 # unblock affected directory
 !data
+!data/irmas
+!data/irmas_combinatorics
+
 # block again everything else except the directory iteself
-data/**
+data/irmas/**
+data/irmas_combinatorics/**
 
 !docs
 !figures
@@ -46,7 +50,7 @@ models/**
 # Ignore anything with "ignoreme"
 # =============================================
 *ignoreme*
-
+*.wav
 
 
 # =============================================
