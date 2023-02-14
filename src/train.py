@@ -11,6 +11,7 @@ from pytorch_lightning.callbacks import (
     TQDMProgressBar,
 )
 
+from src.audio_transform import AudioTransformBase, AudioTransforms, get_audio_transform
 from src.callbacks import (
     LogMetricsAsHyperparams,
     OnTrainEpochStartLogCallback,
@@ -19,7 +20,6 @@ from src.callbacks import (
 from src.datamodule import IRMASDataModule
 from src.model import SupportedModels, get_model
 from src.train_args import parse_args_train
-from src.utils_audio import AudioTransformBase, AudioTransforms, get_audio_transform
 from src.utils_functions import (
     add_prefix_to_keys,
     get_timestamp,

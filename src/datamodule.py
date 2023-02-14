@@ -8,8 +8,8 @@ import pytorch_lightning as pl
 from torch.utils.data import DataLoader, SubsetRandomSampler
 
 import src.config_defaults as config_defaults
+from src.audio_transform import AudioTransformAST, AudioTransformBase
 from src.dataset import IRMASDatasetTest, IRMASDatasetTrain
-from src.utils_audio import AudioTransformAST, AudioTransformBase
 from src.utils_functions import split_by_ratio
 
 

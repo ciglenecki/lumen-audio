@@ -11,8 +11,8 @@ import pytorch_lightning as pl
 
 import src.config_defaults as config_defaults
 import src.utils_functions as utils_functions
+from src.audio_transform import AudioTransforms
 from src.model import SupportedModels
-from src.utils_audio import AudioTransforms
 from src.utils_train import MetricMode, OptimizeMetric, OptimizerType, SchedulerType
 
 ARGS_GROUP_NAME = "General arguments"

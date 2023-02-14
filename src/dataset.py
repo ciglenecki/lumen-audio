@@ -9,7 +9,7 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 
 import src.config_defaults as config_defaults
-from src.utils_audio import AudioTransformAST, AudioTransformBase
+from src.audio_transform import AudioTransformAST, AudioTransformBase
 from src.utils_dataset import multi_hot_indices
 
 # '*.(wav|mp3|flac)'
