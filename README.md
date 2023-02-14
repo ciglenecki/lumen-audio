@@ -1,48 +1,146 @@
-# lumen-audio
+# 🎸 Lumen Data Science 2023 – Audio Classification
 
-# Modeli
+## 📁 Directory structure
 
-## AST
+| Directory                 | Description                                         |
+| ------------------------- | --------------------------------------------------- |
+| [data](data/)             | datasets                                            |
+| [docs](docs/)             | documentation                                       |
+| [figures](figures/)       | figures                                             |
+| [models](models/)         | model checkpoints, model metadata, training reports |
+| [references](references/) | research papers and competition guidelines          |
+| [src](src/)               | python source code                                  |
 
-- They used 16kHz audios for the pretrained model, so if you want to use the pretrained model, please prepare your data in 16kHz.
+## 📋 Notes
 
-Pristup spektogram CNN:
+General links:
 
-- uzmi uzorak
-- rascjepaj ga na djelove po X sekundi
-- za svaki napravi spektogram
-- CNN inference
-  Uzorak (3sec)
-  Sekvenca, sastoji se od više uzoraka
-  Dulji uzorak, validacijski skup (5-20sec)
+- Audio Deep Learning Made Simple State-of-the-Art Techniques:
+  1. https://towardsdatascience.com/audio-deep-learning-made-simple-part-1-state-of-the-art-techniques-da1d3dff2504
+  2. https://towardsdatascience.com/audio-deep-learning-made-simple-part-2-why-mel-spectrograms-perform-better-aad889a93505
+  3. https://towardsdatascience.com/audio-deep-learning-made-simple-part-3-data-preparation-and-augmentation-24c6e1f6b52
+- paperswithcode Audio Classification: https://paperswithcode.com/task/audio-classification
+- Music and Instrument Classification using Deep Learning Technics: https://cs230.stanford.edu/projects_fall_2019/reports/26225883.pdf
+- AUDIO MANIPULATION WITH TORCHAUDIO: https://pytorch.org/tutorials/beginner/audio_preprocessing_tutorial.html
 
-how to create a sequence?
+### 🎵 Datasets
 
-- sakupi sve instrumente
-- napravi jednu sekvencu tako da uzmeš nekoliko .wavova
--
+IRMAS dataset https://www.upf.edu/web/mtg/irmas:
 
-uniform sample?
+- IRMAS Test dataset only contains the information about presence of the instruments. Drums and music genre information is **not present**.
+- examples:  6705
+- instruments: 11
+- duration: 3sec
 
-sequence -> Model -> classify
+NSynth: Neural Audio Synthesis https://magenta.tensorflow.org/datasets/nsynth
 
-istreniraj model prvo na čistim instrumentima
+- examples: 305 979
+- instruments: 1006
+- A novel WaveNet-style autoencoder model that learns codes that meaningfully represent the space of instrument sounds.
 
-finetunaj na sekvencama
+MusicNet:
 
-Kako enkodidarti žanr? Napraviti array klasa
-array \[dru, nod | cou-fol, cla \] has to be sent in the model
+- examples: 330
+- instruments: 11
+- duration: song
 
-## Dataset
+MedleyDB:
 
-Test set (ours) contains only information about presence of the instruments, genre and drums are not present.
+- examples: 122
+- instruments: 80
 
-## Preprocess
+OpenMIC-2018 https://zenodo.org/record/1432913#.W6dPeJNKjOR
 
-to one channel
-input to model: Mel-spectrogram
-Normazlie spectrograms (mean/std)
+- paper: http://ismir2018.ircam.fr/doc/pdfs/248_Paper.pdf
+- num examples: 20 000
+- instruments: 20
+- duration: 10sec
 
-## Augmentation
+### 💡⚙️ Models and training
 
-white nose before going to spectral dimension
+Problem: how to encode additional features (drums/no drums, music genre)? We can't create spectrogram out fo those arrays. Maybe simply append one hot encoded values after the spectrogram becomes 1D linear vector?
+
+#### BEATs
+
+Current state-of-the-art model for audio classification on multiple datasets and multiple metrics.
+
+paper: https://arxiv.org/pdf/2212.09058.pdf
+github: https://github.com/microsoft/unilm/tree/master/beats
+https://paperswithcode.com/sota/audio-classification-on-audioset
+
+#### AST
+
+- github: https://github.com/YuanGongND/ast
+- paper: https://arxiv.org/pdf/2104.01778.pdf
+- pretrained model: https://huggingface.co/MIT/ast-finetuned-audioset-10-10-0.4593
+- hugging face: https://huggingface.co/docs/transformers/model_doc/audio-spectrogram-transformer
+
+Notes:
+
+- They used 16kHz audio for the pretrained model, so if you want to use the pretrained model, please prepare your data in 16kHz
+
+Idea: introduce multiple MLP (fully conneted layer) heads. Each head will detect a single instrument instead of trying to detect all instruments at once.
+
+- [ ] explore how to implement this in PyTorch efficiently:
+  - https://ensemble-pytorch.readthedocs.io/en/latest/
+  - https://pytorch.org/functorch/stable/notebooks/ensembling.html
+
+Idea: train on single wav, then later introduce `irmas_combinatorics` dataset which contains multiple wav
+
+#### ➕ Ensamble
+
+Introduce SVM and train it additionally on high level features of spectrogram. For example, one can caculate entropy of a spectrogram for a given timeframe.
+
+### 🔊 Feature extraction
+
+https://pytorch.org/audio/stable/transforms.html
+https://pytorch.org/audio/stable/functional.html#feature-extractions
+
+#### Spectrogram
+
+note: in practice, Mel Spectrograms are used instead of classical spectrogram. We have to normazlie spectrograms images just like any other image dataset (mean/std).
+
+![](img/spectrogram.png)
+
+https://www.physik.uzh.ch/local/teaching/SPI301/LV-2015-Help/lvanls.chm/STFT_Spectrogram_Core.html#:~:text=frequency%20bins%20specifies%20the%20FFT,The%20default%20is%20512.
+
+Take an audio sequence and peform SFTF (Short-time Fourier transform) to get spectrums in multiple time intervals. The result is a 3D tensor (time, amplitude, spectrum). STFT has a time window size which is defined by a `sampling frequnecy`. It is also defined by a `window type`.
+
+### 🥴 Augmentations
+
+- https://pytorch.org/audio/main/tutorials/audio_feature_augmentation_tutorial.html#specaugment
+- https://pytorch.org/audio/stable/transforms.html#augmentations
+- https://pytorch.org/audio/stable/generated/torchaudio.sox_effects.effect_names.html#torchaudio.sox_effects.effect_names
+
+#### Audio augmentations
+
+- white noise
+- time shift
+- amplitude change / normalization
+
+<details open>
+<summary>PyTorch Sox effects</summary>
+
+allpass, band, bandpass, bandreject, bass, bend, biquad, chorus, channels, compand, contrast, dcshift, deemph, delay, dither, divide, downsample, earwax, echo, echos, equalizer, fade, fir, firfit, flanger, gain, highpass, hilbert, loudness, lowpass, mcompand, norm, oops, overdrive, pad, phaser, pitch, rate, remix, repeat, reverb, reverse, riaa, silence, sinc, speed, stat, stats, stretch, swap, synth, tempo, treble, tremolo, trim, upsample, vad, vol
+
+</details>
+
+#### Spectrum augmentations
+
+SpecAugment: https://ai.googleblog.com/2019/04/specaugment-new-data-augmentation.html
+SpecAugment PyTorch: https://github.com/zcaceres/spec_augment
+SpecAugment torchaudio: https://pytorch.org/audio/main/tutorials/audio_feature_augmentation_tutorial.html#specaugment
+
+### 🔀 Data generation
+
+Naive: concat multiple audio sequences into one and merge their labels. Introduce some overlapping, but not too much!
+
+## 🏆 Team members
+
+<table>
+  <tr>
+    <td align="center"><a href="https://github.com/VinkoGitHub"><img src="https://avatars.githubusercontent.com/u/32898681?v=4" width="100px;" alt=""/><br /><sub><b>Vinko Dragušica</b></sub><br /></td>
+    <td align="center"><a href="https://github.com/mirxonius"><img src="https://avatars.githubusercontent.com/u/102659128?v=4" width="100px;" alt=""/><br /><sub><b>Filip Mirković</b></sub></a><br /></td>
+   <td align="center"><a href="https://github.com/ir2718"><img src="https://avatars.githubusercontent.com/u/94498051?v=4" width="100px;" alt=""/><br /><sub><b>Ivan Rep</b></sub></a><br /></td>
+    <td align="center"><a href="https://github.com/ciglenecki"><img src="https://avatars.githubusercontent.com/u/12819849?v=4" width="100px;" alt=""/><br /><sub><b>Matej Ciglenečki</b></sub></a><br /></td>
+</table>
