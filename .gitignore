@@ -1,14 +1,37 @@
 # =============================================
 # Excludes everything except paths with exclamation (!)
 # =============================================
-*
+
+/*/
+
+
+# =============================================
+# Directories
+# =============================================
+
+
+# unblock affected directory
+!data
+# block again everything else except the directory iteself
+data/**
+
+!docs
+!figures
+!models
+models/**
+!references
+!Dockerfile
+!LICENSE
+!README.md
+!references
+!src
 
 # =============================================
 # Top level files
 # =============================================
-!**/.gitkeep
-!**/.py
-!**/.md
+!/**/.gitkeep
+!/**/.py
+!/**/.md
 
 !.project-root
 !.flake8
@@ -20,26 +43,10 @@
 
 
 # =============================================
-# Directories
-# =============================================
-!data/**/.gitkeep
-!data/**/*.md
-!docs
-!figures
-!models/.gitkeep
-!references
-!Dockerfile
-!LICENSE
-!README.md
-!references
-!src/
-
-# =============================================
 # Ignore anything with "ignoreme"
 # =============================================
 *ignoreme*
 
-!*/
 
 
 # =============================================
