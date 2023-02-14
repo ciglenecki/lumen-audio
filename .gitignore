@@ -12,12 +12,8 @@
 
 # unblock affected directory
 !data
-!data/irmas
-!data/irmas_combinatorics
-
-# block again everything else except the directory iteself
-data/irmas/**
-data/irmas_combinatorics/**
+data/**/*.txt
+data/**/*.wav
 
 !docs
 !figures
