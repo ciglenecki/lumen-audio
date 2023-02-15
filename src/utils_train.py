@@ -1,6 +1,6 @@
 import torch
 
-from utils_functions import EnumStr
+from src.utils_functions import EnumStr
 
 
 class SchedulerType(EnumStr):
@@ -15,12 +15,28 @@ class OptimizerType(EnumStr):
 
 
 class MetricMode(EnumStr):
-    min = "min"
-    max = "max"
+    MIN = "min"
+    MAX = "max"
 
 
 class OptimizeMetric(EnumStr):
     VAL_HAMMING = "val/hamming_acc"
+
+
+class SupportedModels(EnumStr):
+    AST = "ast"
+
+
+class UnsupportedOptimizer(ValueError):
+    pass
+
+
+class UnsupportedScheduler(ValueError):
+    pass
+
+
+class UnsupportedModel(ValueError):
+    pass
 
 
 def multi_acc(y_pred_log, y_test):

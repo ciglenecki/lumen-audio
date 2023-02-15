@@ -7,6 +7,7 @@ torchaudio
 pytorch-lightning
 torchmetrics
 scipy
+tensorboard
 tensorboardX
 librosa
 

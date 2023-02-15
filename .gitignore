@@ -1,53 +1,22 @@
 # =============================================
-# Excludes everything except paths with exclamation (!)
+# Ignore directories
 # =============================================
 
-/*/
-
-
-# =============================================
-# Directories
-# =============================================
-
-
-# unblock affected directory
-!data
 data/**/*.txt
 data/**/*.wav
-
-!docs
-!figures
-!img
-!models
 models/**
-!references
-!Dockerfile
-!LICENSE
-!README.md
-!references
-!src
 
 # =============================================
-# Top level files
+# Ignore files
 # =============================================
-!/**/.gitkeep
-!/**/.py
-!/**/.md
 
-!.project-root
-!.flake8
-!.gitignore
-!Makefile
-!*.yaml
-!*.toml
-
-
-# =============================================
-# Ignore anything with:
-# =============================================
+*.ckpt
 *ignoreme*
+*.mp3
 *.wav
+*.zip
 .directory
+.vscode
 
 # =============================================
 # https://raw.githubusercontent.com/github/gitignore/main/Python.gitignore

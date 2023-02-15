@@ -8,12 +8,18 @@ from __future__ import annotations
 import argparse
 
 import pytorch_lightning as pl
+import torch
 
 import src.config_defaults as config_defaults
 import src.utils_functions as utils_functions
 from src.audio_transform import AudioTransforms
-from src.model import SupportedModels
-from src.utils_train import MetricMode, OptimizeMetric, OptimizerType, SchedulerType
+from src.utils_train import (
+    MetricMode,
+    OptimizeMetric,
+    OptimizerType,
+    SchedulerType,
+    SupportedModels,
+)
 
 ARGS_GROUP_NAME = "General arguments"
 
@@ -25,6 +31,8 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
     lightning_parser.set_defaults(
         log_every_n_steps=config_defaults.DEFAULT_LOG_EVERY_N_STEPS,
         max_epochs=config_defaults.DEFAULT_EPOCHS,
+        accelerator="gpu" if torch.cuda.is_available() else "cpu",
+        devices=-1,  # use all devices
     )
 
     user_group = parser.add_argument_group(ARGS_GROUP_NAME)
@@ -155,6 +163,7 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         "--patience",
         help="Number of checks with no improvement after which training will be stopped. Under the default configuration, one check happens after every training epoch",
         metavar="int",
+        default=config_defaults.DEFAULT_EARLY_STOPPING_NO_IMPROVEMENT_EPOCHS,
         type=utils_functions.is_positive_int,
     )
 
@@ -215,9 +224,9 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
 
     """User arguments which override PyTorch Lightning arguments"""
     if args.quick:
-        pl_args.limit_train_batches = 4
-        pl_args.limit_val_batches = 4
-        pl_args.limit_test_batches = 4
+        pl_args.limit_train_batches = 5
+        pl_args.limit_val_batches = 5
+        pl_args.limit_test_batches = 5
         pl_args.log_every_n_steps = 1
         args.batch_size = 2
 

@@ -9,24 +9,16 @@ from transformers import ASTConfig, ASTFeatureExtractor, ASTForAudioClassificati
 from transformers.modeling_outputs import SequenceClassifierOutput
 
 import src.config_defaults as config_defaults
-from src.utils_functions import EnumStr
-from src.utils_train import MetricMode, OptimizeMetric, OptimizerType, SchedulerType
-
-
-class UnsupportedOptimizer(ValueError):
-    pass
-
-
-class UnsupportedScheduler(ValueError):
-    pass
-
-
-class UnsupportedModel(ValueError):
-    pass
-
-
-class SupportedModels(EnumStr):
-    AST = "ast"
+from src.utils_train import (
+    MetricMode,
+    OptimizeMetric,
+    OptimizerType,
+    SchedulerType,
+    SupportedModels,
+    UnsupportedModel,
+    UnsupportedOptimizer,
+    UnsupportedScheduler,
+)
 
 
 class ASTModelWrapper(pl.LightningModule):
@@ -41,7 +33,7 @@ class ASTModelWrapper(pl.LightningModule):
         batch_size: int = config_defaults.DEFAULT_BATCH_SIZE,
         scheduler_type: SchedulerType = SchedulerType.PLATEAU,
         max_epochs: Optional[int] = None,
-        optimizer_type: OptimizerType = OptimizerType.ADAM,
+        optimizer_type: OptimizerType = config_defaults.DEFAULT_OPTIMIZER,
         model_name: str = config_defaults.DEFAULT_AST_PRETRAINED_TAG,
         num_labels: int = config_defaults.DEFAULT_NUM_LABELS,
         optimization_metric: OptimizeMetric = config_defaults.DEFAULT_OPTIMIZE_METRIC,
@@ -73,6 +65,7 @@ class ASTModelWrapper(pl.LightningModule):
             label2id=config_defaults.IDX_TO_INSTRUMENT,
             num_labels=num_labels,
             finetuning_task="audio-classification",
+            problem_type="multi_label_classification",
         )
 
         self.backbone: ASTForAudioClassification = (
@@ -208,7 +201,7 @@ class ASTModelWrapper(pl.LightningModule):
         config_dict = {
             "optimizer": optimizer,
             "lr_scheduler": {
-                "monitor": self.optimization_metric,  # "val/loss_epoch",
+                "monitor": self.optimization_metric.value,  # "val/loss_epoch",
                 # How many epochs/steps should pass between calls to `scheduler.step()`.1 corresponds to updating the learning  rate after every epoch/step.
                 # If "monitor" references validation metrics, then "frequency" should be set to a multiple of "trainer.check_val_every_n_epoch".
                 "frequency": 1,

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pyrootutils
 
-from src.utils_train import MetricMode, OptimizeMetric
+from src.utils_train import MetricMode, OptimizeMetric, OptimizerType
 
 # ===============
 # PATHS START
@@ -35,8 +35,9 @@ DEFAULT_CHECK_ON_TRAIN_EPOCH_END = False
 DEFAULT_SAVE_ON_TRAIN_EPOCH_END = False
 DEFAULT_SAMPLING_RATE = 16_000
 DEFAULT_AST_PRETRAINED_TAG = "MIT/ast-finetuned-audioset-10-10-0.4593"
+DEFAULT_OPTIMIZER = OptimizerType.ADAMW
 DEFAULT_OPTIMIZE_METRIC = OptimizeMetric.VAL_HAMMING
-DEFAULT_METRIC_MODE = MetricMode.max
+DEFAULT_METRIC_MODE = MetricMode.MAX
 DEFAULT_WEIGHT_DECAY = 1e-5
 DEFAULT_LR_PLATEAU_FACTOR = 0.5
 DEFAULT_SANITY_CHECKS = False

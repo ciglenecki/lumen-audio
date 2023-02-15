@@ -11,14 +11,14 @@ from pytorch_lightning.callbacks import (
     TQDMProgressBar,
 )
 
-from src.audio_transform import AudioTransformBase, AudioTransforms, get_audio_transform
+from src.audio_transform import AudioTransformBase, get_audio_transform
 from src.callbacks import (
     LogMetricsAsHyperparams,
     OnTrainEpochStartLogCallback,
     OverrideEpochMetricCallback,
 )
 from src.datamodule import IRMASDataModule
-from src.model import SupportedModels, get_model
+from src.model import get_model
 from src.train_args import parse_args_train
 from src.utils_functions import (
     add_prefix_to_keys,
@@ -114,6 +114,7 @@ if __name__ == "__main__":
         name=experiment_name,
         default_hp_metric=False,  # default_hp_metric should be turned off unless you log hyperparameters (logger.log_hyperparams(dict)) before the module starts with training
         log_graph=True,
+        version=".",
     )
 
     tensorboard_logger.log_hyperparams(log_dictionary)
