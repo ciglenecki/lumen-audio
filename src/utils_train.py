@@ -1,6 +1,6 @@
 import torch
 
-from utils_functions import EnumStr
+from src.utils_functions import EnumStr
 
 
 class SchedulerType(EnumStr):
