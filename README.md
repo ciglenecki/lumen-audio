@@ -4,6 +4,63 @@ Check the code architecture drawing: https://docs.google.com/drawings/d/1DDG480M
 
 ![](img/code_arh.png)
 
+## Notes:
+
+- todo (matej): fix dataset class extraction (one instrument has the same name as genre)
+
+- todo matej: poslat vinku za klasicne znacajke
+
+- data generation: use same genre for data generation (ako radimo nove zvukove koristiti zvukove iz žanrova)
+
+  - pristupi za generiranje
+  - \[x, x, x\] .wav
+  - duljina audio skvence (3 - 5) # train -> | | | | |
+  - broj instrumenta koji će pojaviti u sekvnci (2-4) uzeti samo iz istog žanra(?)
+  - vremenski trenuci u kojima instrument počinje ^
+    ______________________________________________________________________
+    x  x      xx
+    ______________________________________________________________________
+
+- annotation: neki podaci u trainu imaju dodatne instrumente, treba proći filove i označiti instrumente koji se pojavljuju a nisu označeni
+
+  - možda napraviti random sample od n=300 i provjeritit koji udio filoeva ima kirvo označene podatke
+  - provjeritit što je s validacijskim podacima
+
+- napraviti poseban model koji moze raspoznati znacjke, žanr i bubnjevi (oprez, ukupna veličina je ~2 veća)
+
+  - (             ) => () distiling
+  - kreni možda rađe od manjeg
+
+- audio značajke u kontekstu SVM-a (klasične old school značajke) => baseline
+
+  - https://en.wikipedia.org/wiki/Mel-frequency_cepstrum
+
+- koristiti manji CNN (efficient-v2-small, imagenet) za brže prototipiranje značajki i augemtancije
+
+  - kakav spektrogram (varijablinost duljine u kontestu CNN-a )
+  - kakve augmetnacije
+  - kakve metode generiranje novih audio podataka (audio preklapanja, audio konkartnacije)
+
+- Monolith (Kiklop) vs multi-head (Fluffy / Hydra):
+
+  - problem with multi-head: broj parametara ovisi o broju instrumenta. To vrijedi i za običan model koji nije multi-head ali ovom slučaju je taj problem naglašeniji jer dodajemo cijeli jedan FC umjesto jedan redak u matrici (neuron) u postojećem FC-u.
+  - problem with multi-head: disbalanas klase, koja je dobra loss funckija i hoće li treniranje biti uspješno?
+  - problem Kiklop: nužna augmentacija
+
+- Normalizacija zvuka
+
+  - normalizirati zvuk na po amplitudi (nekako??)
+  - normalizirati spektrogram (isti postupak i klasična normalizacija slika)
+
+- geneirranje spektrograma pomoću maskiranja (transformeri)
+
+  - Masked Autoencoders Are Scalable Vision Learners: https://arxiv.org/abs/2111.06377
+
+Matej: AST
+Mirko: Fluffy modul za efficentv2/ast, valične pizdarije i te gluposti
+Vinko: Augmetnacija, audio značajke u kontekstu SVM-a
+Rep: re-labeliranje Label Studio (todo: matej, pripremiti podatke)
+
 ## Setup
 
 ### Python Virtual Environment
