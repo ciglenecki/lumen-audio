@@ -79,6 +79,9 @@ class ASTModelWrapper(pl.LightningModule):
             task="multilabel", num_labels=num_labels
         )
 
+        # save in case indices change with config changes
+        self.backup_instruments = config_defaults.INSTRUMENT_TO_IDX
+
         self.save_hyperparameters()
 
     def _test_forward(self):

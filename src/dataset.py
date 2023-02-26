@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 import librosa
@@ -10,11 +11,15 @@ from tqdm import tqdm
 
 import src.config_defaults as config_defaults
 from src.audio_transform import AudioTransformAST, AudioTransformBase
-from src.utils_dataset import multi_hot_indices
+from src.utils_dataset import encode_drums, encode_genre, multi_hot_indices
 
 # '*.(wav|mp3|flac)'
 # glob_expression = f"*\.({'|'.join(config_defaults.DEFAULT_AUDIO_EXTENSIONS)})"
 glob_expression = "*.wav"
+
+
+class InvalidDataException(Exception):
+    """Something is wrong with the data."""
 
 
 class IRMASDatasetTrain(Dataset):
@@ -60,24 +65,37 @@ class IRMASDatasetTrain(Dataset):
         for dataset_dir in self.dataset_dirs:
             for audio_path in tqdm(dataset_dir.rglob(glob_expression)):
                 filename = str(audio_path.stem)
+                characteristics = re.findall(
+                    r"\[(.*?)\]", filename
+                )  # 110__[org][dru][jaz_blu]1117__2 => ["org", "dru", "jaz_blue"]
+
+                drums, genre = None, None
+                if len(characteristics) == 2:
+                    instrument, genre = characteristics
+                elif len(characteristics) == 3:
+                    instrument, drums, genre = characteristics
+                else:
+                    raise InvalidDataException(filename)
+
+                drums_vector = encode_drums(drums)
+                genre_vector = encode_genre(genre)
+
                 instrument_indices = []
-                for instrument in config_defaults.INSTRUMENT_TO_IDX.keys():
-                    if f"[{instrument}]" in filename:
-                        instrument_indices.append(
-                            config_defaults.INSTRUMENT_TO_IDX[instrument]
-                        )
+                instrument_indices.append(config_defaults.INSTRUMENT_TO_IDX[instrument])
+
                 labels = multi_hot_indices(
                     instrument_indices,
                     config_defaults.DEFAULT_NUM_LABELS,
                 )
-                self.dataset.append((audio_path, labels))
+
+                self.dataset.append((audio_path, labels, drums_vector, genre_vector))
 
     def __len__(self) -> int:
         return len(self.dataset)
 
     def __getitem__(self, index):
 
-        audio_path, labels = self.dataset[index]
+        audio_path, labels, drums_vector, genre_vector = self.dataset[index]
         audio, orig_sampling_rate = librosa.load(audio_path, sr=None)
         spectrogram, labels = self.audio_transform.process(
             audio=audio,
@@ -160,5 +178,5 @@ class InstrumentInference(Dataset):
     pass
 
 
-if __name__ == "__main__":
-    IRMASDatasetTest().__getitem__(0)
+if __name__ == "__main__":  # for testing only
+    ds = IRMASDatasetTrain()
