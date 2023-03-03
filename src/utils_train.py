@@ -20,7 +20,7 @@ class MetricMode(EnumStr):
 
 
 class OptimizeMetric(EnumStr):
-    VAL_HAMMING = "val/hamming_acc"
+    VAL_HAMMING = "val/hamming_distance"
 
 
 class SupportedModels(EnumStr):

@@ -3,8 +3,10 @@ from typing import Any, Optional
 import pytorch_lightning as pl
 import torch
 import torchmetrics
+from pytorch_lightning.callbacks import ModelSummary
 from pytorch_lightning.loggers import TensorBoardLogger
 from scipy.io import wavfile
+from torchsummary import summary
 from transformers import ASTConfig, ASTFeatureExtractor, ASTForAudioClassification
 from transformers.modeling_outputs import SequenceClassifierOutput
 
@@ -75,6 +77,20 @@ class ASTModelWrapper(pl.LightningModule):
                 ignore_mismatched_sizes=True,
             )
         )  # type: ignore
+
+        # FREEZING THE ENCODER
+        for param in self.backbone.audio_spectrogram_transformer.parameters():
+            param.requires_grad = False
+
+        # for param in self.backbone.audio_spectrogram_transformer.encoder.parameters():
+        #     param.requires_grad = False
+
+        # FREEZING LAST 2 LAYERS
+        # num_layers = len(self.backbone.audio_spectrogram_transformer.encoder.layer)
+        # for i in list(range(num_layers))[-2:]:
+        #     for param in self.backbone.audio_spectrogram_transformer.encoder.layer[i].parameters():
+        #         param.requires_grad = True
+
         self.hamming_distance = torchmetrics.HammingDistance(
             task="multilabel", num_labels=num_labels
         )
@@ -114,12 +130,12 @@ class ASTModelWrapper(pl.LightningModule):
 
         loss, logits_pred = self.forward(audio, labels=y)
         y_pred = torch.sigmoid(logits_pred) > (1 / self.num_labels)
-        hamming_acc = self.hamming_distance(y, y_pred)
+        hamming_distance = self.hamming_distance(y, y_pred)
 
         data_dict = {
             "loss": loss,  # the 'loss' key needs to be present
             "train/loss": loss,
-            "train/hamming_acc": hamming_acc,
+            "train/hamming_distance": hamming_distance,
         }
 
         log_dict = data_dict.copy()
@@ -133,12 +149,12 @@ class ASTModelWrapper(pl.LightningModule):
         loss, logits_pred = self.forward(audio, labels=y)
         y_pred = torch.sigmoid(logits_pred) > (1 / self.num_labels)
 
-        hamming_acc = self.hamming_distance(y, y_pred)
+        hamming_distance = self.hamming_distance(y, y_pred)
 
         data_dict = {
             "loss": loss,  # the 'loss' key needs to be present
             "val/loss": loss,
-            "val/hamming_acc": hamming_acc,
+            "val/hamming_distance": hamming_distance,
         }
 
         log_dict = data_dict.copy()
@@ -153,12 +169,12 @@ class ASTModelWrapper(pl.LightningModule):
         loss, logits_pred = self.forward(audio, labels=y)
         y_pred = torch.sigmoid(logits_pred) > (1 / self.num_labels)
 
-        hamming_acc = self.hamming_distance(y, y_pred)
+        hamming_distance = self.hamming_distance(y, y_pred)
 
         data_dict = {
             "loss": loss,  # the 'loss' key needs to be present
             "test/loss": loss,
-            "test/hamming_acc": hamming_acc,
+            "test/hamming_distance": hamming_distance,
         }
 
         log_dict = data_dict.copy()
@@ -270,9 +286,15 @@ def get_model(args, pl_args):
             model_name=config_defaults.DEFAULT_AST_PRETRAINED_TAG,
             num_labels=args.num_labels,
         )
+
         return model
     raise UnsupportedModel(f"Model {model_enum.value} is not supported")
 
 
 if __name__ == "__main__":
+    model = ASTModelWrapper()
+    summary(
+        model,
+    )
+    ModelSummary(model, max_depth=-1)
     pass
