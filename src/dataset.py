@@ -96,7 +96,7 @@ class IRMASDatasetTrain(Dataset):
 
     def __getitem__(self, index):
         audio_path, labels, drums_vector, genre_vector = self.dataset[index]
-        audio, orig_sampling_rate = librosa.load(audio_path)  # , sr=None)
+        audio, orig_sampling_rate = librosa.load(audio_path, sr=None)
         spectrogram, labels = self.audio_transform.process(
             audio=audio,
             labels=labels,
