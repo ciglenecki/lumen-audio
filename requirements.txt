@@ -10,6 +10,9 @@ scipy
 tensorboard
 tensorboardX
 librosa
+torcheval
+torchmetrics
+
 
 # --------- others --------- #
 pyrootutils     # standardizing the project root setup
