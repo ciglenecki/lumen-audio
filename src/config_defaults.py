@@ -44,7 +44,7 @@ DEFAULT_LR_PLATEAU_FACTOR = 0.5
 DEFAULT_SANITY_CHECKS = False
 DEFUALT_TQDM_REFRESH = 20
 DEFAULT_AUDIO_EXTENSIONS = ["wav"]
-DEFAULT_MULTI_TASK = True  # False
+DEFAULT_MULTI_TASK = False  # True
 
 # ===============
 # KEYS START
@@ -102,8 +102,9 @@ class DrumKeys(Enum):
     NOT_PRESENT = "nod"
 
 
-DRUMS_TO_IDX = {  # no drums is 0 at DrumKeys.IS_PRESENT
-    DrumKeys.UNKNOWN.value: 0,
+DRUMS_TO_IDX = {
+    DrumKeys.UNKNOWN.value: -1,
+    DrumKeys.NOT_PRESENT.value: 0,
     DrumKeys.IS_PRESENT.value: 1,
 }
 IDX_TO_DRUMS = {v: k for k, v in DRUMS_TO_IDX.items()}

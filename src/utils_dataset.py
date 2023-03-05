@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 from src import config_defaults
 
@@ -7,70 +8,54 @@ class InvalidDataException(Exception):
     pass
 
 
-def encode_drums(drum: str | None) -> np.ndarray:
-    """Return [unknown_drum, drum/no_drum]
+def encode_drums(drum: str | None, return_tensors: bool = False) -> np.ndarray:
+    """Return [drum/no_drum]
     Example
         drum = None
-        returns [1, 0]
+        returns -1
 
     Example
         drum = DrumKeys.IS_PRESENT
-        returns [0, 1]
+        returns 1
 
     Example
         drum = DrumKeys.NOT_PRESENT
         genre = None
-        returns [0, 0]
+        returns 0
     """
-    array = np.zeros(len(config_defaults.DRUMS_TO_IDX), dtype=np.int8)
-
     if drum is None or drum == "---":
         drum = config_defaults.DrumKeys.UNKNOWN.value
 
-    if not drum == config_defaults.DrumKeys.NOT_PRESENT.value:
-        drum_index = config_defaults.DRUMS_TO_IDX[
-            drum
-        ]  # "unknown-dru" or DrumKeys.IS_PRESENT
-        array[drum_index] = 1
+    drum = [config_defaults.DRUMS_TO_IDX[drum]]
 
-    return array
+    return torch.tensor(drum) if return_tensors else drum
 
 
-def decode_drums(one_hot: np.ndarray) -> tuple[str | None]:
-    """Return key from one hot encoded drum vector."""
-    indices = np.where(one_hot == 1)[0]
-
-    if len(indices) == 0:
-        return config_defaults.DrumKeys.NOT_PRESENT.value
-
-    if len(indices) != 1:
-        raise InvalidDataException(f"Has to be one hot encoded vector {indices}")
-
-    i = indices[0]
-    return config_defaults.IDX_TO_DRUMS[i]
+def decode_drums(value: np.ndarray) -> str | None:
+    """Return key from drum value."""
+    return config_defaults.IDX_TO_DRUMS[value[0]]
 
 
-def encode_genre(genre: str | None) -> np.ndarray:
-    """Return [unknown_drum, drum/no_drum, cou-fol, cla, pop-roc, lat-sou]. If unknown_drum is 1
-    drum/no_drum should be ignored?
+def encode_genre(genre: str | None, return_tensors: bool = False) -> np.ndarray:
+    """Return [cou-fol, cla, pop-roc, lat-sou, jaz-blu].
 
     Example
         genre = "cou-fol"
-        returns [1, 0, 1, 0, 0, 0]
+        returns [1, 0, 0, 0, 0]
 
     Example
-        genre = "cou-fol"
-        returns [0, 1, 1, 0, 0, 0]
+        genre = "cla"
+        returns [0, 1, 0, 0, 0]
 
     Example
         genre = None
-        returns [0, 0, 0, 0, 0, 0]
+        returns [0, 0, 0, 0, 0]
 
     Args:
         genre: <genre> | None
 
     Returns:
-        np.ndarray: multi-hot label of size `size`
+        np.ndarray: one-hot label of size `size`
     """
 
     array = np.zeros(len(config_defaults.GENRE_TO_IDX), dtype=np.int8)
@@ -78,7 +63,7 @@ def encode_genre(genre: str | None) -> np.ndarray:
         return array
     genre_index = config_defaults.GENRE_TO_IDX[genre]
     array[genre_index] = 1
-    return array
+    return torch.tensor(array) if return_tensors else array
 
 
 def decode_genre(one_hot: np.ndarray) -> tuple[str | None]:
@@ -117,7 +102,14 @@ def multi_hot_indices(indices: np.ndarray | list, size: int) -> np.ndarray:
 
 
 if __name__ == "__main__":
-    assert decode_genre(encode_genre(None)) == "unknown-genre"
-    for genre in config_defaults.GENRE_TO_IDX.keys():
-        assert decode_genre(encode_genre(genre)) == genre
-    assert decode_drums(encode_drums(None)) == "unknown-dru"
+    assert decode_drums(encode_drums(None))
+    assert decode_drums(encode_drums("---"))
+    assert decode_drums(encode_drums("unknown-dru"))
+    assert decode_drums(encode_drums("dru"))
+    assert decode_drums(encode_drums("nod"))
+    assert decode_genre(encode_genre(None))
+    assert decode_genre(encode_genre("cou_fol"))
+    assert decode_genre(encode_genre("cla"))
+    assert decode_genre(encode_genre("pop_roc"))
+    assert decode_genre(encode_genre("lat_sou"))
+    assert decode_genre(encode_genre("jaz_blu"))

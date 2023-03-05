@@ -87,7 +87,10 @@ class EfficientNetV2SmallModel(pl.LightningModule):
         return out
 
     def _step(self, batch, batch_idx, type="train"):
-        audio, y = batch
+        if type == "train":
+            audio, y, _, _ = batch
+        else:
+            audio, y = batch
 
         logits_pred = self.forward(audio)
         loss = self.loss(logits_pred, y)
@@ -210,39 +213,31 @@ class EfficientNetV2SmallMultiTaskModel(EfficientNetV2SmallModel):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.backbone = nn.Sequential(*(list(self.backbone.children())[:-1]))
-        self.instrument_fc = nn.Sequential(
-            nn.Dropout(p=0.2, inplace=False),
-            nn.Linear(in_features=1280, out_features=11, bias=True),
+        self.backbone = nn.Sequential(
+            *(list(self.backbone.children())[:-1]), nn.Dropout(p=0.2, inplace=True)
         )
-        self.drum_fc = nn.Sequential(
-            nn.Dropout(p=0.2, inplace=False),
-            nn.Linear(in_features=1280, out_features=2, bias=True),  # dru, nod
-        )
-        self.genre_fc = nn.Sequential(
-            nn.Dropout(p=0.2, inplace=False),
-            nn.Linear(
-                in_features=1280, out_features=5, bias=True
-            ),  # jaz-blu, cla, pop-roc, lat-sou, cou-fol
-        )
+        self.instrument_fc = nn.Linear(in_features=1280, out_features=11, bias=True)
+        self.drum_fc = nn.Linear(
+            in_features=1280, out_features=1, bias=True
+        )  # dru, nod encoded as 0 or 1
+        self.genre_fc = nn.Linear(
+            in_features=1280, out_features=5, bias=True
+        )  # jaz_blu, cla, pop_roc, lat_sou, cou_fol encoded as one-hot vector
+        self.genre_loss = nn.CrossEntropyLoss()
 
     def forward(self, audio: torch.Tensor):
-        out = self.backbone.forward(audio).squeeze()
+        out = self.backbone.forward(audio["input"]).squeeze()
         instrument_out = self.instrument_fc(out)
-        drum_out = self.drum_fc(out)
-        genre_out = self.genre_fc(out)
+        drum_out = self.drum_fc(out[audio["drum_indices"]])
+        genre_out = self.genre_fc(out[audio["genre_indices"]])
         return instrument_out, drum_out, genre_out
 
-    def _step(self, batch, batch_idx, type="train"):
-        audio, y, y_drum, y_genre = batch
+    def forward_inference(self, audio: torch.Tensor):
+        out = self.backbone.forward(audio).squeeze()
+        instrument_out = self.instrument_fc(out)
+        return instrument_out
 
-        logits_pred, logits_pred_drum, logits_pred_genre = self.forward(audio)
-        loss = self.loss(logits_pred, y)
-        if y_drum is not None:
-            loss += self.loss(logits_pred_drum, y_drum.float())
-        if y_genre is not None:
-            loss += self.loss(logits_pred_genre, y_genre.float())
-
+    def _calculate_metrics(self, logits_pred, y, loss, type):
         y_pred = torch.sigmoid(logits_pred) > 0.5
         hamming_acc = self.hamming_distance(y, y_pred)
         f1_score = self.f1_score(y, y_pred)
@@ -257,17 +252,47 @@ class EfficientNetV2SmallMultiTaskModel(EfficientNetV2SmallModel):
         log_dict = data_dict.copy()
         log_dict.pop("loss", None)
         self.log_dict(log_dict, on_step=True, on_epoch=True, logger=True, prog_bar=True)
-
         return data_dict
 
     def training_step(self, batch, batch_idx):
-        return self._step(batch, batch_idx, type="train")
+        audio, y, y_drum, y_genre = batch
+
+        audio_dict = {
+            "input": audio,
+            "drum_indices": (y_drum != -1).nonzero()[:, 0],
+            "genre_indices": (y_genre != 0).any(dim=1).nonzero().T.squeeze(),
+        }
+
+        logits_pred, logits_pred_drum, logits_pred_genre = self.forward(audio_dict)
+        loss = self.loss(logits_pred, y)
+
+        if y_drum is not None:
+            loss += self.loss(
+                logits_pred_drum, y_drum[audio_dict["drum_indices"]].float()
+            )
+
+        if y_genre is not None:
+            loss += self.genre_loss(
+                logits_pred_genre, y_genre[audio_dict["genre_indices"]].float()
+            )
+
+        data_dict = self._calculate_metrics(logits_pred, y, loss, type="train")
+
+        return data_dict
 
     def validation_step(self, batch, batch_idx):
-        return self._step((*batch, None, None), batch_idx, type="val")
+        audio, y = batch
+        logits_pred = self.forward_inference(audio)
+        loss = self.loss(logits_pred, y)
+        data_dict = self._calculate_metrics(logits_pred, y, loss, type="val")
+        return data_dict
 
     def test_step(self, batch, batch_idx):
-        return self._step((*batch, None, None), batch_idx, type="test")
+        audio, y = batch
+        logits_pred = self.forward_inference(audio)
+        loss = self.loss(logits_pred, y)
+        data_dict = self._calculate_metrics(logits_pred, y, loss, type="test")
+        return data_dict
 
 
 #############################################################################################################
@@ -362,12 +387,10 @@ class ASTModelWrapper(pl.LightningModule):
         return out.loss, out.logits
 
     def _step(self, batch, batch_idx, type="train"):
-        audio, y = batch
+        audio, y, _, _ = batch
 
         loss, logits_pred = self.forward(audio, labels=y)
-        y_pred = torch.sigmoid(logits_pred) > (
-            1 / self.num_labels
-        )  # mislim da ovdje treba ici > 0.5
+        y_pred = torch.sigmoid(logits_pred) > 0.5
         hamming_acc = self.hamming_distance(y, y_pred)
 
         data_dict = {
@@ -383,15 +406,12 @@ class ASTModelWrapper(pl.LightningModule):
         return data_dict
 
     def training_step(self, batch, batch_idx):
-        print("TRAIN")
         return self._step(batch, batch_idx, type="train")
 
     def validation_step(self, batch, batch_idx):
-        print("VALIDACIJA")
         return self._step(batch, batch_idx, type="val")
 
     def test_step(self, batch, batch_idx):
-        print("TEST")
         return self._step(batch, batch_idx, type="test")
 
     def predict_step(

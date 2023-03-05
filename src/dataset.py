@@ -36,7 +36,6 @@ class IRMASDatasetTrain(Dataset):
 
         Args:
             dataset_dirs: directories which have the following structure:
-
                 ├── cel
                 │   ├── 008__[cel][nod][cla]0058__1.wav
                 │   ├── 008__[cel][nod][cla]0058__2.wav
@@ -68,7 +67,7 @@ class IRMASDatasetTrain(Dataset):
                 filename = str(audio_path.stem)
                 characteristics = re.findall(
                     r"\[(.*?)\]", filename
-                )  # 110__[org][dru][jaz_blu]1117__2 => ["org", "dru", "jaz_blue"]
+                )  # 110__[org][dru][jaz_blu]1117__2 => ["org", "dru", "jaz_blu"]
 
                 drums, genre = None, None
                 if len(characteristics) == 2:
@@ -78,8 +77,8 @@ class IRMASDatasetTrain(Dataset):
                 else:
                     raise InvalidDataException(filename)
 
-                drums_vector = encode_drums(drums)
-                genre_vector = encode_genre(genre)
+                drums_vector = encode_drums(drums, return_tensors=True)
+                genre_vector = encode_genre(genre, return_tensors=True)
 
                 instrument_indices = []
                 instrument_indices.append(config_defaults.INSTRUMENT_TO_IDX[instrument])
@@ -96,26 +95,7 @@ class IRMASDatasetTrain(Dataset):
 
     def __getitem__(self, index):
         audio_path, labels, drums_vector, genre_vector = self.dataset[index]
-        audio, orig_sampling_rate = librosa.load(audio_path)  # , sr=None)
-        spectrogram, labels = self.audio_transform.process(
-            audio=audio,
-            labels=labels,
-            orig_sampling_rate=orig_sampling_rate,
-            sampling_rate=self.sampling_rate,
-        )
-        labels = labels.float()  # avoid errors in loss function
-        return spectrogram, labels
-
-
-class IRMASDatasetTrainMultiTask(IRMASDatasetTrain):
-    """Train dataset used for multi task learning with drums and genres."""
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    def __getitem__(self, index):
-        audio_path, labels, drums_vector, genre_vector = self.dataset[index]
-        audio, orig_sampling_rate = librosa.load(audio_path)  # , sr=None)
+        audio, orig_sampling_rate = librosa.load(audio_path, sr=None)
         spectrogram, labels = self.audio_transform.process(
             audio=audio,
             labels=labels,
