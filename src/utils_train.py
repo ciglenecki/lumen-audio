@@ -27,6 +27,7 @@ class OptimizeMetric(EnumStr):
 class SupportedModels(EnumStr):
     AST = "ast"
     EFFICIENT_NET_V2_S = "efficient_net_v2_s"
+    EFFICIENT_NET_V2_S_MULTI_TASK = "efficient_net_v2_s_multi_task"
 
 
 class UnsupportedOptimizer(ValueError):

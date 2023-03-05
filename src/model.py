@@ -24,6 +24,8 @@ from src.utils_train import (
     UnsupportedScheduler,
 )
 
+#########################################################################################
+
 
 class EfficientNetV2SmallModel(pl.LightningModule):
     """Implementation of EfficientNet V2 small model (384 x 384)"""
@@ -202,6 +204,75 @@ class EfficientNetV2SmallModel(pl.LightningModule):
 #############################################################################################################
 
 
+class EfficientNetV2SmallMultiTaskModel(EfficientNetV2SmallModel):
+    """Implementation of EfficientNet V2 small model that uses multi task learning on drums and
+    genre."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.backbone = nn.Sequential(*(list(self.backbone.children())[:-1]))
+        self.instrument_fc = nn.Sequential(
+            nn.Dropout(p=0.2, inplace=False),
+            nn.Linear(in_features=1280, out_features=11, bias=True),
+        )
+        self.drum_fc = nn.Sequential(
+            nn.Dropout(p=0.2, inplace=False),
+            nn.Linear(in_features=1280, out_features=2, bias=True),  # dru, nod
+        )
+        self.genre_fc = nn.Sequential(
+            nn.Dropout(p=0.2, inplace=False),
+            nn.Linear(
+                in_features=1280, out_features=5, bias=True
+            ),  # jaz-blu, cla, pop-roc, lat-sou, cou-fol
+        )
+
+    def forward(self, audio: torch.Tensor):
+        out = self.backbone.forward(audio).squeeze()
+        instrument_out = self.instrument_fc(out)
+        drum_out = self.drum_fc(out)
+        genre_out = self.genre_fc(out)
+        return instrument_out, drum_out, genre_out
+
+    def _step(self, batch, batch_idx, type="train"):
+        audio, y, y_drum, y_genre = batch
+
+        logits_pred, logits_pred_drum, logits_pred_genre = self.forward(audio)
+        loss = self.loss(logits_pred, y)
+        if y_drum is not None:
+            loss += self.loss(logits_pred_drum, y_drum.float())
+        if y_genre is not None:
+            loss += self.loss(logits_pred_genre, y_genre.float())
+
+        y_pred = torch.sigmoid(logits_pred) > 0.5
+        hamming_acc = self.hamming_distance(y, y_pred)
+        f1_score = self.f1_score(y, y_pred)
+
+        data_dict = {
+            "loss": loss,  # the 'loss' key needs to be present
+            f"{type}/loss": loss,
+            f"{type}/hamming_acc": hamming_acc,
+            f"{type}/f1_score": f1_score,
+        }
+
+        log_dict = data_dict.copy()
+        log_dict.pop("loss", None)
+        self.log_dict(log_dict, on_step=True, on_epoch=True, logger=True, prog_bar=True)
+
+        return data_dict
+
+    def training_step(self, batch, batch_idx):
+        return self._step(batch, batch_idx, type="train")
+
+    def validation_step(self, batch, batch_idx):
+        return self._step((*batch, None, None), batch_idx, type="val")
+
+    def test_step(self, batch, batch_idx):
+        return self._step((*batch, None, None), batch_idx, type="test")
+
+
+#############################################################################################################
+
+
 class ASTModelWrapper(pl.LightningModule):
     loggers: list[TensorBoardLogger]
     class_to_crs_centroid_map: torch.Tensor
@@ -312,12 +383,15 @@ class ASTModelWrapper(pl.LightningModule):
         return data_dict
 
     def training_step(self, batch, batch_idx):
+        print("TRAIN")
         return self._step(batch, batch_idx, type="train")
 
     def validation_step(self, batch, batch_idx):
+        print("VALIDACIJA")
         return self._step(batch, batch_idx, type="val")
 
     def test_step(self, batch, batch_idx):
+        print("TEST")
         return self._step(batch, batch_idx, type="test")
 
     def predict_step(
@@ -423,7 +497,8 @@ def get_model(args, pl_args):
             model_name=config_defaults.DEFAULT_AST_PRETRAINED_TAG,
             num_labels=args.num_labels,
         )
-        # return model
+        return model
+
     elif model_enum == SupportedModels.EFFICIENT_NET_V2_S and args.pretrained:
         model = EfficientNetV2SmallModel(
             pretrained=args.pretrained,
@@ -435,6 +510,21 @@ def get_model(args, pl_args):
             num_labels=args.num_labels,
         )
         return model
+
+    elif (
+        model_enum == SupportedModels.EFFICIENT_NET_V2_S_MULTI_TASK and args.pretrained
+    ):
+        model = EfficientNetV2SmallMultiTaskModel(
+            pretrained=args.pretrained,
+            lr=args.lr,
+            batch_size=args.batch_size,
+            scheduler_type=args.scheduler,
+            max_epochs=pl_args.max_epochs,
+            optimizer_type=args.optimizer,
+            num_labels=args.num_labels,
+        )
+        return model
+
     raise UnsupportedModel(f"Model {model_enum.value} is not supported")
 
 

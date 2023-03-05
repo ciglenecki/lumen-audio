@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader, SubsetRandomSampler
 
 import src.config_defaults as config_defaults
 from src.audio_transform import AudioTransformAST, AudioTransformBase
-from src.dataset import IRMASDatasetTest, IRMASDatasetTrain
+from src.dataset import IRMASDatasetTest, IRMASDatasetTrain, IRMASDatasetTrainMultiTask
 from src.utils_functions import split_by_ratio
 
 
@@ -42,6 +42,7 @@ class IRMASDataModule(pl.LightningDataModule):
         train_dirs: list[Path] = [config_defaults.PATH_TRAIN],
         val_dirs: list[Path] = [config_defaults.PATH_VAL],
         test_dirs: list[Path] = [config_defaults.PATH_TEST],
+        multi_task: bool = config_defaults.DEFAULT_MULTI_TASK,
     ):
         super().__init__()
         self.batch_size = batch_size
@@ -54,6 +55,7 @@ class IRMASDataModule(pl.LightningDataModule):
         self.train_dirs = train_dirs
         self.val_dirs = val_dirs
         self.test_dirs = test_dirs
+        self.multi_task = multi_task
         self.setup()
 
     def prepare_data(self) -> None:
@@ -62,7 +64,10 @@ class IRMASDataModule(pl.LightningDataModule):
     def setup(self, stage=None):
         super().setup(stage)
 
-        self.train_dataset = IRMASDatasetTrain(
+        train_constructor = (
+            IRMASDatasetTrainMultiTask if self.multi_task else IRMASDatasetTrain
+        )
+        self.train_dataset = train_constructor(
             dataset_dirs=self.train_dirs,
             audio_transform=self.train_audio_transform,
         )

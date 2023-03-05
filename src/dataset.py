@@ -107,6 +107,25 @@ class IRMASDatasetTrain(Dataset):
         return spectrogram, labels
 
 
+class IRMASDatasetTrainMultiTask(IRMASDatasetTrain):
+    """Train dataset used for multi task learning with drums and genres."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def __getitem__(self, index):
+        audio_path, labels, drums_vector, genre_vector = self.dataset[index]
+        audio, orig_sampling_rate = librosa.load(audio_path)  # , sr=None)
+        spectrogram, labels = self.audio_transform.process(
+            audio=audio,
+            labels=labels,
+            orig_sampling_rate=orig_sampling_rate,
+            sampling_rate=self.sampling_rate,
+        )
+        labels = labels.float()  # avoid errors in loss function
+        return spectrogram, labels, drums_vector, genre_vector
+
+
 class IRMASDatasetTest(Dataset):
     def __init__(
         self,
