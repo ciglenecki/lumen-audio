@@ -34,8 +34,6 @@ class EfficientNetV2SmallModel(pl.LightningModule):
     # M, L - (480 x 480)
 
     loggers: list[TensorBoardLogger]
-    class_to_crs_centroid_map: torch.Tensor
-    class_to_crs_weighted_map: torch.Tensor
 
     def __init__(
         self,
@@ -206,8 +204,6 @@ class EfficientNetV2SmallModel(pl.LightningModule):
 
 class ASTModelWrapper(pl.LightningModule):
     loggers: list[TensorBoardLogger]
-    class_to_crs_centroid_map: torch.Tensor
-    class_to_crs_weighted_map: torch.Tensor
 
     def __init__(
         self,
