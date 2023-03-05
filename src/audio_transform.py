@@ -16,37 +16,6 @@ from transformers import ASTFeatureExtractor
 import src.config_defaults as config_defaults
 from src.utils_functions import EnumStr, MultiEnum
 
-# class SpectrogramAugmentation(torch.nn.Module):
-#     def __init__(
-#         self,
-#         n_fft=1024,
-#         n_mel=256,
-#         stretch_factor=0.8,
-#         sample_rate=config_defaults.DEFAULT_SAMPLING_RATE,
-#         hop_length=512
-#     ):
-#         super().__init__()
-#         self.spec = lambda x: librosa.feature.melspectrogram(
-#             x.cpu().detach().numpy(),
-#             sr=sample_rate,
-#             n_fft=n_fft,
-#             hop_length=hop_length,
-#             n_mels=n_mel
-#         )
-#         self.spec_aug = torch.nn.Sequential(
-#             TimeStretch(fixed_rate=stretch_factor),
-#             FrequencyMasking(freq_mask_param=80),
-#             TimeMasking(time_mask_param=80),
-#         )
-#     def forward(self, waveform: torch.Tensor) -> torch.Tensor:
-#         # Get melspectrogram
-#         spec = self.spec(waveform)
-#         # Apply SpecAugment
-#         spec = self.spec_aug(spec)
-#         return spec
-######################################################################
-
-
 def stereo_to_mono(audio: torch.Tensor | np.ndarray):
     if isinstance(audio, torch.Tensor):
         return audio.sum(dim=1) / 2
@@ -130,7 +99,13 @@ class AudioTransformMelSpectrogram(AudioTransformBase):
 
     """Resamples audio, extracts melspectrogram from audio, resizes it to the given dimensions."""
 
-    def __init__(self, n_fft=2048, hop_length=512, n_mels=10, dim=(384, 384)):
+    def __init__(
+        self, 
+        n_fft=config_defaults.DEFAULT_N_FFT, 
+        hop_length=config_defaults.DEFAULT_HOP_LENGTH, 
+        n_mels=config_defaults.DEFAULT_N_MELS, 
+        dim=config_defaults.DEFAULT_DIM
+    ):
         self.n_fft = n_fft
         self.hop_length = hop_length
         self.n_mels = n_mels
