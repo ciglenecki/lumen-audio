@@ -65,10 +65,10 @@ class EfficientNetV2SmallModel(pl.LightningModule):
         self.backbone = efficientnet_v2_s(weights="IMAGENET1K_V1", progress=True)
         self.backbone.classifier = nn.Sequential(
             nn.Dropout(p=0.2, inplace=True),
-            nn.Linear(in_features=1280, out_features=11, bias=True),
+            nn.Linear(in_features=1280, out_features=self.num_labels, bias=True),
         )
         self.hamming_distance = torchmetrics.HammingDistance(
-            task="multilabel", num_labels=num_labels
+            task="multilabel", num_labels=self.num_labels
         )
 
         self.f1_score = MultilabelF1Score(num_labels=self.num_labels)
