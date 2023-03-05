@@ -21,10 +21,12 @@ class MetricMode(EnumStr):
 
 class OptimizeMetric(EnumStr):
     VAL_HAMMING = "val/hamming_acc"
+    VAL_F1 = "val/f1_score"
 
 
 class SupportedModels(EnumStr):
     AST = "ast"
+    EFFICIENT_NET_V2_S = "efficient_net_v2_s"
 
 
 class UnsupportedOptimizer(ValueError):
