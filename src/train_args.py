@@ -25,7 +25,9 @@ ARGS_GROUP_NAME = "General arguments"
 
 
 def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
 
     lightning_parser = pl.Trainer.add_argparse_args(parser)
     lightning_parser.set_defaults(

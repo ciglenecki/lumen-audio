@@ -5,10 +5,12 @@ import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torchmetrics
+from pytorch_lightning.callbacks import ModelSummary
 from pytorch_lightning.loggers import TensorBoardLogger
 from scipy.io import wavfile
 from torchmetrics.classification import MultilabelF1Score
 from torchvision.models import efficientnet_v2_s
+from torchsummary import summary
 from transformers import ASTConfig, ASTFeatureExtractor, ASTForAudioClassification
 from transformers.modeling_outputs import SequenceClassifierOutput
 
@@ -90,13 +92,13 @@ class EfficientNetV2SmallModel(pl.LightningModule):
         logits_pred = self.forward(audio)
         loss = self.loss(logits_pred, y)
         y_pred = torch.sigmoid(logits_pred) > 0.5
-        hamming_acc = self.hamming_distance(y, y_pred)
+        hamming_distance = self.hamming_distance(y, y_pred)
         f1_score = self.f1_score(y, y_pred)
 
         data_dict = {
             "loss": loss,  # the 'loss' key needs to be present
             f"{type}/loss": loss,
-            f"{type}/hamming_acc": hamming_acc,
+            f"{type}/hamming_distance": hamming_distance,
             f"{type}/f1_score": f1_score,
         }
 
@@ -256,6 +258,20 @@ class ASTModelWrapper(pl.LightningModule):
                 ignore_mismatched_sizes=True,
             )
         )  # type: ignore
+
+        # FREEZING THE ENCODER
+        for param in self.backbone.audio_spectrogram_transformer.parameters():
+            param.requires_grad = False
+
+        # for param in self.backbone.audio_spectrogram_transformer.encoder.parameters():
+        #     param.requires_grad = False
+
+        # FREEZING LAST 2 LAYERS
+        # num_layers = len(self.backbone.audio_spectrogram_transformer.encoder.layer)
+        # for i in list(range(num_layers))[-2:]:
+        #     for param in self.backbone.audio_spectrogram_transformer.encoder.layer[i].parameters():
+        #         param.requires_grad = True
+
         self.hamming_distance = torchmetrics.HammingDistance(
             task="multilabel", num_labels=num_labels
         )
@@ -294,15 +310,13 @@ class ASTModelWrapper(pl.LightningModule):
         audio, y = batch
 
         loss, logits_pred = self.forward(audio, labels=y)
-        y_pred = torch.sigmoid(logits_pred) > (
-            1 / self.num_labels
-        )  # mislim da ovdje treba ici > 0.5
-        hamming_acc = self.hamming_distance(y, y_pred)
+        y_pred = torch.sigmoid(logits_pred) > (1 / self.num_labels)
+        hamming_distance = self.hamming_distance(y, y_pred)
 
         data_dict = {
             "loss": loss,  # the 'loss' key needs to be present
-            f"{type}/loss": loss,
-            f"{type}/hamming_acc": hamming_acc,
+            "train/loss": loss,
+            "train/hamming_distance": hamming_distance,
         }
 
         log_dict = data_dict.copy()
@@ -423,7 +437,7 @@ def get_model(args, pl_args):
             model_name=config_defaults.DEFAULT_AST_PRETRAINED_TAG,
             num_labels=args.num_labels,
         )
-        # return model
+        return model
     elif model_enum == SupportedModels.EFFICIENT_NET_V2_S and args.pretrained:
         model = EfficientNetV2SmallModel(
             pretrained=args.pretrained,
@@ -440,4 +454,8 @@ def get_model(args, pl_args):
 
 if __name__ == "__main__":
     # python3 -m src.train --accelerator gpu --devices -1 --dataset-dir data/raw/train --audio-transform mel_spectrogram --model efficient_net_v2_s
-    pass
+    model = ASTModelWrapper()
+    summary(
+        model,
+    )
+    ModelSummary(model, max_depth=-1)
