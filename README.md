@@ -6,6 +6,13 @@ Check the code architecture drawing: https://docs.google.com/drawings/d/1DDG480M
 
 ## Notes:
 
+- todo: zapisati ideju, error analysis, gledati gdje su gradijenti veći (to je primjer teži)
+
+- todo: zapisati ideju, napraviti eval skriptu koja će računati metrike za cijeli dataset
+
+  - precision, f1, confusin matrica, najteži primjer, koliko smo fulali koji instrument...
+  -
+
 - todo (matej): fix dataset class extraction (one instrument has the same name as genre)
 
 - todo matej: poslat vinku za klasicne znacajke

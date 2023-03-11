@@ -7,6 +7,7 @@ class SchedulerType(EnumStr):
     ONECYCLE = "onecycle"
     PLATEAU = "plateau"
     AUTO_LR = "auto_lr"
+    COSINEANNEALING = "cosine_annealing"
 
 
 class OptimizerType(EnumStr):

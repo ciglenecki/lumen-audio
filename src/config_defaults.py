@@ -45,7 +45,6 @@ DEFAULT_SANITY_CHECKS = False
 DEFUALT_TQDM_REFRESH = 20
 DEFAULT_AUDIO_EXTENSIONS = ["wav"]
 
-
 # ===============
 # KEYS START
 # ===============
