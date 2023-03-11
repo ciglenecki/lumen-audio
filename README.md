@@ -2,71 +2,81 @@
 
 Check the code architecture drawing: https://docs.google.com/drawings/d/1DDG480MVKn_C3fZktl5t6uvWeh57Vx2wgtH9GJYsGAU/edit?usp=sharing
 
-![](img/code_arh.png)
+![ ](img/code_arh.png)
 
-## Notes:
+## Notes
 
-- todo: zapisati ideju, error analysis, gledati gdje su gradijenti veći (to je primjer teži)
+### Meet 2 (2023-03-11, sub)
 
-- todo: zapisati ideju, napraviti eval skriptu koja će računati metrike za cijeli dataset
+Tasks:
 
-  - precision, f1, confusin matrica, najteži primjer, koliko smo fulali koji instrument...
-  -
+- normalization!
+  - normalization of the audio in time domain (amplitude). Librosa already does this?
+  - spectrogram normalization, same as any image problem normalization
+    - pre-caculate mean and std and use it
+- [ ] audio files which are NOT instruments
+  - reserach audio files which are NOT instruments
+    - both background noises and sounds SIMILAR to instruments!
+    - download the datasets and write dataset loader for them (@matej)
+    - label everything \[0, ..., 0\]
+- attempt error analysis by looking where the gradients are large
+- create eval script which will caculate ALL metrics for the whole dataset
+  - precision, f1, confusion matrix, hardest example, scores per instrument
+- check validation results
+- [ ] Implement ELECTRA
 
-- todo (matej): fix dataset class extraction (one instrument has the same name as genre)
+Matej:
 
-- todo matej: poslat vinku za klasicne znacajke
+- [ ] compare Mirko's wavelet transform with scipy's native transformation
+- [ ] implement argument which accepts list of numbers \[1000, 500, 4\] and will create appropriate deep cnn
+  - use module called deep head and pass it as a argument
+- [ ] compare Mirko's wavelet to scipy wavelet
+  - run experiments in both cases
+- [ ] check if AST allows for dynamically long audio sequence (longer spectrogram)
+  - make sure to perform a forwardpass
+  - easiest: resize the spectrogram
+- [ ] check batch size n=8 vs n=1 forward pass speed
+  - we want to see if we can split the 8sec audio in 1sec sequences to perform forward pass fast
+- [ ] perform validation on Rep's corected dataset to check how many labels are correctly marked in the original dataset
+  - check if all instruments are correct
+  - check if at least one instrument is correct
 
-- data generation: use same genre for data generation (ako radimo nove zvukove koristiti zvukove iz žanrova)
+Mirko:
 
-  - pristupi za generiranje
-  - \[x, x, x\] .wav
-  - duljina audio skvence (3 - 5) # train -> | | | | |
-  - broj instrumenta koji će pojaviti u sekvnci (2-4) uzeti samo iz istog žanra(?)
-  - vremenski trenuci u kojima instrument počinje ^
-    ______________________________________________________________________
-    x  x      xx
-    ______________________________________________________________________
+- [ ] finish experiments and interpretation of the wavelet transformation
+- [ ] implement Fluffy on AST, multi-head
+- [ ] reserach the BEATs model and incorporate it to the existing training structure as fast as possible so we get concrete results. BEATs links are down below.
+- [ ] think about and reserach what happens with variable sampling rate and how can we avoid issues with time length change
 
-- annotation: neki podaci u trainu imaju dodatne instrumente, treba proći filove i označiti instrumente koji se pojavljuju a nisu označeni
+Ivan:
 
-  - možda napraviti random sample od n=300 i provjeritit koji udio filoeva ima kirvo označene podatke
-  - provjeritit što je s validacijskim podacima
+- [ ] implement spectrogram cropping and zero padding instead of resizing
+- [ ] implement ResNeXt 50_32x4d
 
-- napraviti poseban model koji moze raspoznati znacjke, žanr i bubnjevi (oprez, ukupna veličina je ~2 veća)
+Vinko:
 
-  - (             ) => () distiling
-  - kreni možda rađe od manjeg
+- [ ] research audio augmentations
+- [ ] research classical audio features
+- [ ] implement SVM model which uses classical audio features for mutlilabel classification
+  - [ ] research if SVM can perform multilabel classification or use 11 SVMs
 
-- audio značajke u kontekstu SVM-a (klasične old school značajke) => baseline
+### Meet 1
+
+- audio features in the context of traditional approach => baseline
 
   - https://en.wikipedia.org/wiki/Mel-frequency_cepstrum
 
-- koristiti manji CNN (efficient-v2-small, imagenet) za brže prototipiranje značajki i augemtancije
+- use smaller CNN (efficient-v2-small, imagenet) for intial reporting
 
-  - kakav spektrogram (varijablinost duljine u kontestu CNN-a )
-  - kakve augmetnacije
-  - kakve metode generiranje novih audio podataka (audio preklapanja, audio konkartnacije)
+  - what's the spectrogram problem in the context of length variability
+  - which augmentations do we use?
+  - what are the methods for generating new audio files?
 
-- Monolith (Kiklop) vs multi-head (Fluffy / Hydra):
+- Monolith (Kiklop) vs multi-head (Fluffy):
 
-  - problem with multi-head: broj parametara ovisi o broju instrumenta. To vrijedi i za običan model koji nije multi-head ali ovom slučaju je taj problem naglašeniji jer dodajemo cijeli jedan FC umjesto jedan redak u matrici (neuron) u postojećem FC-u.
-  - problem with multi-head: disbalanas klase, koja je dobra loss funckija i hoće li treniranje biti uspješno?
-  - problem Kiklop: nužna augmentacija
-
-- Normalizacija zvuka
-
-  - normalizirati zvuk na po amplitudi (nekako??)
-  - normalizirati spektrogram (isti postupak i klasična normalizacija slika)
-
-- geneirranje spektrograma pomoću maskiranja (transformeri)
-
-  - Masked Autoencoders Are Scalable Vision Learners: https://arxiv.org/abs/2111.06377
-
-Matej: AST
-Mirko: Fluffy modul za efficentv2/ast, valične pizdarije i te gluposti
-Vinko: Augmetnacija, audio značajke u kontekstu SVM-a
-Rep: re-labeliranje Label Studio (todo: matej, pripremiti podatke)
+  - problem with multi-head: number of heads depends on the number of instruments
+    - problem with Kiklop but it's manifseted in number of weights
+  - Fluffy problem: class disbalans, what's the appropriate loss function. Will the training be stable?
 
 ## Setup
 
@@ -196,7 +206,7 @@ https://pytorch.org/audio/stable/functional.html#feature-extractions
 
 note: in practice, Mel Spectrograms are used instead of classical spectrogram. We have to normazlie spectrograms images just like any other image dataset (mean/std).
 
-![](img/spectrogram.png)
+![ ](img/spectrogram.png)
 
 https://www.physik.uzh.ch/local/teaching/SPI301/LV-2015-Help/lvanls.chm/STFT_Spectrogram_Core.html#:~:text=frequency%20bins%20specifies%20the%20FFT,The%20default%20is%20512.
 
@@ -230,6 +240,15 @@ SpecAugment torchaudio: https://pytorch.org/audio/main/tutorials/audio_feature_a
 ### 🔀 Data generation
 
 Naive: concat multiple audio sequences into one and merge their labels. Introduce some overlapping, but not too much!
+
+Use the same genre for data generation: combine sounds which come from the same genre instead of different genres
+
+How to sample?
+
+- sample audio files \[3, 5\] but dont use more than 4 instruments
+- sample different starting positions at which the audio will start playing
+  - START-----x---x----------x--------x----------END
+- cutoff the audio sequence at max length?
 
 ## 🏆 Team members
 
