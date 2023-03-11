@@ -13,9 +13,10 @@ from pytorch_lightning.callbacks import (
 
 from src.audio_transform import AudioTransformBase, get_audio_transform
 from src.callbacks import (
-    LogMetricsAsHyperparams,
-    OnTrainEpochStartLogCallback,
+    FinetuningCallback,
+    GeneralMetricsEpochLogger,
     OverrideEpochMetricCallback,
+    TensorBoardHparamFixer,
 )
 from src.datamodule import IRMASDataModule
 from src.model import get_model
@@ -35,6 +36,7 @@ if __name__ == "__main__":
     num_labels = args.num_labels
     batch_size = args.batch_size
     sampling_rate = args.sampling_rate
+    unfreeze_at_epoch: int = args.unfreeze_at_epoch
     metric_mode_str = MetricMode(args.metric_mode).value
     optimizer_metric_str = OptimizeMetric(args.metric).value
 
@@ -66,9 +68,9 @@ if __name__ == "__main__":
     log_dictionary = {
         **add_prefix_to_keys(vars(args), "user_args/"),
         **add_prefix_to_keys(vars(pl_args), "lightning_args/"),
-        "train_size": len(datamodule.train_dataloader().dataset),  # type: ignore
-        "val_size": len(datamodule.val_dataloader().dataset),  # type: ignore
-        "test_size": len(datamodule.test_dataloader().dataset),  # type: ignore
+        "train_size": len(datamodule.train_dataloader().dataset),
+        "val_size": len(datamodule.val_dataloader().dataset),
+        "test_size": len(datamodule.test_dataloader().dataset),
     }
 
     callback_early_stopping = EarlyStopping(
@@ -96,28 +98,32 @@ if __name__ == "__main__":
 
     bar_refresh_rate = int(train_dataloader_size / args.bar_update)
 
-    callbacks = [
-        callback_checkpoint,
-        callback_early_stopping,
-        TQDMProgressBar(refresh_rate=bar_refresh_rate),
-        ModelSummary(max_depth=4),
-        LogMetricsAsHyperparams(),
-        OverrideEpochMetricCallback(),
-        OnTrainEpochStartLogCallback(),
-        LearningRateMonitor(log_momentum=True),
-    ]
-
-    model = get_model(args, pl_args)
-
     tensorboard_logger = pl_loggers.TensorBoardLogger(
         save_dir=str(output_dir),
         name=experiment_name,
-        default_hp_metric=False,  # default_hp_metric should be turned off unless you log hyperparameters (logger.log_hyperparams(dict)) before the module starts with training
+        default_hp_metric=False,  # Enables a placeholder metric with key `hp_metric` when `log_hyperparams` is called without a metric (otherwise calls to log_hyperparams without a metric are ignored).
         log_graph=True,
         version=".",
     )
 
-    tensorboard_logger.log_hyperparams(log_dictionary)
+    model = get_model(args, pl_args)
+
+    callbacks = [
+        callback_checkpoint,
+        callback_early_stopping,
+        TQDMProgressBar(refresh_rate=bar_refresh_rate),
+        TensorBoardHparamFixer(config_dict=log_dictionary),
+        OverrideEpochMetricCallback(),
+        GeneralMetricsEpochLogger(),
+        LearningRateMonitor(log_momentum=True),
+    ]
+
+    if unfreeze_at_epoch is not None:
+        callbacks.append(
+            FinetuningCallback(unfreeze_backbone_at_epoch=args.unfreeze_at_epoch)
+        )
+
+    callbacks.append(ModelSummary(max_depth=4))
 
     trainer: pl.Trainer = pl.Trainer.from_argparse_args(
         pl_args,

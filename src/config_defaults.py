@@ -49,7 +49,6 @@ DEFAULT_HOP_LENGTH = 512
 DEFAULT_N_MELS = 10
 DEFAULT_DIM = (384, 384)
 
-
 # ===============
 # KEYS START
 # ===============
