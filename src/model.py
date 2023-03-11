@@ -10,6 +10,7 @@ from pytorch_lightning.callbacks import ModelSummary
 from pytorch_lightning.loggers import TensorBoardLogger
 from torchmetrics.classification import MultilabelF1Score
 from torchsummary import summary
+from torchvision.models import efficientnet_v2_s
 from transformers import ASTConfig, ASTForAudioClassification
 from transformers.modeling_outputs import SequenceClassifierOutput
 
@@ -145,6 +146,9 @@ class OurLightningModule(pl.LightningModule, ABC):
             2,
         ], "Both should exist or both shouldn't exist!"
 
+        # save in case indices change with config changes
+        self.backup_instruments = config_defaults.INSTRUMENT_TO_IDX
+
     @abstractmethod
     def head(self) -> Union[nn.ModuleList, nn.Module]:
         """Returns "head" part of the model. That's usually whatever's after the large feature
@@ -163,6 +167,14 @@ class OurLightningModule(pl.LightningModule, ABC):
             Union[nn.ModuleList, nn.Module]: modules which are considered a backbone
         """
         return
+
+    def _set_lr(self, lr: float):
+        if self.trainer is not None:
+            for optim in self.trainer.optimizers:
+                for param_group in optim.param_groups:
+                    param_group["lr"] = lr
+        self.lr = lr
+        self.hparams.update({"lr": lr})
 
     def count_trainable_params(self):
         """Returns number of total, trainable and non trainable parameters."""
@@ -299,17 +311,7 @@ class ASTModelWrapper(OurLightningModule):
         )
         self.f1_score = MultilabelF1Score(num_labels=self.num_labels)
 
-        # save in case indices change with config changes
-        self.backup_instruments = config_defaults.INSTRUMENT_TO_IDX
         self.save_hyperparameters()
-
-    def _set_lr(self, lr: float):
-        if self.trainer is not None:
-            for optim in self.trainer.optimizers:
-                for param_group in optim.param_groups:
-                    param_group["lr"] = lr
-        self.lr = lr
-        self.hparams.update({"lr": lr})
 
     def trainable_backbone(self):
         result = []
@@ -368,9 +370,13 @@ class ASTModelWrapper(OurLightningModule):
         pass
 
     def configure_optimizers(self):
-        print("\n", self.__class__.__name__, "Configure optimizers\n")
 
-        """Set optimizer's learning rate to backbone. We do this because we can't explicitly pass the learning rate to scheduler. The scheduler infers the learning rate from the optimizer which is why we set it the lr value which should be activie once  """
+        """Set optimizer's learning rate to backbone.
+
+        We do this because we can't explicitly pass the learning rate to scheduler. The scheduler
+        infers the learning rate from the optimizer which is why we set it the lr value which
+        should be activie once
+        """
         if self.optimizer_type is OptimizerType.ADAMW:
             optimizer = torch.optim.AdamW(
                 self.parameters(),
@@ -381,6 +387,191 @@ class ASTModelWrapper(OurLightningModule):
             optimizer = torch.optim.Adam(
                 self.parameters(),
                 lr=self.backbone_lr,
+                weight_decay=self.weight_decay,
+            )
+        else:
+            raise UnsupportedOptimizer(
+                f"Optimizer {self.optimizer_type} is not implemented",
+                self.optimizer_type,
+            )
+
+        if self.scheduler_type is SchedulerType.AUTO_LR:
+            """SchedulerType.AUTO_LR sets it's own scheduler.
+
+            Only the optimizer has to be returned
+            """
+            return optimizer
+
+        lr_scheduler_config = {
+            "monitor": self.optimization_metric.value,  # "val/loss_epoch",
+            # How many epochs/steps should pass between calls to `scheduler.step()`.1 corresponds to updating the learning  rate after every epoch/step.
+            # If "monitor" references validation metrics, then "frequency" should be set to a multiple of "trainer.check_val_every_n_epoch".
+            "frequency": 1,
+            # If using the `LearningRateMonitor` callback to monitor the learning rate progress, this keyword can be used to specify a custom logged name
+            "name": self.scheduler_type.value,
+        }
+
+        if self.scheduler_type == SchedulerType.ONECYCLE:
+            min_lr = 2.5e-5
+            scheduler = torch.optim.lr_scheduler.OneCycleLR(
+                optimizer=optimizer,
+                max_lr=self.lr,  # TOOD:self.lr,
+                final_div_factor=self.lr / min_lr,
+                total_steps=int(self.trainer.estimated_stepping_batches),
+                verbose=False,
+            )
+            interval = "step"
+
+        elif self.scheduler_type == SchedulerType.PLATEAU:
+            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer,
+                mode=self.metric_mode.value,
+                factor=config_defaults.DEFAULT_LR_PLATEAU_FACTOR,
+                patience=(self.early_stopping_epoch // 2) + 1,
+                verbose=True,
+            )
+            interval = "epoch"
+        elif self.scheduler_type == SchedulerType.COSINEANNEALING:
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+                optimizer,
+                T_0=self.num_of_steps_in_epoch * 3,
+                T_mult=1,
+            )
+            interval = "step"
+        else:
+            raise UnsupportedScheduler(
+                f"Scheduler {self.scheduler_type} is not implemented",
+                self.scheduler_type,
+            )
+
+        lr_scheduler_config.update(
+            {
+                "scheduler": scheduler,
+                "interval": interval,
+            }
+        )
+
+        return [optimizer], [lr_scheduler_config]
+
+    def _lr_finetuning_step(self, optimizer_idx):
+        """Exponential learning rate update.
+
+        Mupltiplicator is the finetune_lr_nominator
+        """
+        old_lr = self.trainer.optimizers[optimizer_idx].param_groups[0]["lr"]
+        new_lr = old_lr * self.finetune_lr_nominator
+        self._set_lr(new_lr)
+        return
+
+
+class EfficientNetV2SmallModel(OurLightningModule):
+    """Implementation of EfficientNet V2 small model (384 x 384)"""
+
+    # S    - (384 x 384)
+    # M, L - (480 x 480)
+
+    loggers: list[TensorBoardLogger]
+
+    def __init__(
+        self,
+        pretrained: bool = config_defaults.DEFAULT_PRETRAINED,
+        batch_size: int = config_defaults.DEFAULT_BATCH_SIZE,
+        scheduler_type: SchedulerType = SchedulerType.PLATEAU,
+        max_epochs: Optional[int] = None,
+        optimizer_type: OptimizerType = config_defaults.DEFAULT_OPTIMIZER,
+        num_labels: int = config_defaults.DEFAULT_NUM_LABELS,
+        optimization_metric: OptimizeMetric = config_defaults.DEFAULT_OPTIMIZE_METRIC,
+        weight_decay: float = config_defaults.DEFAULT_WEIGHT_DECAY,
+        metric_mode: MetricMode = config_defaults.DEFAULT_METRIC_MODE,
+        early_stopping_epoch: int = config_defaults.DEFAULT_EARLY_STOPPING_NO_IMPROVEMENT_EPOCHS,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.pretrained = pretrained
+        self.batch_size = batch_size
+        self.scheduler_type = scheduler_type
+        self.max_epochs = max_epochs
+        self.optimizer_type = optimizer_type
+        self.num_labels = num_labels
+        self.optimization_metric = optimization_metric
+        self.weight_decay = weight_decay
+        self.metric_mode = metric_mode
+        self.early_stopping_epoch = early_stopping_epoch
+
+        self.backbone = efficientnet_v2_s(weights="IMAGENET1K_V1", progress=True)
+
+        self.backbone.classifier = nn.Sequential(
+            nn.Dropout(p=0.2, inplace=True),
+            nn.Linear(
+                in_features=self.backbone.classifier[-1].in_features,
+                out_features=self.num_labels,
+                bias=True,
+            ),
+        )
+        self.hamming_distance = torchmetrics.HammingDistance(
+            task="multilabel", num_labels=self.num_labels
+        )
+
+        self.f1_score = MultilabelF1Score(num_labels=self.num_labels)
+        self.loss_function = nn.BCEWithLogitsLoss()
+        self.save_hyperparameters()
+
+    def head(self) -> Union[nn.ModuleList, nn.Module]:
+        return self.backbone.classifier
+
+    def trainable_backbone(self) -> Union[nn.ModuleList, nn.Module]:
+        result = []
+        result.extend(list(self.backbone.features)[-3:])
+        return result
+
+    def forward(self, audio: torch.Tensor):
+        out = self.backbone.forward(audio)
+        return out
+
+    def _step(self, batch, batch_idx, type: str):
+        audio, y = batch
+
+        logits_pred = self.forward(audio)
+        loss = self.loss_function(logits_pred, y)
+        y_pred = torch.sigmoid(logits_pred) > 0.5
+        hamming_distance = self.hamming_distance(y, y_pred)
+        f1_score = self.f1_score(y, y_pred)
+
+        data_dict = {
+            "loss": loss,  # the 'loss' key needs to be present
+            f"{type}/loss": loss,
+            f"{type}/hamming_distance": hamming_distance,
+            f"{type}/f1_score": f1_score,
+        }
+
+        log_dict = data_dict.copy()
+        log_dict.pop("loss", None)
+        self.log_dict(log_dict, on_step=True, on_epoch=True, logger=True, prog_bar=True)
+
+        return data_dict
+
+    def training_step(self, batch, batch_idx):
+        return self._step(batch, batch_idx, type="train")
+
+    def validation_step(self, batch, batch_idx):
+        return self._step(batch, batch_idx, type="val")
+
+    def test_step(self, batch, batch_idx):
+        return self._step(batch, batch_idx, type="test")
+
+    def configure_optimizers(self):
+
+        if self.optimizer_type is OptimizerType.ADAMW:
+            optimizer = torch.optim.AdamW(
+                self.parameters(),
+                lr=self.lr,
+                weight_decay=self.weight_decay,
+            )
+        elif self.optimizer_type is OptimizerType.ADAM:
+            optimizer = torch.optim.Adam(
+                self.parameters(),
+                lr=self.lr,
                 weight_decay=self.weight_decay,
             )
         else:
@@ -477,15 +668,31 @@ def get_model(args, pl_args):
             early_stopping_epoch=args.patience,
             unfreeze_at_epoch=args.unfreeze_at_epoch,
         )
-
+        return model
+    elif model_enum == SupportedModels.EFFICIENT_NET_V2_S and args.pretrained:
+        model = EfficientNetV2SmallModel(
+            pretrained=args.pretrained,
+            lr=args.lr,
+            batch_size=args.batch_size,
+            scheduler_type=args.scheduler,
+            max_epochs=pl_args.max_epochs,
+            warmup_start_lr=args.warmup_start_lr,
+            optimizer_type=args.optimizer,
+            num_labels=args.num_labels,
+            optimization_metric=args.metric,
+            weight_decay=config_defaults.DEFAULT_WEIGHT_DECAY,
+            metric_mode=args.metric_mode,
+            early_stopping_epoch=args.patience,
+            unfreeze_at_epoch=args.unfreeze_at_epoch,
+        )
         return model
     raise UnsupportedModel(f"Model {model_enum.value} is not supported")
 
 
 if __name__ == "__main__":
+    # python3 -m src.train --accelerator gpu --devices -1 --dataset-dir data/raw/train --audio-transform mel_spectrogram --model efficient_net_v2_s
     model = ASTModelWrapper()
     summary(
         model,
     )
     ModelSummary(model, max_depth=-1)
-    pass

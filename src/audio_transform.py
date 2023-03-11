@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 import librosa
 import numpy as np
 import torch
+import torchvision.transforms.functional as F
 from torchaudio.transforms import (
     FrequencyMasking,
     MelScale,
@@ -14,10 +15,6 @@ from transformers import ASTFeatureExtractor
 
 import src.config_defaults as config_defaults
 from src.utils_functions import EnumStr, MultiEnum
-
-
-class spectrogramAugmentation(torch.nn.Module):
-    """TODO:"""
 
 
 def stereo_to_mono(audio: torch.Tensor | np.ndarray):
@@ -44,7 +41,7 @@ class AudioTransformBase(ABC):
         sampling_rate: int,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Function which prepares everything for model's .forward() function. It creates the
-        spectorgram from audio and prepares the labels.
+        spectrogram from audio and prepares the labels.
 
         Args:
             audio: audio data
@@ -99,57 +96,83 @@ class AudioTransformAST(AudioTransformBase):
         return spectrogram, labels
 
 
-class AudioAugmentation(torch.nn.Module):
-    """Taken from: https://pytorch.org/audio/stable/transforms.html.
+class AudioTransformMelSpectrogram(AudioTransformBase):
 
-    Define custom feature extraction pipeline.
-
-    1. Convert to power spectrogram
-    2. Apply augmentations
-    3. Convert to mel-scale
-    """
+    """Resamples audio, extracts melspectrogram from audio, resizes it to the given dimensions."""
 
     def __init__(
         self,
-        n_fft=1024,
-        n_mel=256,
-        stretch_factor=0.8,
-        sample_rate=config_defaults.DEFAULT_SAMPLING_RATE,
+        n_fft=config_defaults.DEFAULT_N_FFT,
+        hop_length=config_defaults.DEFAULT_HOP_LENGTH,
+        n_mels=config_defaults.DEFAULT_N_MELS,
+        dim=config_defaults.DEFAULT_DIM,
     ):
-        """_summary_
+        self.n_fft = n_fft
+        self.hop_length = hop_length
+        self.n_mels = n_mels
+        self.dim = dim
 
-        Args:
-            n_fft: Size of the fast-fourier transform (FFT), creates n_fft // 2 + 1 frequency bins
-            n_mel: Number of mel filterbanks
-            stretch_factor: rate to speed up or slow down by
-            sample_rate: sampling rate
-        """
+    def process(
+        self,
+        audio: torch.Tensor | np.ndarray,
+        labels: torch.Tensor | np.ndarray,
+        orig_sampling_rate: int,
+        sampling_rate: int,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
 
-        super().__init__()
+        if isinstance(labels, np.ndarray):
+            labels = torch.tensor(labels)
 
-        self.spec = Spectrogram(n_fft=n_fft, power=2)
+        if isinstance(audio, torch.Tensor):
+            audio = audio.detach().numpy()
 
-        self.spec_aug = torch.nn.Sequential(
-            TimeStretch(fixed_rate=stretch_factor),
-            FrequencyMasking(freq_mask_param=80),
-            TimeMasking(time_mask_param=80),
+        audio_resampled = librosa.resample(
+            audio,
+            orig_sr=orig_sampling_rate,
+            target_sr=sampling_rate,
         )
 
-        self.mel_scale = MelScale(
-            n_mels=n_mel, sample_rate=sample_rate, n_stft=n_fft // 2 + 1
+        spectrogram = librosa.feature.melspectrogram(
+            y=audio_resampled,
+            sr=sampling_rate,
+            n_fft=self.n_fft,
+            hop_length=self.hop_length,
+            n_mels=self.n_mels,
         )
 
-    def forward(self, waveform: torch.Tensor) -> torch.Tensor:
-        # Convert to power spectrogram
-        spec = self.spec(waveform)
+        spectrogram = spectrogram.reshape(1, 1, *spectrogram.shape)
+        spectrogram = F.resize(torch.tensor(spectrogram), size=self.dim)
+        spectrogram = spectrogram.reshape(1, *self.dim)
 
-        # Apply SpecAugment
-        spec = self.spec_aug(spec)
+        return spectrogram, labels
 
-        # Convert to mel-scale
-        mel = self.mel_scale(spec)
 
-        return mel
+class AudioTransformMelSpectrogramRepeat(AudioTransformMelSpectrogram):
+    """Calls AudioTransformMelSpectrogram and repeats the output 3 times.
+
+    This is useful for mocking RGB channels.
+    """
+
+    def __init__(self, repeat=3, **kwargs):
+        super().__init__(**kwargs)
+        self.repeat = repeat
+
+    def process(
+        self,
+        audio: torch.Tensor | np.ndarray,
+        labels: torch.Tensor | np.ndarray,
+        orig_sampling_rate: int,
+        sampling_rate: int,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+
+        spectrogram, labels = super().process(
+            audio, labels, orig_sampling_rate, sampling_rate
+        )
+        spectrogram = spectrogram.repeat(1, self.repeat, 1, 1).reshape(
+            self.repeat, *self.dim
+        )
+
+        return spectrogram, labels
 
 
 class UnsupportedAudioTransforms(ValueError):
@@ -160,11 +183,18 @@ class AudioTransforms(EnumStr):
     """List of supported AudioTransforms we use."""
 
     AST = "ast"
+    MEL_SPECTROGRAM = "mel_spectrogram"
+    MEL_SPECTROGRAM_REPEAT = "mel_spectrogram_repeat"
 
 
 def get_audio_transform(audio_transform_enum: AudioTransforms) -> AudioTransformBase:
+    # TODO: check if everyone has 3.10 and switch all ifs to case
     if audio_transform_enum is AudioTransforms.AST:
         return AudioTransformAST(
             ast_pretrained_tag=config_defaults.DEFAULT_AST_PRETRAINED_TAG
         )
+    elif audio_transform_enum is AudioTransforms.MEL_SPECTROGRAM:
+        return AudioTransformMelSpectrogram()
+    elif audio_transform_enum is AudioTransforms.MEL_SPECTROGRAM_REPEAT:
+        return AudioTransformMelSpectrogramRepeat(repeat=3)
     raise UnsupportedAudioTransforms(f"Unsupported transform {audio_transform_enum}")

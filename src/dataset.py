@@ -6,6 +6,7 @@ from pathlib import Path
 
 import librosa
 import numpy as np
+import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
@@ -94,7 +95,6 @@ class IRMASDatasetTrain(Dataset):
         return len(self.dataset)
 
     def __getitem__(self, index):
-
         audio_path, labels, drums_vector, genre_vector = self.dataset[index]
         audio, orig_sampling_rate = librosa.load(audio_path, sr=None)
         spectrogram, labels = self.audio_transform.process(
@@ -103,7 +103,6 @@ class IRMASDatasetTrain(Dataset):
             orig_sampling_rate=orig_sampling_rate,
             sampling_rate=self.sampling_rate,
         )
-
         labels = labels.float()  # avoid errors in loss function
         return spectrogram, labels
 
@@ -169,8 +168,8 @@ class IRMASDatasetTest(Dataset):
             orig_sampling_rate=orig_sampling_rate,
             sampling_rate=self.sampling_rate,
         )
-
         labels = labels.float()  # avoid errors in loss function
+
         return spectrogram, labels
 
 
@@ -179,4 +178,30 @@ class InstrumentInference(Dataset):
 
 
 if __name__ == "__main__":  # for testing only
-    ds = IRMASDatasetTrain()
+    ds = IRMASDatasetTrain(audio_transform=AudioTransformAST)
+
+    import matplotlib.pyplot as plt
+
+    item = ds[0]
+    x, sr, y = item
+
+    filter_banks = librosa.filters.mel(n_fft=2048, sr=22050, n_mels=10)
+    print(filter_banks.shape)
+
+    plt.figure(figsize=(25, 10))
+    librosa.display.specshow(filter_banks, sr=sr, x_axis="linear")
+    plt.colorbar(format="%+2.f")
+    plt.show()
+
+    mel_spectrogram = librosa.feature.melspectrogram(
+        y=x, sr=sr, n_fft=2048, hop_length=512, n_mels=10
+    )
+    print(mel_spectrogram.shape)
+
+    log_mel_spectrogram = librosa.power_to_db(mel_spectrogram)
+    print(log_mel_spectrogram.shape)
+
+    plt.figure(figsize=(25, 10))
+    librosa.display.specshow(log_mel_spectrogram, x_axis="time", y_axis="mel", sr=sr)
+    plt.colorbar(format="%+2.f")
+    plt.show()

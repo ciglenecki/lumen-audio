@@ -126,7 +126,7 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
 
     user_group.add_argument(
         "--metric",
-        type=OptimizeMetric.from_string,
+        type=OptimizeMetric,
         help="Metric which the model will optimize for.",
         default=config_defaults.DEFAULT_OPTIMIZE_METRIC,
         choices=list(OptimizeMetric),
@@ -187,7 +187,7 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         "--unfreeze-at-epoch",
         metavar="int",
         type=int,
-        # default=config_defaults.DEFAULT_UNFREEZE_AT_EPOCH,
+        default=config_defaults.DEFAULT_UNFREEZE_AT_EPOCH,
     )
     user_group.add_argument(
         "--sampling-rate",
@@ -248,13 +248,13 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
 
     """Additional argument checking"""
     if args.metric and not args.metric_mode:
-        raise argparse.ArgumentError(
-            args.metric, "can't pass --metric without passing --metric-mode"
+        raise Exception(
+            f"{args.metric} can't pass --metric without passing --metric-mode"
         )
+
     if bool(args.warmup_start_lr) != bool(args.unfreeze_at_epoch):
-        raise argparse.ArgumentError(
-            args.metric,
-            "--warmup-start-lr and --unfreeze-at-epoch have to be passed together",
+        raise Exception(
+            f"{args.metric} --warmup-start-lr and --unfreeze-at-epoch have to be passed together",
         )
 
     return args, pl_args

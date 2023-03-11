@@ -300,6 +300,9 @@ nato_alphabet = [
     "X-ray",
     "Yankee",
     "Zulu",
+    "Sinisa",
+    "Jan",
+    "Alan",
 ]
 
 adjectives = [
