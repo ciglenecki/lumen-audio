@@ -197,6 +197,15 @@ Idea: train on single wav, then later introduce `irmas_combinatorics` dataset wh
 
 Introduce SVM and train it additionally on high level features of spectrogram. For example, one can caculate entropy of a spectrogram for a given timeframe.
 
+### Audio knowledge
+
+#### Harmonic and Percussive Sounds
+
+https://www.audiolabs-erlangen.de/resources/MIR/FMP/C8/C8S1_HPS.html
+
+![](img/harmonic_and_percussive_sounds.jpg)
+Loosely speaking, a harmonic sound is what we perceive as pitched sound, what makes us hear melodies and chords. The prototype of a **harmonic** sound is the acoustic realization of a sinusoid, which corresponds to a **horizontal line in a spectrogram** representation. The sound of a violin is another typical example of what we consider a harmonic sound. Again, most of the observed structures in the spectrogram are of horizontal nature (even though they are intermingled with noise-like components). On the other hand, a percussive sound is what we perceive as a clash, a knock, a clap, or a click. The sound of a drum stroke or a transient that occurs in the attack phase of a musical tone are further typical examples. The prototype of a **percussive** sound is the acoustic realization of an impulse, which corresponds to a **vertical line in a spectrogram representation**.
+
 ### 🔊 Feature extraction
 
 https://pytorch.org/audio/stable/transforms.html

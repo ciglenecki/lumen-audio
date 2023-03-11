@@ -1,5 +1,4 @@
-from enum import Enum
-from typing import Any, Optional, Union
+from typing import Any, Union
 
 import torch
 import torch.nn as nn
