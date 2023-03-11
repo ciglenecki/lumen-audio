@@ -126,7 +126,7 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
 
     user_group.add_argument(
         "--metric",
-        type=OptimizeMetric,
+        type=OptimizeMetric.from_string,
         help="Metric which the model will optimize for.",
         default=config_defaults.DEFAULT_OPTIMIZE_METRIC,
         choices=list(OptimizeMetric),

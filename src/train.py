@@ -107,8 +107,6 @@ if __name__ == "__main__":
     )
 
     model = get_model(args, pl_args)
-    # TODO remove
-    model.trainable_backbone()
 
     callbacks = [
         callback_checkpoint,

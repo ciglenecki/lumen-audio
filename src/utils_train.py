@@ -24,7 +24,7 @@ class MetricMode(EnumStr):
     MAX = "max"
 
 
-class OptimizeMetric(Enum):
+class OptimizeMetric(EnumStr):
     VAL_HAMMING = "val/hamming_distance"
     VAL_F1 = "val/f1_score"
 
