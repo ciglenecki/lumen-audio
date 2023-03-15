@@ -25,7 +25,7 @@ class IRMASDatasetTrain(Dataset):
     def __init__(
         self,
         dataset_dirs: list[Path] = [config_defaults.PATH_TRAIN],
-        audio_transform: AudioTransformBase = AudioTransformAST(),
+        audio_transform: AudioTransformBase | None = None,
         num_classes=config_defaults.DEFAULT_NUM_LABELS,
         sanity_checks=config_defaults.DEFAULT_SANITY_CHECKS,
         sampling_rate=config_defaults.DEFAULT_SAMPLING_RATE,
@@ -101,6 +101,10 @@ class IRMASDatasetTrain(Dataset):
         audio, original_sr = load_audio_from_file(
             audio_path, method="librosa", normalize=self.normalize_audio
         )
+
+        if self.audio_transform is None:
+            return audio, labels
+
         spectrogram = self.audio_transform.process(
             audio=audio,
             original_sr=original_sr,
@@ -116,7 +120,7 @@ class IRMASDatasetTest(Dataset):
         dataset_dirs: list[Path] = [config_defaults.PATH_TEST],
         num_classes=config_defaults.DEFAULT_NUM_LABELS,
         sanity_checks=config_defaults.DEFAULT_SANITY_CHECKS,
-        audio_transform: AudioTransformBase = AudioTransformAST(),
+        audio_transform: AudioTransformBase | None = None,
         sampling_rate=config_defaults.DEFAULT_SAMPLING_RATE,
     ):
         self.num_classes = num_classes
@@ -165,7 +169,12 @@ class IRMASDatasetTest(Dataset):
 
     def __getitem__(self, index) -> tuple[torch.Tensor, torch.Tensor]:
         audio_path, labels = self.dataset[index]
-        audio, original_sr = librosa.load(audio_path, sr=None)
+        audio, original_sr = load_audio_from_file(
+            audio_path, method="librosa", normalize=self.normalize_audio
+        )
+        if self.audio_transform is None:
+            return audio, labels
+
         spectrogram = self.audio_transform.process(
             audio=audio,
             original_sr=original_sr,

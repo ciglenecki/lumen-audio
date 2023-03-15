@@ -44,6 +44,7 @@ class AudioTransformBase(ABC):
 
     def __init__(
         self,
+        sampling_rate: int,
         spec_aug_enums: list[SupportedSpecAugs] = [
             SupportedSpecAugs.TIME_STRETCH,
             SupportedSpecAugs.FREQ_MASK,
@@ -58,6 +59,7 @@ class AudioTransformBase(ABC):
         std_noise=0.01,
     ) -> None:
         super().__init__()
+        self.sampling_rate = sampling_rate
         self.spec_aug_enums = spec_aug_enums
         self.stretch_factors = stretch_factors
         self.freq_mask_param = freq_mask_param
@@ -70,7 +72,6 @@ class AudioTransformBase(ABC):
     def process(
         self,
         audio: torch.Tensor | np.ndarray,
-        sampling_rate: int,
         original_sr: int,
     ) -> tuple[torch.Tensor]:
         """Function which prepares everything for model's .forward() function. It creates the
@@ -79,7 +80,6 @@ class AudioTransformBase(ABC):
         Args:
             audio: audio data
             original_sr: _description_
-            sampling_rate: _description_
 
         Returns:
             tuple[torch.Tensor, torch.Tensor]: _description_
@@ -132,7 +132,6 @@ class AudioTransformAST(AudioTransformBase):
     def process(
         self,
         audio: torch.Tensor | np.ndarray,
-        sampling_rate: int,
         original_sr: int,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         audio = stereo_to_mono(audio)
@@ -146,7 +145,7 @@ class AudioTransformAST(AudioTransformBase):
 
         features = self.feature_extractor(
             audio,
-            sampling_rate=sampling_rate,
+            sampling_rate=self.sampling_rate,
             return_tensors="pt",
         )
 
@@ -160,7 +159,7 @@ class AudioTransformAST(AudioTransformBase):
         return spectrogram
 
 
-class AudioTransformMelSpectrogram(AudioTransformBase):
+class MelSpectrogramOurs(AudioTransformBase):
 
     """Resamples audio, extracts melspectrogram from audio, resizes it to the given dimensions."""
 
@@ -182,7 +181,6 @@ class AudioTransformMelSpectrogram(AudioTransformBase):
         self,
         audio: torch.Tensor | np.ndarray,
         original_sr: int,
-        sampling_rate: int,
     ) -> tuple[torch.Tensor, torch.Tensor]:
 
         audio = stereo_to_mono(audio)
@@ -190,8 +188,8 @@ class AudioTransformMelSpectrogram(AudioTransformBase):
         return spectrogram
 
 
-class AudioTransformMelSpectrogramRepeat(AudioTransformMelSpectrogram):
-    """Calls AudioTransformMelSpectrogram and repeats the output 3 times.
+class MelSpectrogramRepeat(MelSpectrogramOurs):
+    """Calls MelSpectrogram and repeats the output 3 times.
 
     This is useful for mocking RGB channels.
     """
@@ -204,10 +202,9 @@ class AudioTransformMelSpectrogramRepeat(AudioTransformMelSpectrogram):
         self,
         audio: torch.Tensor | np.ndarray,
         original_sr: int,
-        sampling_rate: int,
     ) -> tuple[torch.Tensor, torch.Tensor]:
 
-        spectrogram = super().process(audio, original_sr, sampling_rate)
+        spectrogram = super().process(audio, original_sr, self.sampling_rate)
         spectrogram = spectrogram.repeat(1, self.repeat, 1, 1)[0]
 
         return spectrogram
@@ -226,9 +223,7 @@ def get_audio_transform(
             **aug_kwargs,
         )
     elif audio_transform_enum is AudioTransforms.MEL_SPECTROGRAM:
-        return AudioTransformMelSpectrogram(spec_aug_enums=spec_aug_enums, **aug_kwargs)
+        return MelSpectrogramOurs(spec_aug_enums=spec_aug_enums, **aug_kwargs)
     elif audio_transform_enum is AudioTransforms.MEL_SPECTROGRAM_REPEAT:
-        return AudioTransformMelSpectrogramRepeat(
-            spec_aug_enums=spec_aug_enums, **aug_kwargs
-        )
+        return MelSpectrogramRepeat(spec_aug_enums=spec_aug_enums, **aug_kwargs)
     raise UnsupportedAudioTransforms(f"Unsupported transform {audio_transform_enum}")
