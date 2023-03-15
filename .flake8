@@ -1,5 +1,5 @@
 [flake8]
-ignore = E203, E402, E501, F401, F841, F403
+ignore = E203, E402, E501, F401, F841, F403, W503
 exclude =
 	logs/*
 	data/*

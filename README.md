@@ -2,7 +2,81 @@
 
 Check the code architecture drawing: https://docs.google.com/drawings/d/1DDG480MVKn_C3fZktl5t6uvWeh57Vx2wgtH9GJYsGAU/edit?usp=sharing
 
-![](img/code_arh.png)
+![ ](img/code_arh.png)
+
+## Notes
+
+### Meet 2 (2023-03-11, sub)
+
+Tasks:
+
+- normalization!
+  - normalization of the audio in time domain (amplitude). Librosa already does this?
+  - spectrogram normalization, same as any image problem normalization
+    - pre-caculate mean and std and use it
+- [ ] audio files which are NOT instruments
+  - reserach audio files which are NOT instruments
+    - both background noises and sounds SIMILAR to instruments!
+    - download the datasets and write dataset loader for them (@matej)
+    - label everything \[0, ..., 0\]
+- attempt error analysis by looking where the gradients are large
+- create eval script which will caculate ALL metrics for the whole dataset
+  - precision, f1, confusion matrix, hardest example, scores per instrument
+- check validation results
+- [ ] Implement ELECTRA
+
+Matej:
+
+- [ ] compare Mirko's wavelet transform with scipy's native transformation
+- [ ] implement argument which accepts list of numbers \[1000, 500, 4\] and will create appropriate deep cnn
+  - use module called deep head and pass it as a argument
+- [ ] compare Mirko's wavelet to scipy wavelet
+  - run experiments in both cases
+- [ ] check if AST allows for dynamically long audio sequence (longer spectrogram)
+  - make sure to perform a forwardpass
+  - easiest: resize the spectrogram
+- [ ] check batch size n=8 vs n=1 forward pass speed
+  - we want to see if we can split the 8sec audio in 1sec sequences to perform forward pass fast
+- [ ] perform validation on Rep's corected dataset to check how many labels are correctly marked in the original dataset
+  - check if all instruments are correct
+  - check if at least one instrument is correct
+
+Mirko:
+
+- [ ] finish experiments and interpretation of the wavelet transformation
+- [ ] implement Fluffy on AST, multi-head
+- [ ] reserach the BEATs model and incorporate it to the existing training structure as fast as possible so we get concrete results. BEATs links are down below.
+- [ ] think about and reserach what happens with variable sampling rate and how can we avoid issues with time length change
+
+Ivan:
+
+- [ ] implement spectrogram cropping and zero padding instead of resizing
+- [ ] implement ResNeXt 50_32x4d
+
+Vinko:
+
+- [ ] research audio augmentations
+- [ ] research classical audio features
+- [ ] implement SVM model which uses classical audio features for mutlilabel classification
+  - [ ] research if SVM can perform multilabel classification or use 11 SVMs
+
+### Meet 1
+
+- audio features in the context of traditional approach => baseline
+
+  - https://en.wikipedia.org/wiki/Mel-frequency_cepstrum
+
+- use smaller CNN (efficient-v2-small, imagenet) for intial reporting
+
+  - what's the spectrogram problem in the context of length variability
+  - which augmentations do we use?
+  - what are the methods for generating new audio files?
+
+- Monolith (Kiklop) vs multi-head (Fluffy):
+
+  - problem with multi-head: number of heads depends on the number of instruments
+    - problem with Kiklop but it's manifseted in number of weights
+  - Fluffy problem: class disbalans, what's the appropriate loss function. Will the training be stable?
 
 ## Setup
 
@@ -141,7 +215,7 @@ https://pytorch.org/audio/stable/functional.html#feature-extractions
 
 note: in practice, Mel Spectrograms are used instead of classical spectrogram. We have to normazlie spectrograms images just like any other image dataset (mean/std).
 
-![](img/spectrogram.png)
+![ ](img/spectrogram.png)
 
 https://www.physik.uzh.ch/local/teaching/SPI301/LV-2015-Help/lvanls.chm/STFT_Spectrogram_Core.html#:~:text=frequency%20bins%20specifies%20the%20FFT,The%20default%20is%20512.
 
@@ -175,6 +249,15 @@ SpecAugment torchaudio: https://pytorch.org/audio/main/tutorials/audio_feature_a
 ### 🔀 Data generation
 
 Naive: concat multiple audio sequences into one and merge their labels. Introduce some overlapping, but not too much!
+
+Use the same genre for data generation: combine sounds which come from the same genre instead of different genres
+
+How to sample?
+
+- sample audio files \[3, 5\] but dont use more than 4 instruments
+- sample different starting positions at which the audio will start playing
+  - START-----x---x----------x--------x----------END
+- cutoff the audio sequence at max length?
 
 ## 🏆 Team members
 

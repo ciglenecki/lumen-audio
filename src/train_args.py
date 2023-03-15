@@ -8,23 +8,33 @@ from __future__ import annotations
 import argparse
 
 import pytorch_lightning as pl
+import torch
 
 import src.config_defaults as config_defaults
 import src.utils_functions as utils_functions
 from src.audio_transform import AudioTransforms
-from src.model import SupportedModels
-from src.utils_train import MetricMode, OptimizeMetric, OptimizerType, SchedulerType
+from src.utils_train import (
+    MetricMode,
+    OptimizeMetric,
+    OptimizerType,
+    SchedulerType,
+    SupportedModels,
+)
 
 ARGS_GROUP_NAME = "General arguments"
 
 
 def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
 
     lightning_parser = pl.Trainer.add_argparse_args(parser)
     lightning_parser.set_defaults(
         log_every_n_steps=config_defaults.DEFAULT_LOG_EVERY_N_STEPS,
         max_epochs=config_defaults.DEFAULT_EPOCHS,
+        accelerator="gpu" if torch.cuda.is_available() else "cpu",
+        devices=-1,  # use all devices
     )
 
     user_group = parser.add_argument_group(ARGS_GROUP_NAME)
@@ -58,6 +68,14 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         type=float,
         metavar="float",
         help="Learning rate",
+    )
+
+    user_group.add_argument(
+        "--warmup-start-lr",
+        type=float,
+        metavar="float",
+        default=config_defaults.DEFAULT_WARMUP_START_LR,
+        help="warmup learning rate",
     )
 
     user_group.add_argument(
@@ -155,6 +173,7 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         "--patience",
         help="Number of checks with no improvement after which training will be stopped. Under the default configuration, one check happens after every training epoch",
         metavar="int",
+        default=config_defaults.DEFAULT_EARLY_STOPPING_NO_IMPROVEMENT_EPOCHS,
         type=utils_functions.is_positive_int,
     )
 
@@ -164,7 +183,12 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         type=int,
         default=config_defaults.DEFAULT_BATCH_SIZE,
     )
-
+    user_group.add_argument(
+        "--unfreeze-at-epoch",
+        metavar="int",
+        type=int,
+        default=config_defaults.DEFAULT_UNFREEZE_AT_EPOCH,
+    )
     user_group.add_argument(
         "--sampling-rate",
         metavar="int",
@@ -174,7 +198,7 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
 
     user_group.add_argument(
         "--scheduler",
-        default=SchedulerType.PLATEAU,
+        default=SchedulerType.COSINEANNEALING,
         type=SchedulerType,
         choices=list(SchedulerType),
     )
@@ -215,16 +239,22 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
 
     """User arguments which override PyTorch Lightning arguments"""
     if args.quick:
-        pl_args.limit_train_batches = 4
-        pl_args.limit_val_batches = 4
-        pl_args.limit_test_batches = 4
+        pl_args.limit_train_batches = 3
+        pl_args.limit_val_batches = 2
+        pl_args.limit_test_batches = 2
         pl_args.log_every_n_steps = 1
+        args.dataset_fraction = 0.01
         args.batch_size = 2
 
     """Additional argument checking"""
     if args.metric and not args.metric_mode:
-        raise argparse.ArgumentError(
-            args.metric, "can't pass --metric without passing --metric-mode"
+        raise Exception(
+            f"{args.metric} can't pass --metric without passing --metric-mode"
+        )
+
+    if bool(args.warmup_start_lr) != bool(args.unfreeze_at_epoch):
+        raise Exception(
+            f"{args.metric} --warmup-start-lr and --unfreeze-at-epoch have to be passed together",
         )
 
     return args, pl_args

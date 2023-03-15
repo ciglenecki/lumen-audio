@@ -1,15 +1,21 @@
-torch
 numpy
 matplotlib
 pandas
 transformers
+scipy
+librosa
+ipykernel
+
+# ----------- torch -------- #
+torchvision
+torcheval
+torchmetrics
+torch
+tensorboard
+tensorboardX
 torchaudio
 pytorch-lightning
 torchmetrics
-scipy
-tensorboardX
-librosa
-ipykernel
 
 # --------- others --------- #
 pyrootutils     # standardizing the project root setup

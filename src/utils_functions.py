@@ -1,4 +1,5 @@
 import argparse
+import inspect
 import json
 import os
 import random
@@ -240,7 +241,7 @@ class MultiEnum(Enum):
         obj._value_ = values[0]
         for other_value in values[1:]:
             cls._value2member_map_[other_value] = obj
-        obj._all_values = values  # type: ignore
+        obj._all_values = values
         if len(values) > 1:
             obj.key = values[1]
         return obj
@@ -260,12 +261,16 @@ class MultiEnum(Enum):
         return "<{}.{}: {}>".format(
             self.__class__.__name__,
             self._name_,
-            ", ".join([repr(v) for v in self._all_values]),  # type: ignore
+            ", ".join([repr(v) for v in self._all_values]),
         )
 
 
 def to_yaml(data):
     return yaml.dump(data, allow_unicode=True, default_flow_style=False)
+
+
+def function_kwargs(func):
+    return inspect.getfullargspec(func)
 
 
 nato_alphabet = [
@@ -295,6 +300,9 @@ nato_alphabet = [
     "X-ray",
     "Yankee",
     "Zulu",
+    "Sinisa",
+    "Jan",
+    "Alan",
 ]
 
 adjectives = [
