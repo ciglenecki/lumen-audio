@@ -12,7 +12,7 @@ import torch
 
 import src.config_defaults as config_defaults
 import src.utils_functions as utils_functions
-from src.audio_transform import AudioTransforms
+from src.audio_transform import AudioTransforms, SupportedSpecAugs
 from src.utils_train import (
     MetricMode,
     OptimizeMetric,
@@ -54,6 +54,7 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         type=utils_functions.is_positive_int,
         help="Number of workers",
     )
+
     user_group.add_argument(
         "--num-labels",
         metavar="int",
@@ -71,10 +72,10 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
     )
 
     user_group.add_argument(
-        "--warmup-start-lr",
+        "--warmup-lr",
         type=float,
         metavar="float",
-        default=config_defaults.DEFAULT_WARMUP_START_LR,
+        default=config_defaults.DEFAULT_WARMUP_LR,
         help="warmup learning rate",
     )
 
@@ -101,6 +102,13 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         help="Use the pretrained model.",
         action="store_true",
         default=config_defaults.DEFAULT_PRETRAINED,
+    )
+
+    user_group.add_argument(
+        "--normalize-audio",
+        help="Normalize audio to [-1, 1]",
+        action="store_true",
+        default=config_defaults.DEFAULT_NORMALIZE_AUDIO,
     )
 
     user_group.add_argument(
@@ -139,6 +147,7 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         default=config_defaults.DEFAULT_METRIC_MODE,
         choices=list(MetricMode),
     )
+
     user_group.add_argument(
         "--model",
         default=SupportedModels.AST,
@@ -146,10 +155,20 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         choices=list(SupportedModels),
         help="Models used for training.",
     )
+
     user_group.add_argument(
         "--audio-transform",
         default=AudioTransforms.AST,
         type=AudioTransforms.from_string,
+        choices=list(AudioTransforms),
+        help="Transformation which will be performed on audio and labels",
+    )
+
+    user_group.add_argument(
+        "--spectrogram-augmentations",
+        default=None,
+        nargs="+",
+        type=SupportedSpecAugs.from_string,
         choices=list(AudioTransforms),
         help="Transformation which will be performed on audio and labels",
     )
@@ -183,12 +202,14 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         type=int,
         default=config_defaults.DEFAULT_BATCH_SIZE,
     )
+
     user_group.add_argument(
         "--unfreeze-at-epoch",
         metavar="int",
         type=int,
         default=config_defaults.DEFAULT_UNFREEZE_AT_EPOCH,
     )
+
     user_group.add_argument(
         "--sampling-rate",
         metavar="int",
@@ -198,7 +219,7 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
 
     user_group.add_argument(
         "--scheduler",
-        default=SchedulerType.COSINEANNEALING,
+        default=SchedulerType.ONECYCLE,
         type=SchedulerType,
         choices=list(SchedulerType),
     )
@@ -252,9 +273,9 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
             f"{args.metric} can't pass --metric without passing --metric-mode"
         )
 
-    if bool(args.warmup_start_lr) != bool(args.unfreeze_at_epoch):
+    if bool(args.warmup_lr) != bool(args.unfreeze_at_epoch):
         raise Exception(
-            f"{args.metric} --warmup-start-lr and --unfreeze-at-epoch have to be passed together",
+            f"{args.metric} --warmup-lr and --unfreeze-at-epoch have to be passed together",
         )
 
     return args, pl_args

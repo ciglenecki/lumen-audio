@@ -28,7 +28,7 @@ from src.utils_functions import (
     stdout_to_file,
     to_yaml,
 )
-from src.utils_train import MetricMode, OptimizeMetric, SchedulerType
+from src.utils_train import MetricMode, OptimizeMetric, SchedulerType, SupportedModels
 
 if __name__ == "__main__":
     args, pl_args = parse_args_train()
@@ -39,10 +39,11 @@ if __name__ == "__main__":
     unfreeze_at_epoch: int = args.unfreeze_at_epoch
     metric_mode_str = MetricMode(args.metric_mode).value
     optimizer_metric_str = OptimizeMetric(args.metric).value
+    normalize_audio = args.normalize_audio
 
     timestamp = get_timestamp()
     experiment_codeword = random_codeword()
-    experiment_name = f"{timestamp}_{experiment_codeword}_{args.model}"
+    experiment_name = f"{timestamp}_{experiment_codeword}_{args.model.value}"
 
     os.makedirs(output_dir, exist_ok=True)
     filename_report = Path(output_dir, experiment_name + ".txt")
@@ -52,7 +53,9 @@ if __name__ == "__main__":
     print("Config:", to_yaml(vars(args)), sep="\n")
     print("Config PyTorch Lightning:", to_yaml(vars(pl_args)), sep="\n")
 
-    audio_transform: AudioTransformBase = get_audio_transform(args.audio_transform)
+    audio_transform: AudioTransformBase = get_audio_transform(
+        args.audio_transform, args.spectrogram_augmentations
+    )
 
     datamodule = IRMASDataModule(
         batch_size=batch_size,
@@ -61,6 +64,7 @@ if __name__ == "__main__":
         drop_last_sample=args.drop_last,
         train_audio_transform=audio_transform,
         val_audio_transform=audio_transform,
+        normalize_audio=normalize_audio,
     )
 
     train_dataloader_size = len(datamodule.train_dataloader())

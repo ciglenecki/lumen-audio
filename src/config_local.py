@@ -4,8 +4,18 @@ e.g.
 DEFAULT_LR = 0.5
 """
 
-DEFAULT_LR = 2e-7
-DEFAULT_WARMUP_START_LR = 5e-5
-DEFAULT_PRETRAINED = True
+from enum import Enum
+from pathlib import Path
+
+import pyrootutils
+
+from src.utils_train import MetricMode, OptimizeMetric
+
+DEFAULT_LR = 5e-6
+DEFAULT_WARMUP_LR = 1e-4
 DEFAULT_EPOCHS = 500
-DEFAULT_UNFREEZE_AT_EPOCH = 3
+DEFAULT_BATCH_SIZE = 3
+DEFAULT_NUM_WORKERS = 4
+
+DEFAULT_OPTIMIZE_METRIC = OptimizeMetric.VAL_F1
+DEFAULT_METRIC_MODE = MetricMode.MAX

@@ -31,13 +31,15 @@ def our_configure_optimizers(
     parameters: Iterator[Parameter],
     scheduler_type: SchedulerType,
     metric_mode: MetricMode,
-    patience: int,
+    plateau_patience: int,
     backbone_lr: float,
     weight_decay: float,
     optimizer_type: OptimizerType,
     optimization_metric: OptimizeMetric,
     trainer_estimated_stepping_batches: int,
     num_of_steps_in_epoch: int,
+    one_cycle_min_lr=1e-7,
+    cosine_anneal_epochs_reset=5,
 ):
     """Set optimizer's learning rate to backbone.
 
@@ -63,6 +65,7 @@ def our_configure_optimizers(
             f"Optimizer {optimizer_type} is not implemented",
             optimizer_type,
         )
+
     if scheduler_type is SchedulerType.AUTO_LR:
         """SchedulerType.AUTO_LR sets it's own scheduler.
 
@@ -80,11 +83,10 @@ def our_configure_optimizers(
     }
 
     if scheduler_type == SchedulerType.ONECYCLE:
-        min_lr = 2.5e-5
         scheduler = torch.optim.lr_scheduler.OneCycleLR(
             optimizer=optimizer,
             max_lr=backbone_lr,  # TOOD:lr,
-            final_div_factor=backbone_lr / min_lr,
+            final_div_factor=backbone_lr / one_cycle_min_lr,
             total_steps=int(trainer_estimated_stepping_batches),
             verbose=False,
         )
@@ -95,14 +97,14 @@ def our_configure_optimizers(
             optimizer,
             mode=metric_mode.value,
             factor=config_defaults.DEFAULT_LR_PLATEAU_FACTOR,
-            patience=patience,
+            patience=plateau_patience,
             verbose=True,
         )
         interval = "epoch"
     elif scheduler_type == SchedulerType.COSINEANNEALING:
         scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
             optimizer,
-            T_0=num_of_steps_in_epoch * 3,
+            T_0=num_of_steps_in_epoch * cosine_anneal_epochs_reset,
             T_mult=1,
         )
         interval = "step"

@@ -57,9 +57,9 @@ class GeneralMetricsEpochLogger(pl.Callback):
         )
 
         data_dict = {
-            "total_params/epoch": total_params,
-            "trainable_params/epoch": trainable_params,
-            "non_trainable_params/epoch": non_trainable_params,
+            "params/total_params_epoch": total_params,
+            "params/trainable_params_epoch": trainable_params,
+            "params/non_trainable_params_epoch": non_trainable_params,
             "current_lr/epoch": trainer.optimizers[0].param_groups[0]["lr"],
             "epoch_true": trainer.current_epoch,
             "step": trainer.current_epoch,
@@ -67,19 +67,18 @@ class GeneralMetricsEpochLogger(pl.Callback):
 
         pl_module.log_dict(data_dict)
 
-    def on_train_batch_end(
+    def on_train_batch_start(
         self,
         trainer: "pl.Trainer",
         pl_module: "pl.LightningModule",
-        outputs,
-        batch,
+        batch: Any,
         batch_idx: int,
-        unused: int = 0,
     ) -> None:
         data_dict = {
             "current_lr/step": trainer.optimizers[0].param_groups[0]["lr"],
         }
         pl_module.log_dict(data_dict)
+        return super().on_train_batch_start(trainer, pl_module, batch, batch_idx)
 
 
 class OverrideEpochMetricCallback(Callback):

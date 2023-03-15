@@ -1,3 +1,4 @@
+import math
 from abc import ABC, abstractmethod
 from typing import Any, Optional, Union
 
@@ -15,6 +16,7 @@ from transformers import ASTConfig, ASTForAudioClassification
 from transformers.modeling_outputs import SequenceClassifierOutput
 
 import src.config_defaults as config_defaults
+from src.optimizers import our_configure_optimizers
 from src.utils_train import (
     MetricMode,
     OptimizeMetric,
@@ -25,6 +27,46 @@ from src.utils_train import (
     UnsupportedOptimizer,
     UnsupportedScheduler,
 )
+
+
+class DeepHead(nn.Module):
+    def __init__(self, dimensions: list[int], dropout_p=0.3) -> None:
+        """List of input and output features which will create N - 1 fully connected layers.
+
+        Args:
+            dimensions: list[int]
+        """
+        assert len(dimensions) >= 2, "Dimensions have to contain at least two ints"
+
+        super().__init__()
+        self.dimensions = dimensions
+        layers = []
+        if len(self.dimensions) == 2:
+            in_features, out_features = self.dimensions[0], self.dimensions[1]
+            layers.append(nn.LayerNorm(in_features))
+            layers.append(nn.ReLU())
+            layers.append(nn.Linear(in_features, out_features))
+            return
+        else:
+            for i in range(len(self.dimensions) - 1):
+                in_features, out_features = self.dimensions[i], self.dimensions[i + 1]
+                layers.append(nn.LayerNorm(in_features))
+                layers.append(nn.ReLU())
+                layers.append(nn.Linear(in_features, out_features))
+                if i != len(self.dimensions) - 1:
+                    # don't add dropout to the classifier itself!
+                    layers.append(nn.Dropout(p=dropout_p))
+
+        self.deep_head = nn.Sequential(*layers)
+
+    def forward(self, x):
+        return self.deep_head(x)
+
+
+# for in_features, out_features in zip(dimensions, dimensions[1:]):
+
+# self.deep_head
+# modules = [self.dimensions[0]]
 
 
 class OurLightningModule(pl.LightningModule, ABC):
@@ -125,7 +167,7 @@ class OurLightningModule(pl.LightningModule, ABC):
     def __init__(
         self,
         lr: float,
-        warmup_start_lr: Optional[float],
+        warmup_lr: Optional[float],
         unfreeze_at_epoch: Optional[int],
         *args,
         **kwargs,
@@ -134,14 +176,14 @@ class OurLightningModule(pl.LightningModule, ABC):
 
         self.unfreeze_at_epoch = unfreeze_at_epoch
         self.backbone_lr = lr  # lr once backbone gets unfrozen
-        self.warmup_start_lr = warmup_start_lr  # starting warmup lr
+        self.warmup_lr = warmup_lr  # starting warmup lr
 
-        if self.warmup_start_lr:
-            self.lr = self.warmup_start_lr
+        if self.warmup_lr:
+            self.lr = self.warmup_lr
         else:
             self.lr = lr
 
-        assert int(bool(self.unfreeze_at_epoch)) + int(bool(self.warmup_start_lr)) in [
+        assert int(bool(self.unfreeze_at_epoch)) + int(bool(self.warmup_lr)) in [
             0,
             2,
         ], "Both should exist or both shouldn't exist!"
@@ -195,18 +237,18 @@ class OurLightningModule(pl.LightningModule, ABC):
 
     def print_params(self):
         """Print module's parameters."""
-        for module in self.named_modules():
-            for param, _ in module.named_params():
+        for _, module in self.named_modules():
+            for param, _ in module.named_parameters():
                 print(param)
 
     def _set_finetune_until_step(self):
         """We have to caculate what's the step number after which the fine tuning phase is over. We
         also dynamically set the finetune lr nominator, which will ensure that warmup learning rate
-        starts at `warmup_start_lr` and ends with `backbone_lr`. Once the trainer reaches the step
+        starts at `warmup_lr` and ends with `backbone_lr`. Once the trainer reaches the step
         `finetune_until_step` and learning rate becomes `backbone_lr`, the finetuning phase is
         over.
 
-        lr = ((warmup_start_lr * numerator) * numerator) ... * numerator))  =  warmup_start_lr * (numerator)^unfreeze_backbone_at_epoch
+        lr = ((warmup_lr * numerator) * numerator) ... * numerator))  =  warmup_lr * (numerator)^unfreeze_backbone_at_epoch
                                                     ^ multiplying unfreeze_backbone_at_epoch times
         """
         assert self.unfreeze_at_epoch is not None
@@ -215,15 +257,15 @@ class OurLightningModule(pl.LightningModule, ABC):
         )
         self.finetune_until_step = self.num_of_steps_in_epoch * self.unfreeze_at_epoch
 
-        _a = self.backbone_lr / self.warmup_start_lr
+        _a = self.backbone_lr / self.warmup_lr
         _b = self.finetune_until_step - 1
         self.finetune_lr_nominator = np.exp(np.log(_a) / (_b))
 
         assert np.isclose(
             np.log(self.backbone_lr),
-            np.log(self.warmup_start_lr)
+            np.log(self.warmup_lr)
             + (self.finetune_until_step - 1) * np.log(self.finetune_lr_nominator),
-        ), "should be: lr = warmup_start_lr * (numerator)^unfreeze_backbone_at_epoch"
+        ), "should be: lr = warmup_lr * (numerator)^unfreeze_backbone_at_epoch"
 
     @abstractmethod
     def _lr_finetuning_step(self, optimizer_idx):
@@ -255,6 +297,11 @@ class OurLightningModule(pl.LightningModule, ABC):
             self._set_finetune_until_step()
         return out
 
+    def on_fit_start(self) -> None:
+        super().on_fit_start()
+        if self.warmup_lr:
+            self._set_lr(self.warmup_lr)
+
 
 class ASTModelWrapper(OurLightningModule):
     loggers: list[TensorBoardLogger]
@@ -271,7 +318,7 @@ class ASTModelWrapper(OurLightningModule):
         optimization_metric: OptimizeMetric,
         weight_decay: float,
         metric_mode: MetricMode,
-        early_stopping_epoch: int,
+        epoch_patience: int,
         *args,
         **kwargs,
     ):
@@ -287,7 +334,7 @@ class ASTModelWrapper(OurLightningModule):
         self.optimization_metric = optimization_metric
         self.weight_decay = weight_decay
         self.metric_mode = metric_mode
-        self.early_stopping_epoch = early_stopping_epoch
+        self.epoch_patience = epoch_patience
 
         config = ASTConfig(
             pretrained_model_name_or_path=model_name,
@@ -304,6 +351,14 @@ class ASTModelWrapper(OurLightningModule):
                 config=config,
                 ignore_mismatched_sizes=True,
             )
+        )
+
+        middle_size = int(
+            math.sqrt(config.hidden_size * self.num_labels) + self.num_labels
+        )
+
+        self.backbone.classifier = DeepHead(
+            [config.hidden_size, middle_size, self.num_labels]
         )
 
         self.hamming_distance = torchmetrics.HammingDistance(
@@ -336,7 +391,7 @@ class ASTModelWrapper(OurLightningModule):
 
         loss, logits_pred = self.forward(audio, labels=y)
         y_pred_prob = torch.sigmoid(logits_pred)
-        y_pred = y_pred_prob > 0.5
+        y_pred = y_pred_prob >= 0.5
 
         hamming_distance = self.hamming_distance(y, y_pred)
         f1_score = self.f1_score(y, y_pred)
@@ -412,12 +467,13 @@ class ASTModelWrapper(OurLightningModule):
         }
 
         if self.scheduler_type == SchedulerType.ONECYCLE:
-            min_lr = 2.5e-5
+            min_lr = 5e-6
             scheduler = torch.optim.lr_scheduler.OneCycleLR(
                 optimizer=optimizer,
-                max_lr=self.lr,  # TOOD:self.lr,
+                max_lr=self.lr,
                 final_div_factor=self.lr / min_lr,
-                total_steps=int(self.trainer.estimated_stepping_batches),
+                epochs=15,
+                steps_per_epoch=self.num_of_steps_in_epoch,
                 verbose=False,
             )
             interval = "step"
@@ -427,7 +483,7 @@ class ASTModelWrapper(OurLightningModule):
                 optimizer,
                 mode=self.metric_mode.value,
                 factor=config_defaults.DEFAULT_LR_PLATEAU_FACTOR,
-                patience=(self.early_stopping_epoch // 2) + 1,
+                patience=(self.epoch_patience // 2) + 1,
                 verbose=True,
             )
             interval = "epoch"
@@ -483,7 +539,7 @@ class EfficientNetV2SmallModel(OurLightningModule):
         optimization_metric: OptimizeMetric = config_defaults.DEFAULT_OPTIMIZE_METRIC,
         weight_decay: float = config_defaults.DEFAULT_WEIGHT_DECAY,
         metric_mode: MetricMode = config_defaults.DEFAULT_METRIC_MODE,
-        early_stopping_epoch: int = config_defaults.DEFAULT_EARLY_STOPPING_NO_IMPROVEMENT_EPOCHS,
+        epoch_patience: int = config_defaults.DEFAULT_EARLY_STOPPING_NO_IMPROVEMENT_EPOCHS,
         *args,
         **kwargs,
     ):
@@ -497,7 +553,7 @@ class EfficientNetV2SmallModel(OurLightningModule):
         self.optimization_metric = optimization_metric
         self.weight_decay = weight_decay
         self.metric_mode = metric_mode
-        self.early_stopping_epoch = early_stopping_epoch
+        self.epoch_patience = epoch_patience
 
         self.backbone = efficientnet_v2_s(weights="IMAGENET1K_V1", progress=True)
 
@@ -562,6 +618,22 @@ class EfficientNetV2SmallModel(OurLightningModule):
 
     def configure_optimizers(self):
 
+        # out = our_configure_optimizers(
+        #     parameters=self.parameters(),
+        #     scheduler_type=self.scheduler_type,
+        #     metric_mode=self.metric_mode,
+        #     plateau_patience=(self.epoch_patience // 2) + 1,
+        #     backbone_lr=self.backbone_lr,
+        #     weight_decay=self.weight_decay,
+        #     optimizer_type=self.optimizer_type,
+        #     optimization_metric=self.optimization_metric,
+        #     trainer_estimated_stepping_batches=int(
+        #         self.trainer.estimated_stepping_batches
+        #     ),
+        #     num_of_steps_in_epoch=self.num_of_steps_in_epoch,
+        #     cosine_anneal_epochs_reset=self.epoch_patience - 1,
+        # )
+
         if self.optimizer_type is OptimizerType.ADAMW:
             optimizer = torch.optim.AdamW(
                 self.parameters(),
@@ -612,7 +684,7 @@ class EfficientNetV2SmallModel(OurLightningModule):
                 optimizer,
                 mode=self.metric_mode.value,
                 factor=config_defaults.DEFAULT_LR_PLATEAU_FACTOR,
-                patience=(self.early_stopping_epoch // 2) + 1,
+                patience=(self.epoch_patience // 2) + 1,
                 verbose=True,
             )
             interval = "epoch"
@@ -658,14 +730,14 @@ def get_model(args, pl_args):
             batch_size=args.batch_size,
             scheduler_type=args.scheduler,
             max_epochs=pl_args.max_epochs,
-            warmup_start_lr=args.warmup_start_lr,
+            warmup_lr=args.warmup_lr,
             optimizer_type=args.optimizer,
             model_name=config_defaults.DEFAULT_AST_PRETRAINED_TAG,
             num_labels=args.num_labels,
             optimization_metric=args.metric,
             weight_decay=config_defaults.DEFAULT_WEIGHT_DECAY,
             metric_mode=args.metric_mode,
-            early_stopping_epoch=args.patience,
+            epoch_patience=args.patience,
             unfreeze_at_epoch=args.unfreeze_at_epoch,
         )
         return model
@@ -676,13 +748,13 @@ def get_model(args, pl_args):
             batch_size=args.batch_size,
             scheduler_type=args.scheduler,
             max_epochs=pl_args.max_epochs,
-            warmup_start_lr=args.warmup_start_lr,
+            warmup_lr=args.warmup_lr,
             optimizer_type=args.optimizer,
             num_labels=args.num_labels,
             optimization_metric=args.metric,
             weight_decay=config_defaults.DEFAULT_WEIGHT_DECAY,
             metric_mode=args.metric_mode,
-            early_stopping_epoch=args.patience,
+            epoch_patience=args.patience,
             unfreeze_at_epoch=args.unfreeze_at_epoch,
         )
         return model

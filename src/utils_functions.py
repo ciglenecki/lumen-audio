@@ -198,6 +198,12 @@ def print_df_sample(df: pd.DataFrame):
     pd.reset_option("display.max_columns")
 
 
+def serialize_functions(*rest):
+    current = rest[len(rest) - 1]
+    rest = rest[:-1]
+    return lambda x: current(serialize_functions(*rest)(x) if rest else x)
+
+
 def timeit(func):
     def timed(*args, **kwargs):
         print("START", func.__qualname__)

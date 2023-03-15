@@ -5,10 +5,11 @@ from pathlib import Path
 
 import numpy as np
 import pytorch_lightning as pl
+from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, SubsetRandomSampler
 
 import src.config_defaults as config_defaults
-from src.audio_transform import AudioTransformAST, AudioTransformBase
+from src.audio_transform import AudioTransformBase
 from src.dataset import IRMASDatasetTest, IRMASDatasetTrain
 from src.utils_functions import split_by_ratio
 
@@ -37,23 +38,27 @@ class IRMASDataModule(pl.LightningDataModule):
         num_workers: int,
         dataset_fraction: int,
         drop_last_sample: bool,
-        train_audio_transform: AudioTransformAST,
-        val_audio_transform: AudioTransformAST,
+        train_audio_transform: AudioTransformBase,
+        val_audio_transform: AudioTransformBase,
         train_dirs: list[Path] = [config_defaults.PATH_TRAIN],
         val_dirs: list[Path] = [config_defaults.PATH_VAL],
         test_dirs: list[Path] = [config_defaults.PATH_TEST],
+        train_only: bool = True,
+        normalize_audio: bool = config_defaults.DEFAULT_NORMALIZE_AUDIO,
     ):
         super().__init__()
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.dataset_fraction = dataset_fraction
         self.drop_last_sample = drop_last_sample
-        self.train_audio_transform: AudioTransformAST = train_audio_transform
-        self.val_audio_transform: AudioTransformAST = val_audio_transform
+        self.train_audio_transform: AudioTransformBase = train_audio_transform
+        self.val_audio_transform: AudioTransformBase = val_audio_transform
         self.prepare_data_per_node = False
         self.train_dirs = train_dirs
         self.val_dirs = val_dirs
         self.test_dirs = test_dirs
+        self.train_only = train_only
+        self.normalize_audio = normalize_audio
         self.setup()
 
     def prepare_data(self) -> None:
@@ -65,16 +70,26 @@ class IRMASDataModule(pl.LightningDataModule):
         self.train_dataset = IRMASDatasetTrain(
             dataset_dirs=self.train_dirs,
             audio_transform=self.train_audio_transform,
+            normalize_audio=self.normalize_audio,
         )
 
-        self.test_dataset = IRMASDatasetTest(
-            dataset_dirs=self.test_dirs,
-            audio_transform=self.val_audio_transform,
-        )
+        if not self.train_only:
+            self.test_dataset = IRMASDatasetTrain(
+                dataset_dirs=self.train_dirs,
+                audio_transform=self.val_audio_transform,
+                normalize_audio=self.normalize_audio,
+            )
+        else:
+            self.test_dataset = self.train_dataset
 
-        train_indices = np.arange(len(self.train_dataset))
-        val_test_indices = np.arange(len(self.test_dataset))
-        val_indices, test_indices = split_by_ratio(val_test_indices, 0.5, 0.5)
+        if self.train_only:
+            indices = np.arange(len(self.train_dataset))
+            train_indices, val_indices = train_test_split(indices, test_size=0.2)
+            test_indices = np.array([])
+        else:
+            train_indices = np.arange(len(self.train_dataset))
+            val_test_indices = np.arange(len(self.test_dataset))
+            val_indices, test_indices = split_by_ratio(val_test_indices, 0.5, 0.5)
 
         if self.dataset_fraction != 1:
             train_indices = np.random.choice(
@@ -93,7 +108,8 @@ class IRMASDataModule(pl.LightningDataModule):
                 replace=False,
             )
 
-        self._sanity_check_indices(val_indices, test_indices)
+        self._sanity_check_difference(train_indices, val_indices)
+        self._sanity_check_difference(val_indices, test_indices)
 
         self.train_size = len(train_indices)
         self.val_size = len(val_indices)
@@ -125,7 +141,7 @@ class IRMASDataModule(pl.LightningDataModule):
         self.val_sampler = SubsetRandomSampler(val_indices.tolist())
         self.test_sampler = SubsetRandomSampler(test_indices.tolist())
 
-    def _sanity_check_indices(
+    def _sanity_check_difference(
         self,
         val_indices: np.ndarray,
         test_indices: np.ndarray,
@@ -155,7 +171,6 @@ class IRMASDataModule(pl.LightningDataModule):
 
         """Uses test dataset files but sampler takes care that validation and test get different
         files."""
-
         return DataLoader(
             self.test_dataset,
             batch_size=self.batch_size,
