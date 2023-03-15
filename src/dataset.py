@@ -27,7 +27,9 @@ class IRMASDatasetTrain(Dataset):
     def __init__(
         self,
         dataset_dirs: list[Path] = [config_defaults.PATH_TRAIN],
-        audio_transform: AudioTransformBase = AudioTransformAST(sampling_rate=config_defaults.DEFAULT_SAMPLING_RATE),
+        audio_transform: AudioTransformBase = AudioTransformAST(
+            sampling_rate=config_defaults.DEFAULT_SAMPLING_RATE
+        ),
         num_classes=config_defaults.DEFAULT_NUM_LABELS,
         sanity_checks=config_defaults.DEFAULT_SANITY_CHECKS,
     ):
@@ -110,7 +112,9 @@ class IRMASDatasetTest(Dataset):
         dataset_dirs: list[Path] = [config_defaults.PATH_TEST],
         num_classes=config_defaults.DEFAULT_NUM_LABELS,
         sanity_checks=config_defaults.DEFAULT_SANITY_CHECKS,
-        audio_transform: AudioTransformAST = AudioTransformAST(sampling_rate=config_defaults.DEFAULT_SAMPLING_RATE),
+        audio_transform: AudioTransformAST = AudioTransformAST(
+            sampling_rate=config_defaults.DEFAULT_SAMPLING_RATE
+        ),
     ):
         self.num_classes = num_classes
         self.audio_transform = audio_transform

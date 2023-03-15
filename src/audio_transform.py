@@ -30,10 +30,10 @@ class AudioTransformBase(ABC):
 
     Audio transfrom can be model dependent. We can create audio transforms which work only for one
     model and that's fine.
-    
+
     Sampling rate defines the target sampling rate.
     """
-    
+
     @abstractmethod
     def __init__(self, sampling_rate):
         self.sampling_rate = sampling_rate
@@ -66,7 +66,8 @@ class AudioTransformAST(AudioTransformBase):
     def __init__(
         self,
         ast_pretrained_tag=config_defaults.DEFAULT_AST_PRETRAINED_TAG,
-        *args, **kwargs
+        *args,
+        **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.feature_extractor = ASTFeatureExtractor.from_pretrained(ast_pretrained_tag)
@@ -99,23 +100,10 @@ class AudioTransformAST(AudioTransformBase):
         # mel filter banks
         spectrogram = features["input_values"].squeeze(dim=0)
         return spectrogram, labels
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+
+
 #############################################################################################################################################################
+
 
 class AudioTransformMelSpectrogram(AudioTransformBase):
     """Resamples audio and extracts melspectrogram from audio."""
@@ -125,7 +113,8 @@ class AudioTransformMelSpectrogram(AudioTransformBase):
         n_fft: int = config_defaults.DEFAULT_N_FFT,
         hop_length: int = config_defaults.DEFAULT_HOP_LENGTH,
         n_mels: int = config_defaults.DEFAULT_N_MELS,
-        *args, **kwargs,
+        *args,
+        **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.n_fft = n_fft
@@ -166,11 +155,7 @@ class AudioTransformMelSpectrogram(AudioTransformBase):
 class AudioTransformMelSpectrogramResize(AudioTransformMelSpectrogram):
     """Resamples audio, extracts melspectrogram from audio, resizes it to the given dimensions."""
 
-    def __init__(
-        self,
-        dim: tuple[int, int],
-        *args, **kwargs
-    ):
+    def __init__(self, dim: tuple[int, int], *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.dim = dim
 
@@ -180,31 +165,25 @@ class AudioTransformMelSpectrogramResize(AudioTransformMelSpectrogram):
         labels: torch.Tensor | np.ndarray,
         orig_sampling_rate: int,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        
-        spectrogram, labels = super().process(
-            audio, labels, orig_sampling_rate
-        )
+
+        spectrogram, labels = super().process(audio, labels, orig_sampling_rate)
 
         spectrogram = spectrogram.reshape(1, 1, *spectrogram.shape)
         spectrogram = F.resize(torch.tensor(spectrogram), size=self.dim, antialias=True)
         spectrogram = spectrogram.reshape(1, *self.dim)
-        
+
         return spectrogram, labels
 
-class AudioTransformMelSpectrogramFixed(AudioTransformMelSpectrogram):
-    """Resamples audio, extracts melspectrogram from audio and pads the original spectrogram to dimension of spectrogram
-    for max_len sequence."""
 
-    def __init__(
-        self,
-        max_len: int, 
-        dim: tuple[int, int],
-        *args,  **kwargs
-    ):
+class AudioTransformMelSpectrogramFixed(AudioTransformMelSpectrogram):
+    """Resamples audio, extracts melspectrogram from audio and pads the original spectrogram to
+    dimension of spectrogram for max_len sequence."""
+
+    def __init__(self, max_len: int, dim: tuple[int, int], *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.max_len = max_len
         self.dim = dim
-        
+
         FAKE_SAMPLE_RATE = 44_100
         dummy_audio = np.random.random(size=(max_len * FAKE_SAMPLE_RATE,))
         audio_resampled = librosa.resample(
@@ -220,9 +199,8 @@ class AudioTransformMelSpectrogramFixed(AudioTransformMelSpectrogram):
             hop_length=self.hop_length,
             n_mels=self.n_mels,
         )
-        
+
         self.seq_dim = spectrogram.shape
-        
 
     def process(
         self,
@@ -231,22 +209,25 @@ class AudioTransformMelSpectrogramFixed(AudioTransformMelSpectrogram):
         orig_sampling_rate: int,
     ) -> tuple[torch.Tensor, torch.Tensor]:
 
-        spectrogram, labels = super().process(
-            audio, labels, orig_sampling_rate
-        )
-        
+        spectrogram, labels = super().process(audio, labels, orig_sampling_rate)
+
         spectrogram_padded = np.zeros(self.seq_dim)
         w, h = spectrogram.shape
         spectrogram_padded[:w, :h] = spectrogram
         spectrogram_padded = spectrogram_padded.reshape(1, 1, *self.seq_dim)
-        spectrogram_padded = F.resize(torch.tensor(spectrogram_padded), size=self.dim, antialias=True)
+        spectrogram_padded = F.resize(
+            torch.tensor(spectrogram_padded), size=self.dim, antialias=True
+        )
         spectrogram_padded = spectrogram_padded.reshape(1, *self.dim)
 
         return spectrogram_padded.type(torch.float32), labels
 
 
 class AudioTransformMelSpectrogramFixedRepeated(AudioTransformMelSpectrogramFixed):
-    """Calls AudioTransformMelSpectrogramFixed and repeats the output 3 times. This is useful for mocking RGB channels."""
+    """Calls AudioTransformMelSpectrogramFixed and repeats the output 3 times.
+
+    This is useful for mocking RGB channels.
+    """
 
     def __init__(self, repeat=3, **kwargs):
         super().__init__(**kwargs)
@@ -259,16 +240,17 @@ class AudioTransformMelSpectrogramFixedRepeated(AudioTransformMelSpectrogramFixe
         orig_sampling_rate: int,
     ) -> tuple[torch.Tensor, torch.Tensor]:
 
-        spectrogram, labels = super().process(
-            audio, labels, orig_sampling_rate
-        )
+        spectrogram, labels = super().process(audio, labels, orig_sampling_rate)
         spectrogram = spectrogram.repeat(1, self.repeat, 1, 1)[0]
 
         return spectrogram, labels
-    
-    
+
+
 class AudioTransformMelSpectrogramResizedRepeated(AudioTransformMelSpectrogramFixed):
-    """Calls AudioTransformMelSpectrogramResize and repeats the output 3 times. This is useful for mocking RGB channels."""
+    """Calls AudioTransformMelSpectrogramResize and repeats the output 3 times.
+
+    This is useful for mocking RGB channels.
+    """
 
     def __init__(self, repeat=3, **kwargs):
         super().__init__(**kwargs)
@@ -281,36 +263,13 @@ class AudioTransformMelSpectrogramResizedRepeated(AudioTransformMelSpectrogramFi
         orig_sampling_rate: int,
     ) -> tuple[torch.Tensor, torch.Tensor]:
 
-        spectrogram, labels = super().process(
-            audio, labels, orig_sampling_rate
-        )
+        spectrogram, labels = super().process(audio, labels, orig_sampling_rate)
         spectrogram = spectrogram.repeat(1, self.repeat, 1, 1)[0]
 
         return spectrogram, labels
-    
-    
+
+
 #############################################################################################################################################################
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 class UnsupportedAudioTransforms(ValueError):
@@ -325,30 +284,41 @@ class AudioTransforms(EnumStr):
     MEL_SPECTROGRAM_FIXED_REPEAT = "mel_spectrogram_fixed_repeat"
 
 
-def get_audio_transform(sampling_rate: int, dim: tuple[int, int], audio_transform_enum: AudioTransforms) -> AudioTransformBase:
+def get_audio_transform(
+    sampling_rate: int, dim: tuple[int, int], audio_transform_enum: AudioTransforms
+) -> AudioTransformBase:
     # TODO: check if everyone has 3.10 and switch all ifs to case
     if audio_transform_enum is AudioTransforms.AST:
         return AudioTransformAST(
             ast_pretrained_tag=config_defaults.DEFAULT_AST_PRETRAINED_TAG
         )
-    
+
     elif audio_transform_enum is AudioTransforms.MEL_SPECTROGRAM_FIXED_REPEAT:
-        return AudioTransformMelSpectrogramFixedRepeated(sampling_rate=sampling_rate, dim=dim, repeat=3, max_len=20)
-    
+        return AudioTransformMelSpectrogramFixedRepeated(
+            sampling_rate=sampling_rate, dim=dim, repeat=3, max_len=20
+        )
+
     elif audio_transform_enum is AudioTransforms.MEL_SPECTROGRAM_RESIZE_REPEAT:
-        return AudioTransformMelSpectrogramResizedRepeated(sampling_rate=sampling_rate, dim=dim, repeat=3)
-    
+        return AudioTransformMelSpectrogramResizedRepeated(
+            sampling_rate=sampling_rate, dim=dim, repeat=3
+        )
+
     raise UnsupportedAudioTransforms(f"Unsupported transform {audio_transform_enum}")
 
 
-if __name__ == "__main__": # for testing only
+if __name__ == "__main__":  # for testing only
     from src.dataset import IRMASDatasetTrain
-    audio_tf = AudioTransformMelSpectrogramFixed(max_len=20, dim=(384, 384), sampling_rate=22050)
+
+    audio_tf = AudioTransformMelSpectrogramFixed(
+        max_len=20, dim=(384, 384), sampling_rate=22050
+    )
     ds = IRMASDatasetTrain(audio_transform=audio_tf)
-    
+
     x, y = ds[100]
 
     import matplotlib.pyplot as plt
-    librosa.display.specshow(x[0].cpu().detach().numpy(), x_axis="time", y_axis="mel", sr=22050)
+
+    librosa.display.specshow(
+        x[0].cpu().detach().numpy(), x_axis="time", y_axis="mel", sr=22050
+    )
     plt.show()
-    

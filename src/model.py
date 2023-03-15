@@ -11,12 +11,12 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from torchmetrics.classification import MultilabelF1Score
 from torchsummary import summary
 from torchvision.models import (
-    efficientnet_v2_s, 
-    efficientnet_v2_m, 
-    efficientnet_v2_l, 
-    resnext50_32x4d, 
-    resnext101_32x8d, 
-    resnext101_64x4d
+    efficientnet_v2_l,
+    efficientnet_v2_m,
+    efficientnet_v2_s,
+    resnext50_32x4d,
+    resnext101_32x8d,
+    resnext101_64x4d,
 )
 from transformers import ASTConfig, ASTForAudioClassification
 from transformers.modeling_outputs import SequenceClassifierOutput
@@ -470,6 +470,7 @@ class ASTModelWrapper(OurLightningModule):
         self._set_lr(new_lr)
         return
 
+
 TORCHVISION_CONSTRUCTOR_DICT = {
     SupportedModels.EFFICIENT_NET_V2_S: efficientnet_v2_s,
     SupportedModels.EFFICIENT_NET_V2_M: efficientnet_v2_m,
@@ -516,46 +517,52 @@ class TorchvisionModel(OurLightningModule):
         self.metric_mode = metric_mode
         self.early_stopping_epoch = early_stopping_epoch
         self.pretrained_weights = pretrained_weights
-        
+
         self.backbone = TORCHVISION_CONSTRUCTOR_DICT[model_enum](
             weights=pretrained_weights, progress=True
         )
-        
-        
-        print('------------------------------------------')
-        print('\n')
-        print('Backbone before changing the classifier:')
+
+        print("------------------------------------------")
+        print("\n")
+        print("Backbone before changing the classifier:")
         print(list(self.backbone.children())[-1])
-        print('\n')
-        print('------------------------------------------')
-        
+        print("\n")
+        print("------------------------------------------")
+
         last_module_name = [
-            i[0] for i in self.backbone.named_modules() if "." not in i[0] and i[0] != ""
+            i[0]
+            for i in self.backbone.named_modules()
+            if "." not in i[0] and i[0] != ""
         ][-1]
         last_module = getattr(self.backbone, last_module_name)
-        last_dim = last_module[-1].in_features if isinstance(last_module, nn.Sequential) else last_module.in_features
+        last_dim = (
+            last_module[-1].in_features
+            if isinstance(last_module, nn.Sequential)
+            else last_module.in_features
+        )
 
         new_fc = []
         if isinstance(last_module, nn.Sequential):
-            for k in last_module[:-1]: # in case of existing dropouts in final fc module
+            for k in last_module[
+                :-1
+            ]:  # in case of existing dropouts in final fc module
                 new_fc.append(k)
-            
+
         fc.insert(0, last_dim)
         fc.append(self.num_labels)
         for i, _ in enumerate(fc[:-1]):
             new_fc.append(
-                nn.Linear(in_features=fc[i], out_features=fc[i+1], bias=True)
+                nn.Linear(in_features=fc[i], out_features=fc[i + 1], bias=True)
             )
-        
-        setattr(self.backbone, last_module_name, nn.Sequential(*new_fc))
-        
-        print('\n')
-        print('Backbone after changing the classifier:')
-        print(list(self.backbone.children())[-1])
-        print('\n')
-        print('------------------------------------------')
 
-                     
+        setattr(self.backbone, last_module_name, nn.Sequential(*new_fc))
+
+        print("\n")
+        print("Backbone after changing the classifier:")
+        print(list(self.backbone.children())[-1])
+        print("\n")
+        print("------------------------------------------")
+
         self.hamming_distance = torchmetrics.HammingDistance(
             task="multilabel", num_labels=self.num_labels
         )
@@ -750,7 +757,7 @@ def get_model(args, pl_args):
             early_stopping_epoch=args.patience,
             unfreeze_at_epoch=args.unfreeze_at_epoch,
             fc=args.fc,
-            pretrained_weights=args.pretrained_weights
+            pretrained_weights=args.pretrained_weights,
         )
         return model
     raise UnsupportedModel(f"Model {model_enum.value} is not supported")

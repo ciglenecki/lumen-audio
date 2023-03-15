@@ -240,14 +240,14 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         type=str,
         help="The string that denotes the pretrained weights used.",
     )
-    
+
     user_group.add_argument(
         "--dim",
         default=config_defaults.DEFAULT_DIM,
         type=tuple[int, int],
         help="The dimension to resize the image to.",
     )
-    
+
     args = parser.parse_args()
 
     """Separate Namespace into two Namespaces"""
