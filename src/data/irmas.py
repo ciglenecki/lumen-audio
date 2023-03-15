@@ -10,22 +10,15 @@ import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-import src.config_defaults as config_defaults
-from src.audio_transform import AudioTransformAST, AudioTransformBase
-from src.utils_dataset import (
-    encode_drums,
-    encode_genre,
-    load_audio_from_file,
-    multi_hot_indices,
-)
+import src.config.config_defaults as config_defaults
+from src.features.audio_transform import AudioTransformAST, AudioTransformBase
+from src.utils.utils_audio import load_audio_from_file
+from src.utils.utils_dataset import encode_drums, encode_genre, multi_hot_indices
+from src.utils.utils_exceptions import InvalidDataException
 
 # '*.(wav|mp3|flac)'
 # glob_expression = f"*\.({'|'.join(config_defaults.DEFAULT_AUDIO_EXTENSIONS)})"
 glob_expression = "*.wav"
-
-
-class InvalidDataException(Exception):
-    """Something is wrong with the data."""
 
 
 class IRMASDatasetTrain(Dataset):

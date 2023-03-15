@@ -4,12 +4,8 @@ e.g.
 DEFAULT_LR = 0.5
 """
 
-from enum import Enum
-from pathlib import Path
 
-import pyrootutils
-
-from src.utils_train import MetricMode, OptimizeMetric
+from src.utils.utils_train import MetricMode, OptimizeMetric
 
 DEFAULT_LR = 5e-6
 DEFAULT_WARMUP_LR = 1e-4

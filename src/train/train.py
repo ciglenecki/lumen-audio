@@ -11,24 +11,29 @@ from pytorch_lightning.callbacks import (
     TQDMProgressBar,
 )
 
-from src.audio_transform import AudioTransformBase, get_audio_transform
-from src.callbacks import (
+from src.data.datamodule import IRMASDataModule
+from src.features.audio_transform import AudioTransformBase, get_audio_transform
+from src.model.model import get_model
+from src.train.callbacks import (
     FinetuningCallback,
     GeneralMetricsEpochLogger,
     OverrideEpochMetricCallback,
     TensorBoardHparamFixer,
 )
-from src.datamodule import IRMASDataModule
-from src.model import get_model
-from src.train_args import parse_args_train
-from src.utils_functions import (
+from src.train.train_args import parse_args_train
+from src.utils.utils_functions import (
     add_prefix_to_keys,
     get_timestamp,
     random_codeword,
     stdout_to_file,
     to_yaml,
 )
-from src.utils_train import MetricMode, OptimizeMetric, SchedulerType, SupportedModels
+from src.utils.utils_train import (
+    MetricMode,
+    OptimizeMetric,
+    SchedulerType,
+    print_modules,
+)
 
 if __name__ == "__main__":
     args, pl_args = parse_args_train()
@@ -40,6 +45,7 @@ if __name__ == "__main__":
     metric_mode_str = MetricMode(args.metric_mode).value
     optimizer_metric_str = OptimizeMetric(args.metric).value
     normalize_audio = args.normalize_audio
+    aug_kwargs = args.aug_kwargs
 
     timestamp = get_timestamp()
     experiment_codeword = random_codeword()
@@ -54,7 +60,7 @@ if __name__ == "__main__":
     print("Config PyTorch Lightning:", to_yaml(vars(pl_args)), sep="\n")
 
     audio_transform: AudioTransformBase = get_audio_transform(
-        args.audio_transform, args.spectrogram_augmentations
+        args.audio_transform, args.spectrogram_augmentations, **aug_kwargs
     )
 
     datamodule = IRMASDataModule(
@@ -111,6 +117,7 @@ if __name__ == "__main__":
     )
 
     model = get_model(args, pl_args)
+    print_modules(model)
 
     callbacks = [
         callback_checkpoint,

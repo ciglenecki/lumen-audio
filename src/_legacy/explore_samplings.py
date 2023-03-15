@@ -11,7 +11,6 @@ for file_name in cd.PATH_VAL.rglob("*.wav"):
         if frame_rate not in val_dict:
             val_dict[frame_rate] = 0
         val_dict[frame_rate] += 1
-print(val_dict)
 
 train_dict = {}
 
@@ -21,4 +20,3 @@ for file_name in cd.PATH_TRAIN.rglob("*.wav"):
         if frame_rate not in train_dict:
             train_dict[frame_rate] = 0
         train_dict[frame_rate] += 1
-print(train_dict)

@@ -1,29 +1,15 @@
-from abc import ABC, abstractmethod
-from typing import Any, Iterator, Optional, Union
+from typing import Iterator
 
-import numpy as np
-import pytorch_lightning as pl
 import torch
-import torch.nn as nn
-import torchmetrics
-from pytorch_lightning.callbacks import ModelSummary
-from pytorch_lightning.loggers import TensorBoardLogger
-from scipy.io import wavfile
 from torch.nn.parameter import Parameter
-from torchmetrics.classification import MultilabelF1Score
-from torchsummary import summary
-from torchvision.models import efficientnet_v2_s
-from transformers import ASTConfig, ASTForAudioClassification
-from transformers.modeling_outputs import SequenceClassifierOutput
 
-import src.config_defaults as config_defaults
-from src.utils_train import (
+import src.config.config_defaults as config_defaults
+from src.utils.utils_exceptions import UnsupportedOptimizer, UnsupportedScheduler
+from src.utils.utils_train import (
     MetricMode,
     OptimizeMetric,
     OptimizerType,
     SchedulerType,
-    UnsupportedOptimizer,
-    UnsupportedScheduler,
 )
 
 
@@ -38,14 +24,16 @@ def our_configure_optimizers(
     optimization_metric: OptimizeMetric,
     trainer_estimated_stepping_batches: int,
     num_of_steps_in_epoch: int,
+    epochs: int,
     one_cycle_min_lr=1e-7,
-    cosine_anneal_epochs_reset=5,
 ):
-    """Set optimizer's learning rate to backbone.
+    """Set optimizer's learning rate to backbone. Why?
 
-    We do this because we can't explicitly pass the learning rate to scheduler. The scheduler
-    infers the learning rate from the optimizer which is why we set it the lr value which should be
-    activie once
+    - lr scheduler starts modifying lr after finetuning, it's starting lr is `backbone_lr`
+    - we can't explicitly pass the intial lr to scheduler
+    - the scheduler infers the initial lr from the optimizer
+    - that's why we set optimizers lr to `backbone_lr`
+    - we later change optimizer's lr to `warmup_lr`
     """
 
     if optimizer_type is OptimizerType.ADAMW:
@@ -104,7 +92,7 @@ def our_configure_optimizers(
     elif scheduler_type == SchedulerType.COSINEANNEALING:
         scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
             optimizer,
-            T_0=num_of_steps_in_epoch * cosine_anneal_epochs_reset,
+            T_0=num_of_steps_in_epoch * epochs,
             T_mult=1,
         )
         interval = "step"

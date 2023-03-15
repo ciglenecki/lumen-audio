@@ -5,9 +5,7 @@ from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import BaseFinetuning, Callback
 from torch.optim.optimizer import Optimizer
 
-
-class InvalidArgument(Exception):
-    pass
+from src.utils.utils_train import print_modules
 
 
 class TensorBoardHparamFixer(pl.Callback):
@@ -48,11 +46,11 @@ class GeneralMetricsEpochLogger(pl.Callback):
     def on_train_epoch_start(
         self, trainer: pl.Trainer, pl_module: pl.LightningModule
     ) -> None:
-        total_params = int(sum(p.numel() for p in pl_module.parameters()))
-        trainable_params = int(
+        total_params = float(sum(p.numel() for p in pl_module.parameters()))
+        trainable_params = float(
             sum(p.numel() for p in pl_module.parameters() if p.requires_grad)
         )
-        non_trainable_params = int(
+        non_trainable_params = float(
             sum(p.numel() for p in pl_module.parameters() if not p.requires_grad)
         )
 
@@ -91,25 +89,33 @@ class OverrideEpochMetricCallback(Callback):
     def __init__(self) -> None:
         super().__init__()
 
-    def on_training_epoch_end(self, trainer, pl_module: pl.LightningModule):
+    def on_training_epoch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
         self._log_step_as_current_epoch(trainer, pl_module)
 
-    def on_test_epoch_end(self, trainer, pl_module: pl.LightningModule):
+    def on_test_epoch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
         self._log_step_as_current_epoch(trainer, pl_module)
 
-    def on_validation_epoch_end(self, trainer, pl_module: pl.LightningModule):
+    def on_validation_epoch_end(
+        self, trainer: pl.Trainer, pl_module: pl.LightningModule
+    ):
         self._log_step_as_current_epoch(trainer, pl_module)
 
-    def on_training_epoch_start(self, trainer, pl_module: pl.LightningModule):
+    def on_training_epoch_start(
+        self, trainer: pl.Trainer, pl_module: pl.LightningModule
+    ):
         self._log_step_as_current_epoch(trainer, pl_module)
 
-    def on_test_epoch_start(self, trainer, pl_module: pl.LightningModule):
+    def on_test_epoch_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
         self._log_step_as_current_epoch(trainer, pl_module)
 
-    def on_validation_epoch_start(self, trainer, pl_module: pl.LightningModule):
+    def on_validation_epoch_start(
+        self, trainer: pl.Trainer, pl_module: pl.LightningModule
+    ):
         self._log_step_as_current_epoch(trainer, pl_module)
 
-    def _log_step_as_current_epoch(self, trainer, pl_module: pl.LightningModule):
+    def _log_step_as_current_epoch(
+        self, trainer: pl.Trainer, pl_module: pl.LightningModule
+    ):
         # has to be float!
         pl_module.log("step", float(trainer.current_epoch))
 
@@ -136,7 +142,7 @@ class FinetuningCallback(BaseFinetuning):
     +---------------------+--------------------------+----------------------+-----------+
     """
 
-    def __init__(self, unfreeze_backbone_at_epoch: int, train_bn=True) -> None:
+    def __init__(self, unfreeze_backbone_at_epoch: int, train_bn=False) -> None:
         super().__init__()
         self.unfreeze_at_epoch = unfreeze_backbone_at_epoch
         self.curr_epoch = 0
@@ -187,6 +193,7 @@ class FinetuningCallback(BaseFinetuning):
         self.freeze(pl_module)
         head = pl_module.head()
         self.make_trainable(head)
+        print_modules(pl_module)
 
     def finetune_function(
         self,
@@ -215,3 +222,4 @@ class FinetuningCallback(BaseFinetuning):
             params = BaseFinetuning.filter_on_optimizer(optimizer, params)
             if params:
                 optimizer.add_param_group({"params": params})
+            print_modules(pl_module)

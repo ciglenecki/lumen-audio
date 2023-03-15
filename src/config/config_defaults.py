@@ -5,22 +5,7 @@ from pathlib import Path
 
 import pyrootutils
 
-from src.utils_train import MetricMode, OptimizeMetric, OptimizerType
-
-# ===============
-# PATHS START
-# ===============
-
-PATH_WORK_DIR = pyrootutils.find_root(search_from=__file__, indicator=".project-root")
-PATH_DATA = Path(PATH_WORK_DIR, "data")
-PATH_TRAIN = Path(PATH_DATA, "irmas", "train")
-PATH_VAL = Path(PATH_DATA, "irmas", "val")
-PATH_TEST = Path(PATH_DATA, "irmas", "test")
-PATH_MODELS = Path(PATH_WORK_DIR, "models")
-
-# ===============
-# PATHS END
-# ===============
+from src.utils.utils_train import MetricMode, OptimizeMetric, OptimizerType
 
 DEFAULT_IRMAS_TRAIN_SIZE = 6705
 DEFAULT_IRMAS_TEST_SIZE = 2874
@@ -29,7 +14,6 @@ DEFAULT_NUM_WORKERS = 4
 DEFAULT_LOG_EVERY_N_STEPS = 100
 DEFAULT_DATASET_FRACTION = 1.0
 DEFAULT_LR = 1e-5
-DEFAULT_UNFREEZE_AT_EPOCH = 5
 
 DEFAULT_WARMUP_LR = 1e-4
 DEFAULT_PRETRAINED = True
@@ -51,6 +35,22 @@ DEFAULT_N_FFT = 400
 DEFAULT_N_MELS = 128
 DEFAULT_DIM = (384, 384)
 DEFAULT_NORMALIZE_AUDIO = True
+
+# ===============
+# PATHS START
+# ===============
+
+PATH_WORK_DIR = pyrootutils.find_root(search_from=__file__, indicator=".project-root")
+PATH_DATA = Path(PATH_WORK_DIR, "data")
+PATH_TRAIN = Path(PATH_DATA, "irmas", "train")
+PATH_VAL = Path(PATH_DATA, "irmas", "val")
+PATH_TEST = Path(PATH_DATA, "irmas", "test")
+PATH_MODELS = Path(PATH_WORK_DIR, "models")
+
+# ===============
+# PATHS END
+# ===============
+
 
 # ===============
 # KEYS START

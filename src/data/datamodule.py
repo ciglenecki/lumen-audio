@@ -8,10 +8,10 @@ import pytorch_lightning as pl
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, SubsetRandomSampler
 
-import src.config_defaults as config_defaults
-from src.audio_transform import AudioTransformBase
-from src.dataset import IRMASDatasetTest, IRMASDatasetTrain
-from src.utils_functions import split_by_ratio
+import src.config.config_defaults as config_defaults
+from src.data.irmas import IRMASDatasetTest, IRMASDatasetTrain
+from src.features.audio_transform import AudioTransformBase
+from src.utils.utils_functions import split_by_ratio
 
 
 class IRMASDataModule(pl.LightningDataModule):
