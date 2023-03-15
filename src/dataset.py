@@ -27,10 +27,9 @@ class IRMASDatasetTrain(Dataset):
     def __init__(
         self,
         dataset_dirs: list[Path] = [config_defaults.PATH_TRAIN],
-        audio_transform: AudioTransformAST = AudioTransformAST(),
+        audio_transform: AudioTransformBase = AudioTransformAST(sampling_rate=config_defaults.DEFAULT_SAMPLING_RATE),
         num_classes=config_defaults.DEFAULT_NUM_LABELS,
         sanity_checks=config_defaults.DEFAULT_SANITY_CHECKS,
-        sampling_rate=config_defaults.DEFAULT_SAMPLING_RATE,
     ):
         """_summary_
 
@@ -50,7 +49,6 @@ class IRMASDatasetTrain(Dataset):
 
         self.dataset: list[tuple[Path, np.ndarray]] = []
         self.dataset_dirs = dataset_dirs
-        self.sampling_rate = sampling_rate
         self.audio_transform = audio_transform
         self.num_classes = num_classes
         self._populate_dataset()
@@ -101,7 +99,6 @@ class IRMASDatasetTrain(Dataset):
             audio=audio,
             labels=labels,
             orig_sampling_rate=orig_sampling_rate,
-            sampling_rate=self.sampling_rate,
         )
         labels = labels.float()  # avoid errors in loss function
         return spectrogram, labels
@@ -113,14 +110,12 @@ class IRMASDatasetTest(Dataset):
         dataset_dirs: list[Path] = [config_defaults.PATH_TEST],
         num_classes=config_defaults.DEFAULT_NUM_LABELS,
         sanity_checks=config_defaults.DEFAULT_SANITY_CHECKS,
-        audio_transform: AudioTransformAST = AudioTransformAST(),
-        sampling_rate=config_defaults.DEFAULT_SAMPLING_RATE,
+        audio_transform: AudioTransformAST = AudioTransformAST(sampling_rate=config_defaults.DEFAULT_SAMPLING_RATE),
     ):
         self.num_classes = num_classes
         self.audio_transform = audio_transform
         self.dataset: list[tuple[Path, np.ndarray]] = []
         self.dataset_dirs = dataset_dirs
-        self.sampling_rate = sampling_rate
         self._populate_dataset()
 
         if sanity_checks:
@@ -166,7 +161,6 @@ class IRMASDatasetTest(Dataset):
             audio=audio,
             labels=labels,
             orig_sampling_rate=orig_sampling_rate,
-            sampling_rate=self.sampling_rate,
         )
         labels = labels.float()  # avoid errors in loss function
 
@@ -177,31 +171,31 @@ class InstrumentInference(Dataset):
     pass
 
 
-if __name__ == "__main__":  # for testing only
-    ds = IRMASDatasetTrain(audio_transform=AudioTransformAST)
+# if __name__ == "__main__":  # for testing only
+#     ds = IRMASDatasetTrain(audio_transform=AudioTransformAST)
 
-    import matplotlib.pyplot as plt
+#     import matplotlib.pyplot as plt
 
-    item = ds[0]
-    x, sr, y = item
+#     item = ds[0]
+#     x, sr, y = item
 
-    filter_banks = librosa.filters.mel(n_fft=2048, sr=22050, n_mels=10)
-    print(filter_banks.shape)
+#     filter_banks = librosa.filters.mel(n_fft=2048, sr=22050, n_mels=10)
+#     print(filter_banks.shape)
 
-    plt.figure(figsize=(25, 10))
-    librosa.display.specshow(filter_banks, sr=sr, x_axis="linear")
-    plt.colorbar(format="%+2.f")
-    plt.show()
+#     plt.figure(figsize=(25, 10))
+#     librosa.display.specshow(filter_banks, sr=sr, x_axis="linear")
+#     plt.colorbar(format="%+2.f")
+#     plt.show()
 
-    mel_spectrogram = librosa.feature.melspectrogram(
-        y=x, sr=sr, n_fft=2048, hop_length=512, n_mels=10
-    )
-    print(mel_spectrogram.shape)
+#     mel_spectrogram = librosa.feature.melspectrogram(
+#         y=x, sr=sr, n_fft=2048, hop_length=512, n_mels=10
+#     )
+#     print(mel_spectrogram.shape)
 
-    log_mel_spectrogram = librosa.power_to_db(mel_spectrogram)
-    print(log_mel_spectrogram.shape)
+#     log_mel_spectrogram = librosa.power_to_db(mel_spectrogram)
+#     print(log_mel_spectrogram.shape)
 
-    plt.figure(figsize=(25, 10))
-    librosa.display.specshow(log_mel_spectrogram, x_axis="time", y_axis="mel", sr=sr)
-    plt.colorbar(format="%+2.f")
-    plt.show()
+#     plt.figure(figsize=(25, 10))
+#     librosa.display.specshow(log_mel_spectrogram, x_axis="time", y_axis="mel", sr=sr)
+#     plt.colorbar(format="%+2.f")
+#     plt.show()

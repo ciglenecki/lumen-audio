@@ -31,6 +31,11 @@ class OptimizeMetric(EnumStr):
 class SupportedModels(EnumStr):
     AST = "ast"
     EFFICIENT_NET_V2_S = "efficient_net_v2_s"
+    EFFICIENT_NET_V2_M = "efficient_net_v2_m"
+    EFFICIENT_NET_V2_L = "efficient_net_v2_l"
+    RESNEXT50_32X4D = "resnext50_32x4d"
+    RESNEXT101_32X8D = "resnext101_32x8d"
+    RESNEXT101_64X4D = "resnext101_64x4d"
 
 
 class UnsupportedOptimizer(ValueError):

@@ -52,7 +52,7 @@ if __name__ == "__main__":
     print("Config:", to_yaml(vars(args)), sep="\n")
     print("Config PyTorch Lightning:", to_yaml(vars(pl_args)), sep="\n")
 
-    audio_transform: AudioTransformBase = get_audio_transform(args.audio_transform)
+    audio_transform: AudioTransformBase = get_audio_transform(args.sampling_rate, args.dim, args.audio_transform)
 
     datamodule = IRMASDataModule(
         batch_size=batch_size,

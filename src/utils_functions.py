@@ -24,7 +24,6 @@ class InvalidRatios(Exception):
 
 T = TypeVar("T")
 
-
 def get_dirs_only(path: Path):
     """Return only top level directories in the path."""
     return [
