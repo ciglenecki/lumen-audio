@@ -59,7 +59,7 @@ if __name__ == "__main__":
     audio_transform: AudioTransformBase = get_audio_transform(
         args.audio_transform,
         sampling_rate=sampling_rate,
-        spec_aug_enums=args.spectrogram_augmentations,
+        augmentation_enums=args.augmentations,
         dim=dim,
         **aug_kwargs,
     )

@@ -3,6 +3,7 @@ from torchsummary import summary
 
 import src.config.config_defaults as config_defaults
 from src.model.model_ast import ASTModelWrapper
+from src.model.model_wav2vec import Wav2VecWrapper
 from src.utils.utils_exceptions import UnsupportedModel
 from src.utils.utils_functions import EnumStr
 
@@ -15,6 +16,7 @@ class SupportedModels(EnumStr):
     RESNEXT50_32X4D = "resnext50_32x4d"
     RESNEXT101_32X8D = "resnext101_32x8d"
     RESNEXT101_64X4D = "resnext101_64x4d"
+    WAV2VEC = "wav2vec"
 
 
 def get_model(args, pl_args):
@@ -39,6 +41,7 @@ def get_model(args, pl_args):
             unfreeze_at_epoch=args.unfreeze_at_epoch,
             backbone_after=args.backbone_after,
             head_after=args.head_after,
+            onecycle_max_lr=args.onecycle_max_lr,
         )
         return model
     elif model_enum in TORCHVISION_CONSTRUCTOR_DICT:
@@ -62,6 +65,27 @@ def get_model(args, pl_args):
             epoch_patience=args.patience,
             backbone_after=args.backbone_after,
             head_after=args.head_after,
+        )
+        return model
+    elif model_enum == SupportedModels.WAV2VEC:
+        model = Wav2VecWrapper(
+            pretrained=args.pretrained,
+            lr=args.lr,
+            batch_size=args.batch_size,
+            scheduler_type=args.scheduler,
+            epochs=args.epochs,
+            warmup_lr=args.warmup_lr,
+            optimizer_type=args.optimizer,
+            model_name=config_defaults.DEFAULT_WAV2VEC_PRETRAINED_TAG,
+            num_labels=args.num_labels,
+            optimization_metric=args.metric,
+            weight_decay=config_defaults.DEFAULT_WEIGHT_DECAY,
+            metric_mode=args.metric_mode,
+            epoch_patience=args.patience,
+            unfreeze_at_epoch=args.unfreeze_at_epoch,
+            backbone_after=args.backbone_after,
+            head_after=args.head_after,
+            onecycle_max_lr=args.onecycle_max_lr,
         )
         return model
     raise UnsupportedModel(f"Model {model_enum} is not supported")

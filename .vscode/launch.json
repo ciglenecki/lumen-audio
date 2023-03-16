@@ -10,7 +10,16 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --dataset-dir data/raw/train --lr 0.003 --batch-size 2 --num-workers 6 --audio-transform ast --model ast --spectrogram-augmentations time_stretch radnom_pixels --epochs 40  --patience 50 --quick --backbone-after layer.9 --head-after deep_head",
+			"args": "--accelerator gpu --devices -1 --dataset-dir data/raw/train --lr 0.003 --batch-size 2 --num-workers 6 --audio-transform ast --model ast --augmentations time_stretch radnom_pixels --epochs 40  --patience 50 --quick --backbone-after layer.9 --head-after deep_head",
+			"justMyCode": false
+		},
+		{
+			"name": "Train Wav2vec",
+			"type": "python",
+			"request": "launch",
+			"program": "src/train/train.py",
+			"console": "integratedTerminal",
+			"args": "--accelerator gpu --devices -1 --dataset-dir data/raw/train --lr 0.003 --batch-size 2 --num-workers 6 --audio-transform wav2vec --model wav2vec --augmentations time_stretch --epochs 40  --patience 50 --quick --head-after deep_head",
 			"justMyCode": false
 		},
 		{
@@ -19,7 +28,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --dataset-dir data/raw/train --lr 5e-4 --batch-size 4 --num-workers 4 --audio-transform mel_spectrogram_fixed_repeat --model efficient_net_v2_s --spectrogram-augmentations time_stretch radnom_pixels --epochs 20  --patience 50 --quick",
+			"args": "--accelerator gpu --devices -1 --dataset-dir data/raw/train --lr 5e-4 --batch-size 4 --num-workers 4 --audio-transform mel_spectrogram_fixed_repeat --model efficient_net_v2_s --augmentations time_stretch radnom_pixels --epochs 20  --patience 50 --quick",
 			"justMyCode": false
 		},
 		{

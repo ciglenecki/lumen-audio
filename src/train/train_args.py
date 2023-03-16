@@ -12,9 +12,10 @@ import torch
 
 import src.config.config_defaults as config_defaults
 import src.utils.utils_functions as utils_functions
-from src.features.audio_transform import AudioTransforms, SupportedSpecAugs
+from src.features.audio_transform import AudioTransforms, SupportedAugmentations
 from src.model.model import SupportedModels
 from src.model.optimizers import OptimizerType, SchedulerType
+from src.utils.utils_exceptions import InvalidArgument
 from src.utils.utils_train import MetricMode, OptimizeMetric
 
 ARGS_GROUP_NAME = "General arguments"
@@ -72,6 +73,13 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         type=float,
         metavar="float",
         help="warmup learning rate",
+    )
+
+    user_group.add_argument(
+        "--onecycle-max-lr",
+        type=float,
+        metavar="float",
+        help="Maximum lr OneCycle scheduler reaches",
     )
 
     user_group.add_argument(
@@ -160,11 +168,11 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
     )
 
     user_group.add_argument(
-        "--spectrogram-augmentations",
+        "--augmentations",
         default=None,
         nargs="+",
-        choices=list(SupportedSpecAugs),
-        type=SupportedSpecAugs.from_string,
+        choices=list(SupportedAugmentations),
+        type=SupportedAugmentations.from_string,
         help="Transformation which will be performed on audio and labels",
     )
 
@@ -310,10 +318,10 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
 
     """Additional argument checking"""
     if args.metric and not args.metric_mode:
-        raise Exception("can't pass --metric without passing --metric-mode")
+        raise InvalidArgument("can't pass --metric without passing --metric-mode")
 
     if bool(args.warmup_lr) != bool(args.unfreeze_at_epoch):
-        raise Exception(
+        raise InvalidArgument(
             "--warmup-lr and --unfreeze-at-epoch have to be passed together",
         )
 
@@ -322,6 +330,10 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
     else:
         args.aug_kwargs = utils_functions.parse_kwargs(args.aug_kwargs)
 
+    if args.scheduler == SchedulerType.ONECYCLE and args.onecycle_max_lr is None:
+        raise InvalidArgument(
+            f"You have to pass the --onecycle-max-lr if you use the {args.scheduler}",
+        )
     return args, pl_args
 
 
