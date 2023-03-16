@@ -5,12 +5,20 @@ from torch.nn.parameter import Parameter
 
 import src.config.config_defaults as config_defaults
 from src.utils.utils_exceptions import UnsupportedOptimizer, UnsupportedScheduler
-from src.utils.utils_train import (
-    MetricMode,
-    OptimizeMetric,
-    OptimizerType,
-    SchedulerType,
-)
+from src.utils.utils_functions import EnumStr
+from src.utils.utils_train import MetricMode, OptimizeMetric
+
+
+class SchedulerType(EnumStr):
+    ONECYCLE = "onecycle"
+    PLATEAU = "plateau"
+    AUTO_LR = "auto_lr"
+    COSINEANNEALING = "cosine_annealing"
+
+
+class OptimizerType(EnumStr):
+    ADAM = "adam"
+    ADAMW = "adamw"
 
 
 def our_configure_optimizers(

@@ -14,6 +14,7 @@ from pytorch_lightning.callbacks import (
 from src.data.datamodule import IRMASDataModule
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
 from src.model.model import get_model
+from src.model.optimizers import SchedulerType
 from src.train.callbacks import (
     FinetuningCallback,
     GeneralMetricsEpochLogger,
@@ -28,12 +29,7 @@ from src.utils.utils_functions import (
     stdout_to_file,
     to_yaml,
 )
-from src.utils.utils_train import (
-    MetricMode,
-    OptimizeMetric,
-    SchedulerType,
-    print_modules,
-)
+from src.utils.utils_train import MetricMode, OptimizeMetric, print_modules
 
 if __name__ == "__main__":
     args, pl_args = parse_args_train()
@@ -46,6 +42,7 @@ if __name__ == "__main__":
     optimizer_metric_str = OptimizeMetric(args.metric).value
     normalize_audio = args.normalize_audio
     aug_kwargs = args.aug_kwargs
+    dim = args.dim
 
     timestamp = get_timestamp()
     experiment_codeword = random_codeword()
@@ -60,7 +57,11 @@ if __name__ == "__main__":
     print("Config PyTorch Lightning:", to_yaml(vars(pl_args)), sep="\n")
 
     audio_transform: AudioTransformBase = get_audio_transform(
-        args.audio_transform, args.spectrogram_augmentations, **aug_kwargs
+        args.audio_transform,
+        sampling_rate=sampling_rate,
+        spec_aug_enums=args.spectrogram_augmentations,
+        dim=dim,
+        **aug_kwargs,
     )
 
     datamodule = IRMASDataModule(

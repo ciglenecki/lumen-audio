@@ -108,7 +108,6 @@ class IRMASDatasetTrain(Dataset):
         spectrogram = self.audio_transform.process(
             audio=audio,
             original_sr=original_sr,
-            sampling_rate=self.sampling_rate,
         )
 
         return spectrogram, labels
@@ -178,7 +177,6 @@ class IRMASDatasetTest(Dataset):
         spectrogram = self.audio_transform.process(
             audio=audio,
             original_sr=original_sr,
-            sampling_rate=self.sampling_rate,
         )
         return spectrogram, labels
 

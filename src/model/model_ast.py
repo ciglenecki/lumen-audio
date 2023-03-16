@@ -11,13 +11,8 @@ from transformers.modeling_outputs import SequenceClassifierOutput
 import src.config.config_defaults as config_defaults
 from src.model.deep_head import DeepHead
 from src.model.model_base import ModelBase
-from src.model.optimizers import our_configure_optimizers
-from src.utils.utils_train import (
-    MetricMode,
-    OptimizeMetric,
-    OptimizerType,
-    SchedulerType,
-)
+from src.model.optimizers import OptimizerType, SchedulerType, our_configure_optimizers
+from src.utils.utils_train import MetricMode, OptimizeMetric
 
 
 class ASTModelWrapper(ModelBase):

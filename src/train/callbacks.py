@@ -161,6 +161,8 @@ class FinetuningCallback(BaseFinetuning):
         ASSUMPTIONS_TEXT = "To use this callback, your Lightning Module has to implement the head() and trainable_backbone() which returns appropriate module parameters."
         assert hasattr(pl_module, "head"), ASSUMPTIONS_TEXT
         assert hasattr(pl_module, "trainable_backbone"), ASSUMPTIONS_TEXT
+        assert pl_module.head(), ASSUMPTIONS_TEXT
+        assert pl_module.trainable_backbone(), ASSUMPTIONS_TEXT
         return
 
     def state_dict(self) -> Dict[str, Any]:

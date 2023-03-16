@@ -9,13 +9,8 @@ from torchvision.models import efficientnet_v2_s
 
 import src.config.config_defaults as config_defaults
 from src.model.model_base import ModelBase
-from src.model.optimizers import our_configure_optimizers
-from src.utils.utils_train import (
-    MetricMode,
-    OptimizeMetric,
-    OptimizerType,
-    SchedulerType,
-)
+from src.model.optimizers import OptimizerType, SchedulerType, our_configure_optimizers
+from src.utils.utils_train import MetricMode, OptimizeMetric
 
 
 class EfficientNetV2SmallModel(ModelBase):

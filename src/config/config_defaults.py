@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pyrootutils
 
-from src.utils.utils_train import MetricMode, OptimizeMetric, OptimizerType
+from src.model.optimizers import OptimizerType
+from src.utils.utils_train import MetricMode, OptimizeMetric
 
 DEFAULT_IRMAS_TRAIN_SIZE = 6705
 DEFAULT_IRMAS_TEST_SIZE = 2874
@@ -35,7 +36,7 @@ DEFAULT_N_FFT = 400
 DEFAULT_N_MELS = 128
 DEFAULT_DIM = (384, 384)
 DEFAULT_NORMALIZE_AUDIO = True
-
+DEFAULT_HOP_LENGTH = DEFAULT_N_FFT // 2
 # ===============
 # PATHS START
 # ===============

@@ -5,7 +5,12 @@ import src.config.config_defaults as config_defaults
 from src.model.model_ast import ASTModelWrapper
 from src.model.model_effcientnetv2 import EfficientNetV2SmallModel
 from src.utils.utils_exceptions import UnsupportedModel
-from src.utils.utils_train import SupportedModels
+from src.utils.utils_functions import EnumStr
+
+
+class SupportedModels(EnumStr):
+    AST = "ast"
+    EFFICIENT_NET_V2_S = "efficient_net_v2_s"
 
 
 def get_model(args, pl_args):

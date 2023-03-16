@@ -4,19 +4,8 @@ import torch
 import torch.nn as nn
 from torchmetrics.metric import Metric
 
+from src.utils.utils_exceptions import InvalidModuleStr
 from src.utils.utils_functions import EnumStr
-
-
-class SchedulerType(EnumStr):
-    ONECYCLE = "onecycle"
-    PLATEAU = "plateau"
-    AUTO_LR = "auto_lr"
-    COSINEANNEALING = "cosine_annealing"
-
-
-class OptimizerType(EnumStr):
-    ADAM = "adam"
-    ADAMW = "adamw"
 
 
 class MetricMode(EnumStr):
@@ -27,11 +16,6 @@ class MetricMode(EnumStr):
 class OptimizeMetric(EnumStr):
     VAL_HAMMING = "val/hamming_distance"
     VAL_F1 = "val/f1_score"
-
-
-class SupportedModels(EnumStr):
-    AST = "ast"
-    EFFICIENT_NET_V2_S = "efficient_net_v2_s"
 
 
 def get_all_modules_after(
@@ -50,9 +34,17 @@ def get_all_modules_after(
             modules.add_module(sub_module_name.replace(".", "_"), sub_module)
 
     if not found_layer:
+        # print_modules(module)
         raise ValueError(
-            f"module_str {module_str} should be a a named module (e.g. layer3.2)"
+            f"module_str '{module_str}' not found. should be (e.g. layer3.2)"
         )
+
+    if len(modules) == 0:
+        print_modules(module)
+        raise InvalidModuleStr(
+            f"get_all_modules_after return no elements because of invalid module '{module_str}', use one of the above."
+        )
+
     return modules
 
 

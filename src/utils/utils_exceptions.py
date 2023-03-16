@@ -20,3 +20,7 @@ class UnsupportedScheduler(ValueError):
 
 class UnsupportedModel(ValueError):
     pass
+
+
+class InvalidModuleStr(ValueError):
+    """Invalid submodule string which isn't contained within the parent module."""

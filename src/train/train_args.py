@@ -13,13 +13,9 @@ import torch
 import src.config.config_defaults as config_defaults
 import src.utils.utils_functions as utils_functions
 from src.features.audio_transform import AudioTransforms, SupportedSpecAugs
-from src.utils.utils_train import (
-    MetricMode,
-    OptimizeMetric,
-    OptimizerType,
-    SchedulerType,
-    SupportedModels,
-)
+from src.model.model import SupportedModels
+from src.model.optimizers import OptimizerType, SchedulerType
+from src.utils.utils_train import MetricMode, OptimizeMetric
 
 ARGS_GROUP_NAME = "General arguments"
 
@@ -149,18 +145,18 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
 
     user_group.add_argument(
         "--model",
-        default=SupportedModels.AST,
         type=SupportedModels.from_string,
         choices=list(SupportedModels),
         help="Models used for training.",
+        required=True,
     )
 
     user_group.add_argument(
         "--audio-transform",
-        default=AudioTransforms.AST,
         type=AudioTransforms.from_string,
         choices=list(AudioTransforms),
         help="Transformation which will be performed on audio and labels",
+        required=True,
     )
 
     user_group.add_argument(
@@ -265,6 +261,13 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         metavar="str",
         type=str,
         help="Name of the submodule after which the all submodules are considered as head, e.g. classifier.dense",
+    )
+
+    user_group.add_argument(
+        "--dim",
+        default=config_defaults.DEFAULT_DIM,
+        type=tuple[int, int],
+        help="The dimension to resize the image to.",
     )
 
     args = parser.parse_args()

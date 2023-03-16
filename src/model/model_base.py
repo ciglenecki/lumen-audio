@@ -133,6 +133,11 @@ class ModelBase(pl.LightningModule, ABC):
             2,
         ], "Both should exist or both shouldn't exist!"
 
+        assert int(bool(self.head_after)) + int(bool(self.backbone_after)) in [
+            0,
+            2,
+        ], "Both should exist or both shouldn't exist!"
+
         # save in case indices change with config changes
         self.backup_instruments = config_defaults.INSTRUMENT_TO_IDX
 
@@ -143,15 +148,16 @@ class ModelBase(pl.LightningModule, ABC):
             self.trainer.estimated_stepping_batches / self.trainer.max_epochs
         )
 
-        BaseFinetuning.freeze(self, train_bn=False)
-        BaseFinetuning.make_trainable(self.trainable_backbone())
-        BaseFinetuning.make_trainable(self.head())
+        if self.head() is not None and self.trainable_backbone() is not None:
+            BaseFinetuning.freeze(self, train_bn=False)
+            BaseFinetuning.make_trainable(self.trainable_backbone())
+            BaseFinetuning.make_trainable(self.head())
 
         if self.has_finetuning:
             self._set_finetune_until_step()
         return out
 
-    def head(self) -> Union[nn.ModuleList, nn.Module]:
+    def head(self) -> Union[nn.ModuleList, nn.Module] | None:
         """Returns "head" part of the model. That's usually whatever's after the large feature
         extractor.
 
@@ -161,11 +167,9 @@ class ModelBase(pl.LightningModule, ABC):
         if self.head_after:
             return get_all_modules_after(self, self.head_after)
         else:
-            raise ValueError(
-                f"Head is not defined because self.head_after is {self.head_after}"
-            )
+            return None
 
-    def trainable_backbone(self) -> Union[nn.ModuleList, nn.Module]:
+    def trainable_backbone(self) -> Union[nn.ModuleList, nn.Module] | None:
         """Returns "backbone" part of the model. That's usually the large feature extractor.
 
         Returns:
@@ -174,9 +178,7 @@ class ModelBase(pl.LightningModule, ABC):
         if self.backbone_after:
             return get_all_modules_after(self, self.backbone_after)
         else:
-            raise ValueError(
-                f"Head is not defined because self.backbone_after is {self.backbone_after}"
-            )
+            return None
 
     def _set_lr(self, lr: float):
         if self.trainer is not None:
