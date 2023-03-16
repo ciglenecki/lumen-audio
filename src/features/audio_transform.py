@@ -9,7 +9,7 @@ from torchvision.transforms import RandomErasing
 from transformers import ASTFeatureExtractor, AutoConfig, Wav2Vec2FeatureExtractor
 
 import src.config.config_defaults as config_defaults
-from src.utils.utils_audio import stereo_to_mono
+from src.utils.utils_audio import stereo_to_mono, time_stretch
 from src.utils.utils_functions import EnumStr
 
 
@@ -325,8 +325,6 @@ class AudioTransformWav2Vec2(AudioTransformBase):
             config_defaults.DEFAULT_WAV2VEC_PRETRAINED_TAG
         )
 
-        self.feature_extractor = ASTFeatureExtractor.from_pretrained(pretrained_tag)
-
     def process(
         self,
         audio: torch.Tensor | np.ndarray,
@@ -335,18 +333,18 @@ class AudioTransformWav2Vec2(AudioTransformBase):
         audio = stereo_to_mono(audio)
 
         if SupportedAugmentations.TIME_STRETCH in self.augmentation_enums:
-            l, r = self.stretch_factors
-            stretch_rate = np.random.uniform(l, r)
-            # size_before = len(audio)
-            audio = librosa.effects.time_stretch(y=audio, rate=stretch_rate)
-            # audio = audio[:size_before]
+            min_s, max_s = self.stretch_factors
+            audio = time_stretch(audio, min_s, max_s, trim=True)
 
-        features = self.feature_extractor(
+        audio = librosa.util.fix_length(audio, size=original_sr * 3)
+
+        features_dict = self.feature_extractor(
             audio,
             sampling_rate=self.sampling_rate,
             return_tensors="pt",
             padding=True,
         )
+        features = features_dict.input_values.squeeze(0)
 
         return features
 

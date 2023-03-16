@@ -4,7 +4,6 @@ import os
 import re
 from pathlib import Path
 
-import librosa
 import numpy as np
 import torch
 from torch.utils.data import Dataset
@@ -172,11 +171,11 @@ class IRMASDatasetTest(Dataset):
         if self.audio_transform is None:
             return audio, labels
 
-        spectrogram = self.audio_transform.process(
+        features = self.audio_transform.process(
             audio=audio,
             original_sr=original_sr,
         )
-        return spectrogram, labels
+        return features, labels
 
 
 class InstrumentInference(Dataset):

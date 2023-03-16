@@ -12,6 +12,7 @@ from transformers import (
     AutoConfig,
     AutoFeatureExtractor,
     Wav2Vec2Config,
+    Wav2Vec2Model,
     Wav2Vec2PreTrainedModel,
 )
 from transformers.modeling_outputs import SequenceClassifierOutput
@@ -40,6 +41,7 @@ class Wav2VecWrapper(ModelBase):
         metric_mode: MetricMode,
         epoch_patience: int,
         onecycle_max_lr: int | None,
+        pooling_mode="mean",
         *args,
         **kwargs,
     ):
@@ -57,13 +59,8 @@ class Wav2VecWrapper(ModelBase):
         self.metric_mode = metric_mode
         self.epoch_patience = epoch_patience
         self.onecycle_max_lr = onecycle_max_lr
+        self.pooling_mode = pooling_mode
 
-        config = Wav2Vec2Config(
-            pretrained_model_name_or_path=model_name,
-            id2label=config_defaults.IDX_TO_INSTRUMENT,
-            label2id=config_defaults.IDX_TO_INSTRUMENT,
-            num_labels=num_labels,
-        )
         self.loss_function = nn.BCEWithLogitsLoss()
 
         self.hamming_distance = torchmetrics.HammingDistance(
@@ -71,10 +68,14 @@ class Wav2VecWrapper(ModelBase):
         )
         self.f1_score = MultilabelF1Score(num_labels=self.num_labels)
 
-        self.backbone: Wav2Vec2PreTrainedModel = (
-            Wav2Vec2PreTrainedModel.from_pretrained(
-                model_name, config=config, ignore_mismatched_sizes=True
-            )
+        config = Wav2Vec2Config(
+            pretrained_model_name_or_path=model_name,
+            id2label=config_defaults.IDX_TO_INSTRUMENT,
+            label2id=config_defaults.IDX_TO_INSTRUMENT,
+            num_labels=num_labels,
+        )
+        self.backbone: Wav2Vec2Model = Wav2Vec2Model.from_pretrained(
+            model_name, config=config, ignore_mismatched_sizes=True
         )
         middle_size = int(
             math.sqrt(config.hidden_size * self.num_labels) + self.num_labels
@@ -83,13 +84,28 @@ class Wav2VecWrapper(ModelBase):
 
         self.save_hyperparameters()
 
+    def merged_strategy(self, hidden_states, mode="mean"):
+        if mode == "mean":
+            outputs = torch.mean(hidden_states, dim=1)
+        elif mode == "sum":
+            outputs = torch.sum(hidden_states, dim=1)
+        elif mode == "max":
+            outputs = torch.max(hidden_states, dim=1)[0]
+        else:
+            raise Exception(
+                "The pooling method hasn't been defined! Your pooling mode must be one of these ['mean', 'sum', 'max']"
+            )
+
+        return outputs
+
     def forward(self, audio: torch.Tensor, labels: torch.Tensor):
         hidden_states = self.backbone.forward(
-            audio,
-            output_attentions=True,
+            input_values=audio,
+            output_attentions=False,
             return_dict=True,
-            labels=labels,
-        )[0]
+        ).last_hidden_state
+        hidden_states = self.merged_strategy(hidden_states, mode=self.pooling_mode)
+
         y = self.classifier(hidden_states)
         return y
 

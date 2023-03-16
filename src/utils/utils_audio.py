@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import librosa.display
+import librosa
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -12,6 +12,34 @@ def stereo_to_mono(audio: torch.Tensor | np.ndarray):
         return torch.mean(audio, dim=0).unsqueeze(0)
     elif isinstance(audio, np.ndarray):
         return librosa.to_mono(audio)
+
+
+def time_stretch(audio: np.ndarray, min_stretch, max_stretch, trim=True):
+    """Audio stretch with random offset + trimming.
+
+    A------B-------C        original
+    A---------B---------C   streched
+    ---------B------        trim
+
+    Args:
+        audio: _description_
+        min_stretch: minimal stretch factor
+        max_stretch: maximum stretch factor
+        trim: trim the audio to original legnth
+    """
+
+    stretch_rate = np.random.uniform(min_stretch, max_stretch)
+    size_before = len(audio)
+    audio = librosa.effects.time_stretch(y=audio, rate=stretch_rate)
+
+    if not trim:
+        return audio
+
+    diff = max(len(audio) - size_before, 0)
+    offset = np.random.randint(0, diff + 1)
+    audio_offset = audio[offset:]
+    audio_trimmed = librosa.util.fix_length(audio_offset, size=size_before)
+    return audio_trimmed
 
 
 def load_audio_from_file(
