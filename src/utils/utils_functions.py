@@ -1,13 +1,11 @@
 import argparse
 import inspect
-import json
 import os
 import random
 import sys
 import time
 from datetime import datetime
 from enum import Enum
-from math import floor
 from pathlib import Path
 from typing import TypeVar
 
@@ -15,14 +13,41 @@ import numpy as np
 import pandas as pd
 import torch
 import yaml
-from torch.utils.data import Dataset
-
-
-class InvalidRatios(Exception):
-    pass
-
 
 T = TypeVar("T")
+
+
+def parse_kwargs(kwargs_strs: list[str], list_sep=",", key_value_sep="="):
+    """
+
+    Example:
+        kwargs_str = stretch_factors=0.8,1.2 freq_mask_param=30
+        returns {"stretch_factors": [0.8, 1.2], "freq_mask_param": 30}
+
+    Args:
+        kwargs_str: _description_
+        list_sep: _description_..
+        arg_sep: _description_..
+    """
+
+    def parse_value(value: str):
+        if isint(value):
+            return int(value)
+        if isfloat(value):
+            return float(value)
+        return value
+
+    kwargs = {}
+    for key_value in kwargs_strs:
+        _kv = key_value.split(key_value_sep)
+        assert (
+            len(_kv) == 2
+        ), f"Exactly one {key_value_sep} should appear in {key_value}"
+        key, value = _kv
+        value = [parse_value(v) for v in value.split(list_sep)]
+        value = value if len(value) > 1 else value[0]
+        kwargs[key] = value
+    return kwargs
 
 
 def get_dirs_only(path: Path):
@@ -37,6 +62,25 @@ def get_dirs_only(path: Path):
 def tensor_sum_of_elements_to_one(tensor: torch.Tensor, dim):
     """Scales elements of the tensor so that the sum is 1."""
     return tensor / torch.sum(tensor, dim=dim, keepdim=True)
+
+
+def isfloat(x: str):
+    try:
+        a = float(x)
+    except (TypeError, ValueError):
+        return False
+    else:
+        return True
+
+
+def isint(x: str):
+    try:
+        a = float(x)
+        b = int(x)
+    except (TypeError, ValueError):
+        return False
+    else:
+        return a == b
 
 
 def split_by_ratio(
@@ -198,6 +242,12 @@ def print_df_sample(df: pd.DataFrame):
     pd.reset_option("display.max_columns")
 
 
+def serialize_functions(*rest):
+    current = rest[len(rest) - 1]
+    rest = rest[:-1]
+    return lambda x: current(serialize_functions(*rest)(x) if rest else x)
+
+
 def timeit(func):
     def timed(*args, **kwargs):
         print("START", func.__qualname__)
@@ -216,53 +266,18 @@ class EnumStr(Enum):
         return [elem.value for elem in list(cls)]
 
     @classmethod
-    def from_string(cls, s):
+    def from_string(cls, s, do_except=False):
         try:
             return cls(s)
-        except KeyError:
-            raise ValueError()
+        except Exception:
+            if do_except:
+                raise ValueError(s)
+            else:
+                print(f"Skipping enum parsing {s}")
 
-
-class MultiEnum(Enum):
-    """
-    Enum which accepts multiple values instead of a single value. This is useful alternative to dict key-value pairs.
-    Example:
-
-        class MyCubes(MultiEnum):
-            GREEN = GreenCube(), 'green'
-
-        MyCubes('green').value  # returns instance of GreenCube
-        MyCubes.GREEN.value     # returns instance of GreenCube
-    """
-
-    def __new__(cls, *values):
-        obj = object.__new__(cls)
-        # first value is canonical value
-        obj._value_ = values[0]
-        for other_value in values[1:]:
-            cls._value2member_map_[other_value] = obj
-        obj._all_values = values
-        if len(values) > 1:
-            obj.key = values[1]
-        return obj
-
-    @classmethod
-    def keys(cls):
-        return [elem.key for elem in list(cls)]
-
-    @classmethod
-    def from_string(cls, s):
-        try:
-            return cls(s)
-        except KeyError:
-            raise ValueError()
-
-    def __repr__(self):
-        return "<{}.{}: {}>".format(
-            self.__class__.__name__,
-            self._name_,
-            ", ".join([repr(v) for v in self._all_values]),
-        )
+    def __str__(self) -> str:
+        first = super().__str__()
+        return f"{first}: '{self.value}'"
 
 
 def to_yaml(data):

@@ -2,20 +2,10 @@ from typing import Any, Union
 
 import torch
 import torch.nn as nn
+from torchmetrics.metric import Metric
 
-from src.utils_functions import EnumStr
-
-
-class SchedulerType(EnumStr):
-    ONECYCLE = "onecycle"
-    PLATEAU = "plateau"
-    AUTO_LR = "auto_lr"
-    COSINEANNEALING = "cosine_annealing"
-
-
-class OptimizerType(EnumStr):
-    ADAM = "adam"
-    ADAMW = "adamw"
+from src.utils.utils_exceptions import InvalidModuleStr
+from src.utils.utils_functions import EnumStr
 
 
 class MetricMode(EnumStr):
@@ -28,26 +18,50 @@ class OptimizeMetric(EnumStr):
     VAL_F1 = "val/f1_score"
 
 
-class SupportedModels(EnumStr):
-    AST = "ast"
-    EFFICIENT_NET_V2_S = "efficient_net_v2_s"
-    EFFICIENT_NET_V2_M = "efficient_net_v2_m"
-    EFFICIENT_NET_V2_L = "efficient_net_v2_l"
-    RESNEXT50_32X4D = "resnext50_32x4d"
-    RESNEXT101_32X8D = "resnext101_32x8d"
-    RESNEXT101_64X4D = "resnext101_64x4d"
+def get_all_modules_after(
+    module: Union[nn.ModuleList, nn.Module], module_str: str
+) -> nn.ModuleDict:
+    """Returns all consequive submodules after and including the submodule `module_str`"""
+    found_layer = False
+    modules = nn.ModuleDict()
+
+    for sub_module_name, sub_module in module.named_modules():
+        if type(sub_module) is Metric:
+            continue
+        if module_str in sub_module_name:
+            found_layer = True
+        if found_layer:
+            modules.add_module(sub_module_name.replace(".", "_"), sub_module)
+
+    if not found_layer:
+        # print_modules(module)
+        raise ValueError(
+            f"module_str '{module_str}' not found. should be (e.g. layer3.2)"
+        )
+
+    if len(modules) == 0:
+        print_modules(module)
+        raise InvalidModuleStr(
+            f"get_all_modules_after return no elements because of invalid module '{module_str}', use one of the above."
+        )
+
+    return modules
 
 
-class UnsupportedOptimizer(ValueError):
-    pass
+def print_params(module: Union[nn.ModuleList, nn.Module]):
+    """Print params."""
+    for sub_module_name, sub_module in module.named_modules():
+        for param_name, param in sub_module.named_parameters():
+            print("requires_grad:", param.requires_grad, param.numel(), param_name)
 
 
-class UnsupportedScheduler(ValueError):
-    pass
-
-
-class UnsupportedModel(ValueError):
-    pass
+def print_modules(module: Union[nn.ModuleList, nn.Module]):
+    """Print module."""
+    for sub_module_name, sub_module in module.named_modules():
+        sub_module_req_grad = any(
+            [x[1].requires_grad for x in sub_module.named_parameters()]
+        )
+        print(sub_module_name, "requires_grad:", sub_module_req_grad)
 
 
 def multi_acc(y_pred_log, y_test):

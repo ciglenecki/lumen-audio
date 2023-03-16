@@ -7,7 +7,7 @@ from torchaudio.transforms import (
     TimeStretch,
 )
 
-import src.config_defaults as config_defaults
+import src.config.config_defaults as config_defaults
 
 
 class AudioAugmentation(torch.nn.Module):

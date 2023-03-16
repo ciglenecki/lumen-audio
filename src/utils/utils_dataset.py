@@ -1,10 +1,7 @@
 import numpy as np
 
-from src import config_defaults
-
-
-class InvalidDataException(Exception):
-    pass
+from src.config import config_defaults
+from src.utils.utils_exceptions import InvalidDataException
 
 
 def encode_drums(drum: str | None) -> np.ndarray:
