@@ -250,6 +250,21 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
     )
 
     user_group.add_argument(
+        "--fc",
+        default=config_defaults.DEFAULT_FC,
+        nargs="+",
+        type=utils_functions.is_positive_int,
+        help="List of dimensions for the fully connected layers of the classifier head.",
+    )
+
+    user_group.add_argument(
+        "--pretrained-weights",
+        default=config_defaults.DEFAULT_PRETRAINED_WEIGHTS,
+        type=str,
+        help="The string that denotes the pretrained weights used.",
+    )
+
+    user_group.add_argument(
         "--backbone-after",
         metavar="str",
         type=str,

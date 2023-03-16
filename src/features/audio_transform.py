@@ -4,7 +4,7 @@ import librosa
 import numpy as np
 import torch
 import torchvision.transforms.functional as F
-from torchaudio.transforms import FrequencyMasking, MelSpectrogram, TimeMasking
+from torchaudio.transforms import FrequencyMasking, TimeMasking
 from torchvision.transforms import RandomErasing
 from transformers import ASTFeatureExtractor
 
@@ -180,7 +180,7 @@ class MelSpectrogramOurs(AudioTransformBase):
         self,
         audio: torch.Tensor | np.ndarray,
         original_sr: int,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    ) -> torch.Tensor:
         audio = stereo_to_mono(audio)
         audio_resampled = librosa.resample(
             audio,

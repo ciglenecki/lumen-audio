@@ -49,7 +49,6 @@ class IRMASDatasetTrain(Dataset):
 
         self.dataset: list[tuple[Path, np.ndarray]] = []
         self.dataset_dirs = dataset_dirs
-        self.sampling_rate = sampling_rate
         self.audio_transform = audio_transform
         self.num_classes = num_classes
         self.normalize_audio = normalize_audio
@@ -126,7 +125,6 @@ class IRMASDatasetTest(Dataset):
         self.audio_transform = audio_transform
         self.dataset: list[tuple[Path, np.ndarray]] = []
         self.dataset_dirs = dataset_dirs
-        self.sampling_rate = sampling_rate
         self._populate_dataset()
 
         if sanity_checks:
