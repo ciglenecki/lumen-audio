@@ -15,7 +15,8 @@ def stereo_to_mono(audio: torch.Tensor | np.ndarray):
 
 
 def time_stretch(audio: np.ndarray, min_stretch, max_stretch, trim=True):
-    """Audio stretch with random offset + trimming.
+    """Audio stretch with random offset + trimming which ensures that the stretched waveform will
+    be the same length as the original.
 
     A------B-------C        original
     A---------B---------C   streched
