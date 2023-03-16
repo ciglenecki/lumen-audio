@@ -10,16 +10,12 @@ import argparse
 import pytorch_lightning as pl
 import torch
 
-import src.config_defaults as config_defaults
-import src.utils_functions as utils_functions
-from src.audio_transform import AudioTransforms
-from src.utils_train import (
-    MetricMode,
-    OptimizeMetric,
-    OptimizerType,
-    SchedulerType,
-    SupportedModels,
-)
+import src.config.config_defaults as config_defaults
+import src.utils.utils_functions as utils_functions
+from src.features.audio_transform import AudioTransforms, SupportedSpecAugs
+from src.model.model import SupportedModels
+from src.model.optimizers import OptimizerType, SchedulerType
+from src.utils.utils_train import MetricMode, OptimizeMetric
 
 ARGS_GROUP_NAME = "General arguments"
 
@@ -32,7 +28,7 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
     lightning_parser = pl.Trainer.add_argparse_args(parser)
     lightning_parser.set_defaults(
         log_every_n_steps=config_defaults.DEFAULT_LOG_EVERY_N_STEPS,
-        max_epochs=config_defaults.DEFAULT_EPOCHS,
+        epochs=config_defaults.DEFAULT_EPOCHS,
         accelerator="gpu" if torch.cuda.is_available() else "cpu",
         devices=-1,  # use all devices
     )
@@ -54,6 +50,7 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         type=utils_functions.is_positive_int,
         help="Number of workers",
     )
+
     user_group.add_argument(
         "--num-labels",
         metavar="int",
@@ -71,10 +68,9 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
     )
 
     user_group.add_argument(
-        "--warmup-start-lr",
+        "--warmup-lr",
         type=float,
         metavar="float",
-        default=config_defaults.DEFAULT_WARMUP_START_LR,
         help="warmup learning rate",
     )
 
@@ -101,6 +97,13 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         help="Use the pretrained model.",
         action="store_true",
         default=config_defaults.DEFAULT_PRETRAINED,
+    )
+
+    user_group.add_argument(
+        "--normalize-audio",
+        help="Normalize audio to [-1, 1]",
+        action="store_true",
+        default=config_defaults.DEFAULT_NORMALIZE_AUDIO,
     )
 
     user_group.add_argument(
@@ -139,19 +142,38 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         default=config_defaults.DEFAULT_METRIC_MODE,
         choices=list(MetricMode),
     )
+
     user_group.add_argument(
         "--model",
-        default=SupportedModels.AST,
         type=SupportedModels.from_string,
         choices=list(SupportedModels),
         help="Models used for training.",
+        required=True,
     )
+
     user_group.add_argument(
         "--audio-transform",
-        default=AudioTransforms.AST,
         type=AudioTransforms.from_string,
         choices=list(AudioTransforms),
         help="Transformation which will be performed on audio and labels",
+        required=True,
+    )
+
+    user_group.add_argument(
+        "--spectrogram-augmentations",
+        default=None,
+        nargs="+",
+        choices=list(SupportedSpecAugs),
+        type=SupportedSpecAugs.from_string,
+        help="Transformation which will be performed on audio and labels",
+    )
+
+    user_group.add_argument(
+        "--aug-kwargs",
+        default=None,
+        nargs="+",
+        type=str,
+        help="Arguments are split by space, mutiple values are sep'ed by comma (,). E.g. stretch_factors=0.8,1.2 freq_mask_param=30 time_mask_param=30 hide_random_pixels_p=0.5",
     )
 
     user_group.add_argument(
@@ -183,12 +205,13 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         type=int,
         default=config_defaults.DEFAULT_BATCH_SIZE,
     )
+
     user_group.add_argument(
         "--unfreeze-at-epoch",
         metavar="int",
         type=int,
-        default=config_defaults.DEFAULT_UNFREEZE_AT_EPOCH,
     )
+
     user_group.add_argument(
         "--sampling-rate",
         metavar="int",
@@ -198,7 +221,7 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
 
     user_group.add_argument(
         "--scheduler",
-        default=SchedulerType.COSINEANNEALING,
+        default=SchedulerType.ONECYCLE,
         type=SchedulerType,
         choices=list(SchedulerType),
     )
@@ -242,6 +265,20 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
     )
 
     user_group.add_argument(
+        "--backbone-after",
+        metavar="str",
+        type=str,
+        help="Name of the submodule after which the all submodules are considered as backbone, e.g. layer.11.dense",
+    )
+
+    user_group.add_argument(
+        "--head-after",
+        metavar="str",
+        type=str,
+        help="Name of the submodule after which the all submodules are considered as head, e.g. classifier.dense",
+    )
+
+    user_group.add_argument(
         "--dim",
         default=config_defaults.DEFAULT_DIM,
         type=tuple[int, int],
@@ -268,16 +305,22 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         args.dataset_fraction = 0.01
         args.batch_size = 2
 
+    if args.epochs:
+        pl_args.max_epochs = args.epochs
+
     """Additional argument checking"""
     if args.metric and not args.metric_mode:
+        raise Exception("can't pass --metric without passing --metric-mode")
+
+    if bool(args.warmup_lr) != bool(args.unfreeze_at_epoch):
         raise Exception(
-            f"{args.metric} can't pass --metric without passing --metric-mode"
+            "--warmup-lr and --unfreeze-at-epoch have to be passed together",
         )
 
-    if bool(args.warmup_start_lr) != bool(args.unfreeze_at_epoch):
-        raise Exception(
-            f"{args.metric} --warmup-start-lr and --unfreeze-at-epoch have to be passed together",
-        )
+    if args.aug_kwargs is None:
+        args.aug_kwargs = {}
+    else:
+        args.aug_kwargs = utils_functions.parse_kwargs(args.aug_kwargs)
 
     return args, pl_args
 

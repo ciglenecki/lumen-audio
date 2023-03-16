@@ -1,5 +1,5 @@
 import hydra
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import OmegaConf
 
 hydra.initialize(version_base=None, config_path="../config")
 _cfg = hydra.compose(config_name="config")
