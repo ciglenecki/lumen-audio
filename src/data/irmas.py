@@ -10,27 +10,26 @@ import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-import src.config_defaults as config_defaults
-from src.audio_transform import AudioTransformAST, AudioTransformBase
-from src.utils_dataset import encode_drums, encode_genre, multi_hot_indices
+import src.config.config_defaults as config_defaults
+from src.features.audio_transform import AudioTransformAST, AudioTransformBase
+from src.utils.utils_audio import load_audio_from_file
+from src.utils.utils_dataset import encode_drums, encode_genre, multi_hot_indices
+from src.utils.utils_exceptions import InvalidDataException
 
 # '*.(wav|mp3|flac)'
 # glob_expression = f"*\.({'|'.join(config_defaults.DEFAULT_AUDIO_EXTENSIONS)})"
 glob_expression = "*.wav"
 
 
-class InvalidDataException(Exception):
-    """Something is wrong with the data."""
-
-
 class IRMASDatasetTrain(Dataset):
     def __init__(
         self,
         dataset_dirs: list[Path] = [config_defaults.PATH_TRAIN],
-        audio_transform: AudioTransformAST = AudioTransformAST(),
+        audio_transform: AudioTransformBase | None = None,
         num_classes=config_defaults.DEFAULT_NUM_LABELS,
         sanity_checks=config_defaults.DEFAULT_SANITY_CHECKS,
         sampling_rate=config_defaults.DEFAULT_SAMPLING_RATE,
+        normalize_audio=config_defaults.DEFAULT_NORMALIZE_AUDIO,
     ):
         """_summary_
 
@@ -53,6 +52,7 @@ class IRMASDatasetTrain(Dataset):
         self.sampling_rate = sampling_rate
         self.audio_transform = audio_transform
         self.num_classes = num_classes
+        self.normalize_audio = normalize_audio
         self._populate_dataset()
 
         if sanity_checks:
@@ -88,22 +88,28 @@ class IRMASDatasetTrain(Dataset):
                     instrument_indices,
                     config_defaults.DEFAULT_NUM_LABELS,
                 )
+                labels = torch.tensor(labels).float()
 
                 self.dataset.append((audio_path, labels, drums_vector, genre_vector))
 
     def __len__(self) -> int:
         return len(self.dataset)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index) -> tuple[torch.Tensor, torch.Tensor]:
         audio_path, labels, drums_vector, genre_vector = self.dataset[index]
-        audio, orig_sampling_rate = librosa.load(audio_path, sr=None)
-        spectrogram, labels = self.audio_transform.process(
-            audio=audio,
-            labels=labels,
-            orig_sampling_rate=orig_sampling_rate,
-            sampling_rate=self.sampling_rate,
+
+        audio, original_sr = load_audio_from_file(
+            audio_path, method="librosa", normalize=self.normalize_audio
         )
-        labels = labels.float()  # avoid errors in loss function
+
+        if self.audio_transform is None:
+            return audio, labels
+
+        spectrogram = self.audio_transform.process(
+            audio=audio,
+            original_sr=original_sr,
+        )
+
         return spectrogram, labels
 
 
@@ -113,7 +119,7 @@ class IRMASDatasetTest(Dataset):
         dataset_dirs: list[Path] = [config_defaults.PATH_TEST],
         num_classes=config_defaults.DEFAULT_NUM_LABELS,
         sanity_checks=config_defaults.DEFAULT_SANITY_CHECKS,
-        audio_transform: AudioTransformAST = AudioTransformAST(),
+        audio_transform: AudioTransformBase | None = None,
         sampling_rate=config_defaults.DEFAULT_SAMPLING_RATE,
     ):
         self.num_classes = num_classes
@@ -153,23 +159,25 @@ class IRMASDatasetTest(Dataset):
                     instrument_indices,
                     config_defaults.DEFAULT_NUM_LABELS,
                 )
+                labels = torch.tensor(labels).float()
 
                 self.dataset.append((audio_file, labels))
 
     def __len__(self) -> int:
         return len(self.dataset)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index) -> tuple[torch.Tensor, torch.Tensor]:
         audio_path, labels = self.dataset[index]
-        audio, orig_sampling_rate = librosa.load(audio_path, sr=None)
-        spectrogram, labels = self.audio_transform.process(
-            audio=audio,
-            labels=labels,
-            orig_sampling_rate=orig_sampling_rate,
-            sampling_rate=self.sampling_rate,
+        audio, original_sr = load_audio_from_file(
+            audio_path, method="librosa", normalize=self.normalize_audio
         )
-        labels = labels.float()  # avoid errors in loss function
+        if self.audio_transform is None:
+            return audio, labels
 
+        spectrogram = self.audio_transform.process(
+            audio=audio,
+            original_sr=original_sr,
+        )
         return spectrogram, labels
 
 
@@ -178,30 +186,32 @@ class InstrumentInference(Dataset):
 
 
 if __name__ == "__main__":  # for testing only
-    ds = IRMASDatasetTrain(audio_transform=AudioTransformAST)
+    ds = IRMASDatasetTrain(audio_transform=AudioTransformAST())
+    for i in range(0, 30):
 
-    import matplotlib.pyplot as plt
+        print(ds[i][1], ds[i][2])
+    # import matplotlib.pyplot as plt
 
-    item = ds[0]
-    x, sr, y = item
+    # item = ds[0]
+    # x, sr, y = item
 
-    filter_banks = librosa.filters.mel(n_fft=2048, sr=22050, n_mels=10)
-    print(filter_banks.shape)
+    # filter_banks = librosa.filters.mel(n_fft=2048, sr=22050, n_mels=10)
+    # print(filter_banks.shape)
 
-    plt.figure(figsize=(25, 10))
-    librosa.display.specshow(filter_banks, sr=sr, x_axis="linear")
-    plt.colorbar(format="%+2.f")
-    plt.show()
+    # plt.figure(figsize=(25, 10))
+    # librosa.display.specshow(filter_banks, sr=sr, x_axis="linear")
+    # plt.colorbar(format="%+2.f")
+    # plt.show()
 
-    mel_spectrogram = librosa.feature.melspectrogram(
-        y=x, sr=sr, n_fft=2048, hop_length=512, n_mels=10
-    )
-    print(mel_spectrogram.shape)
+    # mel_spectrogram = librosa.feature.melspectrogram(
+    #     y=x, sr=sr, n_fft=2048, hop_length=512, n_mels=10
+    # )
+    # print(mel_spectrogram.shape)
 
-    log_mel_spectrogram = librosa.power_to_db(mel_spectrogram)
-    print(log_mel_spectrogram.shape)
+    # log_mel_spectrogram = librosa.power_to_db(mel_spectrogram)
+    # print(log_mel_spectrogram.shape)
 
-    plt.figure(figsize=(25, 10))
-    librosa.display.specshow(log_mel_spectrogram, x_axis="time", y_axis="mel", sr=sr)
-    plt.colorbar(format="%+2.f")
-    plt.show()
+    # plt.figure(figsize=(25, 10))
+    # librosa.display.specshow(log_mel_spectrogram, x_axis="time", y_axis="mel", sr=sr)
+    # plt.colorbar(format="%+2.f")
+    # plt.show()

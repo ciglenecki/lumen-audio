@@ -11,24 +11,25 @@ from pytorch_lightning.callbacks import (
     TQDMProgressBar,
 )
 
-from src.audio_transform import AudioTransformBase, get_audio_transform
-from src.callbacks import (
+from src.data.datamodule import IRMASDataModule
+from src.features.audio_transform import AudioTransformBase, get_audio_transform
+from src.model.model import get_model
+from src.model.optimizers import SchedulerType
+from src.train.callbacks import (
     FinetuningCallback,
     GeneralMetricsEpochLogger,
     OverrideEpochMetricCallback,
     TensorBoardHparamFixer,
 )
-from src.datamodule import IRMASDataModule
-from src.model import get_model
-from src.train_args import parse_args_train
-from src.utils_functions import (
+from src.train.train_args import parse_args_train
+from src.utils.utils_functions import (
     add_prefix_to_keys,
     get_timestamp,
     random_codeword,
     stdout_to_file,
     to_yaml,
 )
-from src.utils_train import MetricMode, OptimizeMetric, SchedulerType
+from src.utils.utils_train import MetricMode, OptimizeMetric, print_modules
 
 if __name__ == "__main__":
     args, pl_args = parse_args_train()
@@ -39,10 +40,13 @@ if __name__ == "__main__":
     unfreeze_at_epoch: int = args.unfreeze_at_epoch
     metric_mode_str = MetricMode(args.metric_mode).value
     optimizer_metric_str = OptimizeMetric(args.metric).value
+    normalize_audio = args.normalize_audio
+    aug_kwargs = args.aug_kwargs
+    dim = args.dim
 
     timestamp = get_timestamp()
     experiment_codeword = random_codeword()
-    experiment_name = f"{timestamp}_{experiment_codeword}_{args.model}"
+    experiment_name = f"{timestamp}_{experiment_codeword}_{args.model.value}"
 
     os.makedirs(output_dir, exist_ok=True)
     filename_report = Path(output_dir, experiment_name + ".txt")
@@ -52,7 +56,13 @@ if __name__ == "__main__":
     print("Config:", to_yaml(vars(args)), sep="\n")
     print("Config PyTorch Lightning:", to_yaml(vars(pl_args)), sep="\n")
 
-    audio_transform: AudioTransformBase = get_audio_transform(args.audio_transform)
+    audio_transform: AudioTransformBase = get_audio_transform(
+        args.audio_transform,
+        sampling_rate=sampling_rate,
+        spec_aug_enums=args.spectrogram_augmentations,
+        dim=dim,
+        **aug_kwargs,
+    )
 
     datamodule = IRMASDataModule(
         batch_size=batch_size,
@@ -61,6 +71,7 @@ if __name__ == "__main__":
         drop_last_sample=args.drop_last,
         train_audio_transform=audio_transform,
         val_audio_transform=audio_transform,
+        normalize_audio=normalize_audio,
     )
 
     train_dataloader_size = len(datamodule.train_dataloader())
@@ -107,6 +118,7 @@ if __name__ == "__main__":
     )
 
     model = get_model(args, pl_args)
+    print_modules(model)
 
     callbacks = [
         callback_checkpoint,

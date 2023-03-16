@@ -17,7 +17,7 @@ models/**
 *.zip
 .directory
 .vscode
-
+*.tar*
 # =============================================
 # https://raw.githubusercontent.com/github/gitignore/main/Python.gitignore
 # =============================================

@@ -5,9 +5,7 @@ from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import BaseFinetuning, Callback
 from torch.optim.optimizer import Optimizer
 
-
-class InvalidArgument(Exception):
-    pass
+from src.utils.utils_train import print_modules
 
 
 class TensorBoardHparamFixer(pl.Callback):
@@ -48,18 +46,18 @@ class GeneralMetricsEpochLogger(pl.Callback):
     def on_train_epoch_start(
         self, trainer: pl.Trainer, pl_module: pl.LightningModule
     ) -> None:
-        total_params = int(sum(p.numel() for p in pl_module.parameters()))
-        trainable_params = int(
+        total_params = float(sum(p.numel() for p in pl_module.parameters()))
+        trainable_params = float(
             sum(p.numel() for p in pl_module.parameters() if p.requires_grad)
         )
-        non_trainable_params = int(
+        non_trainable_params = float(
             sum(p.numel() for p in pl_module.parameters() if not p.requires_grad)
         )
 
         data_dict = {
-            "total_params/epoch": total_params,
-            "trainable_params/epoch": trainable_params,
-            "non_trainable_params/epoch": non_trainable_params,
+            "params/total_params_epoch": total_params,
+            "params/trainable_params_epoch": trainable_params,
+            "params/non_trainable_params_epoch": non_trainable_params,
             "current_lr/epoch": trainer.optimizers[0].param_groups[0]["lr"],
             "epoch_true": trainer.current_epoch,
             "step": trainer.current_epoch,
@@ -67,19 +65,18 @@ class GeneralMetricsEpochLogger(pl.Callback):
 
         pl_module.log_dict(data_dict)
 
-    def on_train_batch_end(
+    def on_train_batch_start(
         self,
         trainer: "pl.Trainer",
         pl_module: "pl.LightningModule",
-        outputs,
-        batch,
+        batch: Any,
         batch_idx: int,
-        unused: int = 0,
     ) -> None:
         data_dict = {
             "current_lr/step": trainer.optimizers[0].param_groups[0]["lr"],
         }
         pl_module.log_dict(data_dict)
+        return super().on_train_batch_start(trainer, pl_module, batch, batch_idx)
 
 
 class OverrideEpochMetricCallback(Callback):
@@ -92,25 +89,33 @@ class OverrideEpochMetricCallback(Callback):
     def __init__(self) -> None:
         super().__init__()
 
-    def on_training_epoch_end(self, trainer, pl_module: pl.LightningModule):
+    def on_training_epoch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
         self._log_step_as_current_epoch(trainer, pl_module)
 
-    def on_test_epoch_end(self, trainer, pl_module: pl.LightningModule):
+    def on_test_epoch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
         self._log_step_as_current_epoch(trainer, pl_module)
 
-    def on_validation_epoch_end(self, trainer, pl_module: pl.LightningModule):
+    def on_validation_epoch_end(
+        self, trainer: pl.Trainer, pl_module: pl.LightningModule
+    ):
         self._log_step_as_current_epoch(trainer, pl_module)
 
-    def on_training_epoch_start(self, trainer, pl_module: pl.LightningModule):
+    def on_training_epoch_start(
+        self, trainer: pl.Trainer, pl_module: pl.LightningModule
+    ):
         self._log_step_as_current_epoch(trainer, pl_module)
 
-    def on_test_epoch_start(self, trainer, pl_module: pl.LightningModule):
+    def on_test_epoch_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
         self._log_step_as_current_epoch(trainer, pl_module)
 
-    def on_validation_epoch_start(self, trainer, pl_module: pl.LightningModule):
+    def on_validation_epoch_start(
+        self, trainer: pl.Trainer, pl_module: pl.LightningModule
+    ):
         self._log_step_as_current_epoch(trainer, pl_module)
 
-    def _log_step_as_current_epoch(self, trainer, pl_module: pl.LightningModule):
+    def _log_step_as_current_epoch(
+        self, trainer: pl.Trainer, pl_module: pl.LightningModule
+    ):
         # has to be float!
         pl_module.log("step", float(trainer.current_epoch))
 
@@ -137,7 +142,7 @@ class FinetuningCallback(BaseFinetuning):
     +---------------------+--------------------------+----------------------+-----------+
     """
 
-    def __init__(self, unfreeze_backbone_at_epoch: int, train_bn=True) -> None:
+    def __init__(self, unfreeze_backbone_at_epoch: int, train_bn=False) -> None:
         super().__init__()
         self.unfreeze_at_epoch = unfreeze_backbone_at_epoch
         self.curr_epoch = 0
@@ -156,6 +161,8 @@ class FinetuningCallback(BaseFinetuning):
         ASSUMPTIONS_TEXT = "To use this callback, your Lightning Module has to implement the head() and trainable_backbone() which returns appropriate module parameters."
         assert hasattr(pl_module, "head"), ASSUMPTIONS_TEXT
         assert hasattr(pl_module, "trainable_backbone"), ASSUMPTIONS_TEXT
+        assert pl_module.head(), ASSUMPTIONS_TEXT
+        assert pl_module.trainable_backbone(), ASSUMPTIONS_TEXT
         return
 
     def state_dict(self) -> Dict[str, Any]:
@@ -188,6 +195,7 @@ class FinetuningCallback(BaseFinetuning):
         self.freeze(pl_module)
         head = pl_module.head()
         self.make_trainable(head)
+        print_modules(pl_module)
 
     def finetune_function(
         self,
@@ -216,3 +224,4 @@ class FinetuningCallback(BaseFinetuning):
             params = BaseFinetuning.filter_on_optimizer(optimizer, params)
             if params:
                 optimizer.add_param_group({"params": params})
+            print_modules(pl_module)

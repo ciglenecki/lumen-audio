@@ -259,6 +259,16 @@ How to sample?
   - START-----x---x----------x--------x----------END
 - cutoff the audio sequence at max length?
 
+### Kaldi vs Librosa terminilogy
+
+Kaldi
+window_shift = int(sample_frequency * frame_shift * MILLISECONDS_TO_SECONDS)
+
+Librosa
+hop_length
+
+______________________________________________________________________
+
 ## 🏆 Team members
 
 <table>
