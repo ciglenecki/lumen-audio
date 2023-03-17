@@ -43,7 +43,7 @@ class IRMASDataModule(pl.LightningDataModule):
         train_dirs: list[Path] = [config_defaults.PATH_TRAIN],
         val_dirs: list[Path] = [config_defaults.PATH_VAL],
         test_dirs: list[Path] = [config_defaults.PATH_TEST],
-        train_only: bool = True,
+        train_only: bool = False,
         normalize_audio: bool = config_defaults.DEFAULT_NORMALIZE_AUDIO,
     ):
         super().__init__()
@@ -80,17 +80,22 @@ class IRMASDataModule(pl.LightningDataModule):
                 normalize_audio=self.normalize_audio,
             )
         else:
-            self.test_dataset = self.train_dataset
+            self.test_dataset = IRMASDatasetTest(
+                dataset_dirs=self.test_dirs,
+                audio_transform=self.val_audio_transform,
+                normalize_audio=self.normalize_audio,
+            )
 
         if self.train_only:
             indices = np.arange(len(self.train_dataset))
             train_indices, val_indices = train_test_split(indices, test_size=0.2)
             test_indices = np.array([])
             # test_indices = val_indices
+            self._sanity_check_difference(train_indices, val_indices)
         else:
             train_indices = np.arange(len(self.train_dataset))
             val_test_indices = np.arange(len(self.test_dataset))
-            val_indices, test_indices = split_by_ratio(val_test_indices, 0.5, 0.5)
+            val_indices, test_indices = split_by_ratio(val_test_indices, 0.8, 0.2)
 
         if self.dataset_fraction != 1:
             train_indices = np.random.choice(
@@ -109,7 +114,6 @@ class IRMASDataModule(pl.LightningDataModule):
                 replace=False,
             )
 
-        self._sanity_check_difference(train_indices, val_indices)
         self._sanity_check_difference(val_indices, test_indices)
 
         self.train_size = len(train_indices)

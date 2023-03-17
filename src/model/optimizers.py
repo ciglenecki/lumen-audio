@@ -25,35 +25,35 @@ def our_configure_optimizers(
     parameters: Iterator[Parameter],
     scheduler_type: SchedulerType,
     metric_mode: MetricMode,
-    plateau_patience: int,
-    backbone_lr: float,
+    plateau_epoch_patience: int,
+    lr_backbone: float,
     weight_decay: float,
     optimizer_type: OptimizerType,
     optimization_metric: OptimizeMetric,
-    trainer_estimated_stepping_batches: int,
+    total_lr_sch_steps: int,
     num_of_steps_in_epoch: int,
-    epochs: int,
-    onecycle_max_lr=0.03,
+    scheduler_epochs: int,
+    lr_onecycle_max=0.03,
 ):
     """Set optimizer's learning rate to backbone. Why?
 
-    - lr scheduler starts modifying lr after finetuning, it's starting lr is `backbone_lr`
+    - lr scheduler starts modifying lr after finetuning, it's starting lr is `lr_backbone`
     - we can't explicitly pass the intial lr to scheduler
     - the scheduler infers the initial lr from the optimizer
-    - that's why we set optimizers lr to `backbone_lr`
-    - we later change optimizer's lr to `warmup_lr`
+    - that's why we set optimizers lr to `lr_backbone`
+    - we later change optimizer's lr to `lr_warmup`
     """
 
     if optimizer_type is OptimizerType.ADAMW:
         optimizer = torch.optim.AdamW(
             parameters,
-            lr=backbone_lr,
+            lr=lr_backbone,
             weight_decay=weight_decay,
         )
     elif optimizer_type is OptimizerType.ADAM:
         optimizer = torch.optim.Adam(
             parameters,
-            lr=backbone_lr,
+            lr=lr_backbone,
             weight_decay=weight_decay,
         )
     else:
@@ -71,7 +71,7 @@ def our_configure_optimizers(
 
     lr_scheduler_config = {
         "monitor": optimization_metric.value,  # "val/loss_epoch",
-        # How many epochs/steps should pass between calls to `scheduler.step()`.1 corresponds to updating the learning  rate after every epoch/step.
+        # How many scheduler_epochs/steps should pass between calls to `scheduler.step()`.1 corresponds to updating the learning  rate after every epoch/step.
         # If "monitor" references validation metrics, then "frequency" should be set to a multiple of "trainer.check_val_every_n_epoch".
         "frequency": 1,
         # If using the `LearningRateMonitor` callback to monitor the learning rate progress, this keyword can be used to specify a custom logged name
@@ -79,11 +79,19 @@ def our_configure_optimizers(
     }
 
     if scheduler_type == SchedulerType.ONECYCLE:
+        # min_lr = initial_lr/final_div_factor
+        # initial_lr = max_lr/div_factor
+
+        start_lr = lr_backbone
+        end_lr = lr_backbone / 2
+
         scheduler = torch.optim.lr_scheduler.OneCycleLR(
             optimizer=optimizer,
-            max_lr=onecycle_max_lr,  # TOOD:lr,
-            final_div_factor=onecycle_max_lr / backbone_lr,
-            total_steps=int(trainer_estimated_stepping_batches),
+            max_lr=lr_onecycle_max,  # TOOD:lr,
+            div_factor=lr_onecycle_max / start_lr,  # initial_lr = max_lr/div_factor
+            # final_div_factor=lr_onecycle_max / end_lr,
+            total_steps=int(total_lr_sch_steps),
+            three_phase=False,
             verbose=False,
         )
         interval = "step"
@@ -93,14 +101,14 @@ def our_configure_optimizers(
             optimizer,
             mode=metric_mode.value,
             factor=config_defaults.DEFAULT_LR_PLATEAU_FACTOR,
-            patience=plateau_patience,
+            patience=plateau_epoch_patience,
             verbose=True,
         )
         interval = "epoch"
     elif scheduler_type == SchedulerType.COSINEANNEALING:
         scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
             optimizer,
-            T_0=num_of_steps_in_epoch * epochs,
+            T_0=num_of_steps_in_epoch * scheduler_epochs,
             T_mult=1,
         )
         interval = "step"

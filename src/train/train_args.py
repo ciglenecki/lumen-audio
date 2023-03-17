@@ -69,14 +69,14 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
     )
 
     user_group.add_argument(
-        "--warmup-lr",
+        "--lr-warmup",
         type=float,
         metavar="float",
         help="warmup learning rate",
     )
 
     user_group.add_argument(
-        "--onecycle-max-lr",
+        "--lr-onecycle-max",
         type=float,
         metavar="float",
         help="Maximum lr OneCycle scheduler reaches",
@@ -203,7 +203,7 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         "--patience",
         help="Number of checks with no improvement after which training will be stopped. Under the default configuration, one check happens after every training epoch",
         metavar="int",
-        default=config_defaults.DEFAULT_EARLY_STOPPING_NO_IMPROVEMENT_EPOCHS,
+        default=config_defaults.DEFAULT_PLATEAU_EPOCH_PATIENCE,
         type=utils_functions.is_positive_int,
     )
 
@@ -246,7 +246,7 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         metavar="int",
         default=config_defaults.DEFAULT_EPOCHS,
         type=utils_functions.is_positive_int,
-        help="Maximum number epochs. Default number of epochs in other cases is 1000.",
+        help="Number epochs. Works only if learning rate scheduler has fixed number of steps (onecycle, cosine...). It won't have an effect on 'reduce on palteau' lr scheduler.",
     )
 
     user_group.add_argument(
@@ -306,7 +306,7 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
 
     """User arguments which override PyTorch Lightning arguments"""
     if args.quick:
-        pl_args.limit_train_batches = 3
+        pl_args.limit_train_batches = 2
         pl_args.limit_val_batches = 2
         pl_args.limit_test_batches = 2
         pl_args.log_every_n_steps = 1
@@ -320,9 +320,9 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
     if args.metric and not args.metric_mode:
         raise InvalidArgument("can't pass --metric without passing --metric-mode")
 
-    if bool(args.warmup_lr) != bool(args.unfreeze_at_epoch):
+    if bool(args.lr_warmup) != bool(args.unfreeze_at_epoch):
         raise InvalidArgument(
-            "--warmup-lr and --unfreeze-at-epoch have to be passed together",
+            "--lr-warmup and --unfreeze-at-epoch have to be passed together",
         )
 
     if args.aug_kwargs is None:
@@ -330,9 +330,9 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
     else:
         args.aug_kwargs = utils_functions.parse_kwargs(args.aug_kwargs)
 
-    if args.scheduler == SchedulerType.ONECYCLE and args.onecycle_max_lr is None:
+    if args.scheduler == SchedulerType.ONECYCLE and args.lr_onecycle_max is None:
         raise InvalidArgument(
-            f"You have to pass the --onecycle-max-lr if you use the {args.scheduler}",
+            f"You have to pass the --lr-onecycle-max if you use the {args.scheduler}",
         )
     return args, pl_args
 

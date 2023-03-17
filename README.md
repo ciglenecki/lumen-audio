@@ -23,10 +23,16 @@ Tasks:
 - create eval script which will caculate ALL metrics for the whole dataset
   - precision, f1, confusion matrix, hardest example, scores per instrument
 - check validation results
-- [ ] Implement ELECTRA
+- [ ] Implement MAE/ELECTRA
+- [ ] convert all augmentations so they happen on the GPU
+  - make sure augmetantions happen in batch
+- \[\] use MFCC instead of spectrogram
+- \[\] include relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
 
 Matej:
 
+- [ ] wav2vec2 padding ???
+- \[ \]
 - [ ] compare Mirko's wavelet transform with scipy's native transformation
 - [ ] implement argument which accepts list of numbers \[1000, 500, 4\] and will create appropriate deep cnn
   - use module called deep head and pass it as a argument

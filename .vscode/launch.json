@@ -5,12 +5,12 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "Train AST",
+			"name": "Train AST simple lr",
 			"type": "python",
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --dataset-dir data/raw/train --lr 0.003 --batch-size 2 --num-workers 6 --audio-transform ast --model ast --augmentations time_stretch radnom_pixels --epochs 40  --patience 50 --backbone-after layer.10 --head-after deep_head",
+			"args": "--accelerator gpu --devices -1 --dataset-dir data/raw/train --batch-size 2 --num-workers 6 --audio-transform ast --model ast --augmentations time_stretch radnom_pixels --epochs 9  --patience 90 --backbone-after layer.11.output --head-after deep_head --lr 1e-5 --lr-onecycle-max 5e-4 --lr-warmup 1e-4 --unfreeze-at-epoch 3 --quick",
 			"justMyCode": false
 		},
 		{
@@ -19,7 +19,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --dataset-dir data/raw/train --lr 5e-5 --batch-size 2 --num-workers 6 --audio-transform wav2vec --model wav2vec --augmentations time_stretch --epochs 40  --patience 50 --backbone-after layers.9 --head-after deep_head --onecycle-max-lr 1e-3 --warmup-lr 5e-5 --unfreeze-at-epoch 4",
+			"args": "--accelerator gpu --devices -1 --dataset-dir data/raw/train --lr 5e-5 --batch-size 2 --num-workers 4 --audio-transform wav2vec --model wav2vec --augmentations time_stretch --epochs 40  --patience 50 --backbone-after layers.9 --head-after deep_head --lr-onecycle-max 1e-3 --lr-warmup 5e-5 --unfreeze-at-epoch 4",
 			"justMyCode": false
 		},
 		{
@@ -28,7 +28,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --dataset-dir data/raw/train --lr 5e-4 --batch-size 4 --num-workers 4 --audio-transform mel_spectrogram_fixed_repeat --model efficient_net_v2_s --augmentations time_stretch radnom_pixels --epochs 20  --patience 50 --quick",
+			"args": "--accelerator gpu --devices -1 --dataset-dir data/raw/train --lr 5e-4 --batch-size 4 --num-workers 4 --audio-transform mel_spectrogram_fixed_repeat --model efficient_net_v2_s --augmentations time_stretch radnom_pixels --epochs 20  --patience 50 --lr-onecycle-max 1e-4 --quick",
 			"justMyCode": false
 		},
 		{
@@ -37,7 +37,7 @@
 			"request": "launch",
 			"program": "src/train.py",
 			"console": "integratedTerminal",
-			"args": "--dataset-dir data/raw/train --lr 1e-4 --warmup-lr 5e-4 --num-workers 1 --quick",
+			"args": "--dataset-dir data/raw/train --lr 1e-4 --lr-warmup 5e-4 --num-workers 1 --quick",
 			"justMyCode": false
 		},
 	]

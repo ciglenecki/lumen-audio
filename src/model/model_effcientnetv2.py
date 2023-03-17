@@ -1,52 +1,27 @@
-from typing import Optional, Union
+from typing import Union
 
 import torch
 import torch.nn as nn
 import torchmetrics
-from pytorch_lightning.loggers import TensorBoardLogger
 from torchmetrics.classification import MultilabelF1Score
 from torchvision.models import efficientnet_v2_s
 
-import src.config.config_defaults as config_defaults
 from src.model.model_base import ModelBase
-from src.model.optimizers import OptimizerType, SchedulerType, our_configure_optimizers
-from src.utils.utils_train import MetricMode, OptimizeMetric
 
 
 class EfficientNetV2SmallModel(ModelBase):
-    """Implementation of EfficientNet V2 small model (384 x 384)"""
+    """Implementation of EfficientNet V2 small model (384 x 384)
 
-    # S    - (384 x 384)
-    # M, L - (480 x 480)
-
-    loggers: list[TensorBoardLogger]
+    S    - (384 x 384)
+    M, L - (480 x 480)
+    """
 
     def __init__(
         self,
-        pretrained: bool = config_defaults.DEFAULT_PRETRAINED,
-        batch_size: int = config_defaults.DEFAULT_BATCH_SIZE,
-        scheduler_type: SchedulerType = SchedulerType.PLATEAU,
-        epochs: Optional[int] = None,
-        optimizer_type: OptimizerType = config_defaults.DEFAULT_OPTIMIZER,
-        num_labels: int = config_defaults.DEFAULT_NUM_LABELS,
-        optimization_metric: OptimizeMetric = config_defaults.DEFAULT_OPTIMIZE_METRIC,
-        weight_decay: float = config_defaults.DEFAULT_WEIGHT_DECAY,
-        metric_mode: MetricMode = config_defaults.DEFAULT_METRIC_MODE,
-        epoch_patience: int = config_defaults.DEFAULT_EARLY_STOPPING_NO_IMPROVEMENT_EPOCHS,
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        self.pretrained = pretrained
-        self.batch_size = batch_size
-        self.scheduler_type = scheduler_type
-        self.epochs = epochs
-        self.optimizer_type = optimizer_type
-        self.num_labels = num_labels
-        self.optimization_metric = optimization_metric
-        self.weight_decay = weight_decay
-        self.metric_mode = metric_mode
-        self.epoch_patience = epoch_patience
 
         self.backbone = efficientnet_v2_s(weights="IMAGENET1K_V1", progress=True)
 
@@ -108,24 +83,6 @@ class EfficientNetV2SmallModel(ModelBase):
 
     def test_step(self, batch, batch_idx):
         return self._step(batch, batch_idx, type="test")
-
-    def configure_optimizers(self):
-        out = our_configure_optimizers(
-            parameters=self.parameters(),
-            scheduler_type=self.scheduler_type,
-            metric_mode=self.metric_mode,
-            plateau_patience=(self.epoch_patience // 2) + 1,
-            backbone_lr=self.backbone_lr,
-            weight_decay=self.weight_decay,
-            optimizer_type=self.optimizer_type,
-            optimization_metric=self.optimization_metric,
-            trainer_estimated_stepping_batches=int(
-                self.trainer.estimated_stepping_batches
-            ),
-            num_of_steps_in_epoch=self.num_of_steps_in_epoch,
-            epochs=self.epochs,
-        )
-        return out
 
     def _lr_finetuning_step(self, optimizer_idx):
         """Exponential learning rate update.
