@@ -158,6 +158,7 @@ class AudioTransformAST(AudioTransformBase):
         ), "Spectrogram has to have 3 dimensions before torch augmentations!"
         spectrogram = self.apply_augmentations(spectrogram)
         spectrogram = spectrogram.squeeze(dim=0)
+
         return spectrogram
 
 

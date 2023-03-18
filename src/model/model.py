@@ -38,6 +38,7 @@ def get_model(args, pl_args):
         head_after=args.head_after,
         lr_onecycle_max=args.lr_onecycle_max,
     )
+
     if model_enum == SupportedModels.AST:
         model = ASTModelWrapper(
             model_name=config_defaults.DEFAULT_AST_PRETRAINED_TAG,

@@ -97,6 +97,7 @@ if __name__ == "__main__":
         check_on_train_epoch_end=args.check_on_train_epoch_end,
         verbose=True,
     )
+
     callback_checkpoint = ModelCheckpoint(
         monitor=optimizer_metric_str,
         mode=metric_mode_str,
