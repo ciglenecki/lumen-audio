@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, SubsetRandomSampler
 
 import src.config.config_defaults as config_defaults
-from src.data.irmas import IRMASDatasetTest, IRMASDatasetTrain
+from src.data.dataset_irmas import IRMASDatasetTest, IRMASDatasetTrain
 from src.features.audio_transform import AudioTransformBase
 from src.utils.utils_functions import split_by_ratio
 
@@ -86,6 +86,7 @@ class IRMASDataModule(pl.LightningDataModule):
             indices = np.arange(len(self.train_dataset))
             train_indices, val_indices = train_test_split(indices, test_size=0.2)
             test_indices = np.array([])
+            # test_indices = val_indices
         else:
             train_indices = np.arange(len(self.train_dataset))
             val_test_indices = np.arange(len(self.test_dataset))

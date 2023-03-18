@@ -33,7 +33,7 @@ def our_configure_optimizers(
     trainer_estimated_stepping_batches: int,
     num_of_steps_in_epoch: int,
     epochs: int,
-    one_cycle_max_lr=0.03,
+    onecycle_max_lr=0.03,
 ):
     """Set optimizer's learning rate to backbone. Why?
 
@@ -81,8 +81,8 @@ def our_configure_optimizers(
     if scheduler_type == SchedulerType.ONECYCLE:
         scheduler = torch.optim.lr_scheduler.OneCycleLR(
             optimizer=optimizer,
-            max_lr=one_cycle_max_lr,  # TOOD:lr,
-            final_div_factor=one_cycle_max_lr / backbone_lr,
+            max_lr=onecycle_max_lr,  # TOOD:lr,
+            final_div_factor=onecycle_max_lr / backbone_lr,
             total_steps=int(trainer_estimated_stepping_batches),
             verbose=False,
         )
