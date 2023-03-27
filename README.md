@@ -2,9 +2,9 @@
 
 Check the code architecture drawing: https://docs.google.com/drawings/d/1DDG480MVKn_C3fZktl5t6uvWeh57Vx2wgtH9GJYsGAU/edit?usp=sharing
 
-Experiments: https://docs.google.com/spreadsheets/d/1DK04mzl79wB_NNKNJFpf8HrG24TvEzwpreovirgSjGY/edit?usp=sharing
-
 ![ ](img/code_arh.png)
+
+Experiments: https://docs.google.com/spreadsheets/d/1DK04mzl79wB_NNKNJFpf8HrG24TvEzwpreovirgSjGY/edit?usp=sharing
 
 ## Notes
 
@@ -12,41 +12,29 @@ Experiments: https://docs.google.com/spreadsheets/d/1DK04mzl79wB_NNKNJFpf8HrG24T
 
 Tasks:
 
-- normalization!
-  - normalization of the audio in time domain (amplitude). Librosa already does this?
-  - spectrogram normalization, same as any image problem normalization
-    - pre-caculate mean and std and use it
-- [ ] audio files which are NOT instruments
-  - reserach audio files which are NOT instruments
-    - both background noises and sounds SIMILAR to instruments!
-    - download the datasets and write dataset loader for them (@matej)
-    - label everything [0, ..., 0]
-- attempt error analysis by looking where the gradients are large
-- create eval script which will caculate ALL metrics for the whole dataset
-  - precision, f1, confusion matrix, hardest example, scores per instrument
-- check validation results
-- [ ] Implement MAE/ELECTRA
-- [ ] convert all augmentations so they happen on the GPU
-  - make sure augmetantions happen in batch
-- [ ] use MFCC instead of spectrogram
 - [ ] include relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
+- [ ] implement audio and spectrogram normalization
+- [ ] include files which are NOT instruments
+- [ ] download non instrument audio files and write data loader which are NOT instruments (@matej)
+- [ ] create eval script which will caculate ALL metrics for the whole dataset
+- [ ] try MFCC instead of spectrogram
+
+Low priority tasks:
+
+- [ ] convert all augmentations so they happen on the GPU
+- [ ] make sure augmetantions happen in batch
+- [ ] attempt error analysis by looking where the gradients are large
 
 Matej:
 
-- [ ] wav2vec2 padding ???
 - [ ] compare Mirko's wavelet transform with scipy's native transformation
-- [ ] implement argument which accepts list of numbers [1000, 500, 4] and will create appropriate deep cnn
-  - use module called deep head and pass it as a argument
-- [ ] compare Mirko's wavelet to scipy wavelet
   - run experiments in both cases
-- [ ] check if AST allows for dynamically long audio sequence (longer spectrogram)
-  - make sure to perform a forwardpass
-  - easiest: resize the spectrogram
-- [ ] check batch size n=8 vs n=1 forward pass speed
-  - we want to see if we can split the 8sec audio in 1sec sequences to perform forward pass fast
+- [ ] check AST edge cases (0.1 sec, 30 sec)
+- [ ] comapre batch size n=8 vs n=1 forward pass speed. We want to see if we can split the 8sec audio in 1sec sequences to perform forward pass fast
 - [ ] perform validation on Rep's corected dataset to check how many labels are correctly marked in the original dataset
   - check if all instruments are correct
   - check if at least one instrument is correct
+- [ ] check what's up with wav2vec2 padding
 
 Mirko:
 
@@ -136,6 +124,22 @@ General links:
 - Music and Instrument Classification using Deep Learning Technics: https://cs230.stanford.edu/projects_fall_2019/reports/26225883.pdf
 - AUDIO MANIPULATION WITH TORCHAUDIO: https://pytorch.org/tutorials/beginner/audio_preprocessing_tutorial.html
 
+### Pretraining
+
+Masked Autoencoders (MAE)
+
+![](https://user-images.githubusercontent.com/11435359/146857310-f258c86c-fde6-48e8-9cee-badd2b21bd2c.png)
+
+
+https://huggingface.co/docs/transformers/model_doc/vit_mae#transformers.ViTMAEForPreTraining
+- https://github.com/YuanGongND/ssast
+- https://github.com/AlanBaade/MAE-AST-Public
+### Normalization
+
+Normalization of the audio in time domain (amplitude). Librosa already does this?
+
+Spectrogram normalization, same as any image problem normalization - pre-caculate mean and std and use it in the preprocessing step.
+
 ### 🎵 Datasets
 
 IRMAS dataset https://www.upf.edu/web/mtg/irmas:
@@ -168,6 +172,10 @@ OpenMIC-2018 https://zenodo.org/record/1432913#.W6dPeJNKjOR
 - num examples: 20 000
 - instruments: 20
 - duration: 10sec
+
+### Audio which are not instruments
+
+Reserach audio files which are NOT instruments. Both background noises and sounds SIMILAR to instruments! Download the datasets and write dataset loader for them (@matej). Label everything [0, ..., 0]
 
 ### 💡⚙️ Models and training
 
@@ -228,6 +236,12 @@ https://www.physik.uzh.ch/local/teaching/SPI301/LV-2015-Help/lvanls.chm/STFT_Spe
 
 Take an audio sequence and peform SFTF (Short-time Fourier transform) to get spectrums in multiple time intervals. The result is a 3D tensor (time, amplitude, spectrum). STFT has a time window size which is defined by a `sampling frequnecy`. It is also defined by a `window type`.
 
+### Mel-Frequency Cepstral Coefficients (MFCC)
+
+Spectrogram of Mel Spectrogram:
+
+https://youtu.be/4_SH2nfbQZ8
+
 ### 🥴 Augmentations
 
 - https://pytorch.org/audio/main/tutorials/audio_feature_augmentation_tutorial.html#specaugment
@@ -274,6 +288,11 @@ window_shift = int(sample_frequency * frame_shift * MILLISECONDS_TO_SECONDS)
 Librosa
 hop_length
 
+### Done tasks
+
+Tasks:
+- [x] implement argument which accepts list of numbers [1000, 500, 4] and will create appropriate deep cnn
+  - use module called deep head and pass it as a argument
 ______________________________________________________________________
 
 ## 🏆 Team members
