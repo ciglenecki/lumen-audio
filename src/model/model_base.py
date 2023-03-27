@@ -152,12 +152,6 @@ class ModelBase(pl.LightningModule, ABC):
         metric_dict.update({"loss": loss})
         return metric_dict
 
-    def predict_step(
-        self, batch: torch.Tensor, batch_idx: int, dataloader_idx: int = 0
-    ) -> Any:
-        # TODO:
-        pass
-
     def head(self) -> Union[nn.ModuleList, nn.Module] | None:
         """Returns "head" part of the model. That's usually whatever's after the large feature
         extractor.
