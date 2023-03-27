@@ -45,6 +45,7 @@ DEFAULT_HOP_LENGTH = DEFAULT_N_FFT // 2
 DEFAULT_DIM = (384, 384)
 DEFAULT_FC = []
 DEFAULT_PRETRAINED_WEIGHTS = "DEFAULT"
+DEFAULT_LOG_PER_INSTRUMENT_METRICS = False
 
 # ===============
 # PATHS START
@@ -67,7 +68,7 @@ PATH_MODELS = Path(PATH_WORK_DIR, "models")
 # ===============
 
 
-class InstrumentKeys(Enum):
+class InstrumentEnums(Enum):
     CELLO = "cel"
     CLARINET = "cla"
     FLUTE = "flu"
@@ -82,31 +83,31 @@ class InstrumentKeys(Enum):
 
 
 INSTRUMENT_TO_IDX = {
-    InstrumentKeys.CELLO.value: 0,
-    InstrumentKeys.CLARINET.value: 1,
-    InstrumentKeys.FLUTE.value: 2,
-    InstrumentKeys.ACOUSTIC_GUITAR.value: 3,
-    InstrumentKeys.ELECTRIC_GUITAR.value: 4,
-    InstrumentKeys.ORGAN.value: 5,
-    InstrumentKeys.PIANO.value: 6,
-    InstrumentKeys.SAXOPHONE.value: 7,
-    InstrumentKeys.TRUMPET.value: 8,
-    InstrumentKeys.VIOLIN.value: 9,
-    InstrumentKeys.VOICE.value: 10,
+    InstrumentEnums.CELLO.value: 0,
+    InstrumentEnums.CLARINET.value: 1,
+    InstrumentEnums.FLUTE.value: 2,
+    InstrumentEnums.ACOUSTIC_GUITAR.value: 3,
+    InstrumentEnums.ELECTRIC_GUITAR.value: 4,
+    InstrumentEnums.ORGAN.value: 5,
+    InstrumentEnums.PIANO.value: 6,
+    InstrumentEnums.SAXOPHONE.value: 7,
+    InstrumentEnums.TRUMPET.value: 8,
+    InstrumentEnums.VIOLIN.value: 9,
+    InstrumentEnums.VOICE.value: 10,
 }
 
 INSTRUMENT_TO_FULLNAME = {
-    InstrumentKeys.CELLO.value: "cello",
-    InstrumentKeys.CLARINET.value: "clarinet",
-    InstrumentKeys.FLUTE.value: "flute",
-    InstrumentKeys.ACOUSTIC_GUITAR.value: "acoustic guitar",
-    InstrumentKeys.ELECTRIC_GUITAR.value: "electric guitar",
-    InstrumentKeys.ORGAN.value: "organ",
-    InstrumentKeys.PIANO.value: "piano",
-    InstrumentKeys.SAXOPHONE.value: "saxophone",
-    InstrumentKeys.TRUMPET.value: "trumpet",
-    InstrumentKeys.VIOLIN.value: "violin",
-    InstrumentKeys.VOICE.value: "human voice",
+    InstrumentEnums.CELLO.value: "cello",
+    InstrumentEnums.CLARINET.value: "clarinet",
+    InstrumentEnums.FLUTE.value: "flute",
+    InstrumentEnums.ACOUSTIC_GUITAR.value: "acoustic_guitar",
+    InstrumentEnums.ELECTRIC_GUITAR.value: "electric_guitar",
+    InstrumentEnums.ORGAN.value: "organ",
+    InstrumentEnums.PIANO.value: "piano",
+    InstrumentEnums.SAXOPHONE.value: "saxophone",
+    InstrumentEnums.TRUMPET.value: "trumpet",
+    InstrumentEnums.VIOLIN.value: "violin",
+    InstrumentEnums.VOICE.value: "human_voice",
 }
 
 IDX_TO_INSTRUMENT = {v: k for k, v in INSTRUMENT_TO_IDX.items()}

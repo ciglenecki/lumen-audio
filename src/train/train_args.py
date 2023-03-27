@@ -293,6 +293,13 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         help="The dimension to resize the image to.",
     )
 
+    user_group.add_argument(
+        "--log-per-instrument-metrics",
+        help="Along with aggregated metrics, also log per instrument metrics.",
+        action="store_true",
+        default=config_defaults.DEFAULT_LOG_PER_INSTRUMENT_METRICS,
+    )
+
     args = parser.parse_args()
 
     """Separate Namespace into two Namespaces"""

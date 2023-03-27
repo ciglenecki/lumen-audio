@@ -5,7 +5,6 @@ import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import (
     EarlyStopping,
-    LearningRateMonitor,
     ModelCheckpoint,
     ModelSummary,
     TQDMProgressBar,
@@ -133,7 +132,6 @@ if __name__ == "__main__":
         TensorBoardHparamFixer(config_dict=log_dictionary),
         OverrideEpochMetricCallback(),
         GeneralMetricsEpochLogger(),
-        LearningRateMonitor(log_momentum=True),
     ]
 
     if unfreeze_at_epoch is not None:

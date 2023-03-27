@@ -1,14 +1,18 @@
 from abc import ABC
-from typing import Optional, Union
+from argparse import Namespace
+from typing import Any, Optional, Union
 
 import numpy as np
 import pytorch_lightning as pl
+import torch
 import torch.nn as nn
 from pytorch_lightning.callbacks import BaseFinetuning
 from pytorch_lightning.loggers import TensorBoardLogger
 
 import src.config.config_defaults as config_defaults
 from src.model.optimizers import OptimizerType, SchedulerType, our_configure_optimizers
+from src.train.metrics import get_metrics
+from src.utils.utils_functions import add_prefix_to_keys
 from src.utils.utils_train import MetricMode, OptimizeMetric, get_all_modules_after
 
 
@@ -34,6 +38,7 @@ class ModelBase(pl.LightningModule, ABC):
         scheduler_type: SchedulerType = config_defaults.DEFAULT_LR_SCHEDULER,
         unfreeze_at_epoch: Optional[int] = config_defaults.DEFAULT_UNFREEZE_AT_EPOOCH,
         weight_decay: float = config_defaults.DEFAULT_WEIGHT_DECAY,
+        log_per_instrument_metrics=config_defaults.DEFAULT_LOG_PER_INSTRUMENT_METRICS,
         *args,
         **kwargs,
     ) -> None:
@@ -79,6 +84,7 @@ class ModelBase(pl.LightningModule, ABC):
         self.epochs = epochs
         self.has_finetuning = unfreeze_at_epoch is not None
         self.head_after = head_after
+        self.log_per_instrument_metrics = log_per_instrument_metrics
         self.lr_backbone = lr  # lr once backbone gets unfrozen
         self.lr_onecycle_max = lr_onecycle_max
         self.lr_warmup = lr_warmup  # starting warmup lr
@@ -126,6 +132,32 @@ class ModelBase(pl.LightningModule, ABC):
             self._set_finetune_until_step()
         return out
 
+    def log_and_return_loss_step(self, loss, y_pred, y_true, type):
+        """Has to return dictionary with 'loss'.
+
+        Lightning uses loss variable to perform backwards
+        """
+        metric_dict = add_prefix_to_keys(
+            get_metrics(
+                y_pred=y_pred,
+                y_true=y_true,
+                num_labels=self.num_labels,
+                return_per_instrument=self.log_per_instrument_metrics,
+            ),
+            f"{type}/",
+        )
+        self.log_dict(
+            metric_dict, on_step=True, on_epoch=True, logger=True, prog_bar=True
+        )
+        metric_dict.update({"loss": loss})
+        return metric_dict
+
+    def predict_step(
+        self, batch: torch.Tensor, batch_idx: int, dataloader_idx: int = 0
+    ) -> Any:
+        # TODO:
+        pass
+
     def head(self) -> Union[nn.ModuleList, nn.Module] | None:
         """Returns "head" part of the model. That's usually whatever's after the large feature
         extractor.
@@ -148,6 +180,14 @@ class ModelBase(pl.LightningModule, ABC):
             return get_all_modules_after(self, self.backbone_after)
         else:
             return None
+
+    def log_hparams(
+        self,
+        params: Union[dict[str, Any], Namespace],
+        metrics: Optional[dict[str, Any]] = None,
+    ):
+        self.loggers[0].log_hyperparams(params)
+        self.loggers[0].finalize("success")
 
     def _set_lr(self, lr: float):
         if self.trainer is not None:

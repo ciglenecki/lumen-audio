@@ -4,6 +4,8 @@ Check the code architecture drawing: https://docs.google.com/drawings/d/1DDG480M
 
 ![ ](img/code_arh.png)
 
+Experiments: https://docs.google.com/spreadsheets/d/1DK04mzl79wB_NNKNJFpf8HrG24TvEzwpreovirgSjGY/edit?usp=sharing
+
 ## Notes
 
 ### Meet 2 (2023-03-11, sub)
