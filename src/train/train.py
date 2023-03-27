@@ -56,12 +56,18 @@ if __name__ == "__main__":
     print("Config:", to_yaml(vars(args)), sep="\n")
     print("Config PyTorch Lightning:", to_yaml(vars(pl_args)), sep="\n")
 
-    audio_transform: AudioTransformBase = get_audio_transform(
+    train_audio_transform: AudioTransformBase = get_audio_transform(
         args.audio_transform,
         sampling_rate=sampling_rate,
         augmentation_enums=args.augmentations,
         dim=dim,
         **aug_kwargs,
+    )
+    val_audio_transform: AudioTransformBase = get_audio_transform(
+        args.audio_transform,
+        sampling_rate=sampling_rate,
+        augmentation_enums=[],
+        dim=dim,
     )
 
     datamodule = IRMASDataModule(
@@ -69,8 +75,8 @@ if __name__ == "__main__":
         num_workers=args.num_workers,
         dataset_fraction=args.dataset_fraction,
         drop_last_sample=args.drop_last,
-        train_audio_transform=audio_transform,
-        val_audio_transform=audio_transform,
+        train_audio_transform=train_audio_transform,
+        val_audio_transform=val_audio_transform,
         normalize_audio=normalize_audio,
     )
 
@@ -91,14 +97,13 @@ if __name__ == "__main__":
         check_on_train_epoch_end=args.check_on_train_epoch_end,
         verbose=True,
     )
-
     callback_checkpoint = ModelCheckpoint(
         monitor=optimizer_metric_str,
         mode=metric_mode_str,
         filename="_".join(
             [
                 experiment_name,
-                "val_acc_{val/acc_epoch:.4f}",
+                "val_acc_{val/f1_score_epoch:.4f}",
                 "val_loss_{val/loss_epoch:.4f}",
             ]
         ),

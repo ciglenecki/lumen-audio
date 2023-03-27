@@ -6,7 +6,7 @@ import torch
 import torchvision.transforms.functional as F
 from torchaudio.transforms import FrequencyMasking, TimeMasking
 from torchvision.transforms import RandomErasing
-from transformers import ASTFeatureExtractor, AutoConfig, Wav2Vec2FeatureExtractor
+from transformers import ASTFeatureExtractor, Wav2Vec2FeatureExtractor
 
 import src.config.config_defaults as config_defaults
 from src.utils.utils_audio import stereo_to_mono, time_stretch

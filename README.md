@@ -18,17 +18,22 @@ Tasks:
   - reserach audio files which are NOT instruments
     - both background noises and sounds SIMILAR to instruments!
     - download the datasets and write dataset loader for them (@matej)
-    - label everything \[0, ..., 0\]
+    - label everything [0, ..., 0]
 - attempt error analysis by looking where the gradients are large
 - create eval script which will caculate ALL metrics for the whole dataset
   - precision, f1, confusion matrix, hardest example, scores per instrument
 - check validation results
-- [ ] Implement ELECTRA
+- [ ] Implement MAE/ELECTRA
+- [ ] convert all augmentations so they happen on the GPU
+  - make sure augmetantions happen in batch
+- [ ] use MFCC instead of spectrogram
+- [ ] include relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
 
 Matej:
 
+- [ ] wav2vec2 padding ???
 - [ ] compare Mirko's wavelet transform with scipy's native transformation
-- [ ] implement argument which accepts list of numbers \[1000, 500, 4\] and will create appropriate deep cnn
+- [ ] implement argument which accepts list of numbers [1000, 500, 4] and will create appropriate deep cnn
   - use module called deep head and pass it as a argument
 - [ ] compare Mirko's wavelet to scipy wavelet
   - run experiments in both cases
@@ -254,7 +259,7 @@ Use the same genre for data generation: combine sounds which come from the same 
 
 How to sample?
 
-- sample audio files \[3, 5\] but dont use more than 4 instruments
+- sample audio files [3, 5] but dont use more than 4 instruments
 - sample different starting positions at which the audio will start playing
   - START-----x---x----------x--------x----------END
 - cutoff the audio sequence at max length?
