@@ -37,7 +37,9 @@ def get_model(args, pl_args):
         backbone_after=args.backbone_after,
         head_after=args.head_after,
         lr_onecycle_max=args.lr_onecycle_max,
+        log_per_instrument_metrics=args.log_per_instrument_metrics,
     )
+
     if model_enum == SupportedModels.AST:
         model = ASTModelWrapper(
             model_name=config_defaults.DEFAULT_AST_PRETRAINED_TAG,

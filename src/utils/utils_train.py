@@ -15,7 +15,7 @@ class MetricMode(EnumStr):
 
 class OptimizeMetric(EnumStr):
     VAL_HAMMING = "val/hamming_distance"
-    VAL_F1 = "val/f1_score"
+    VAL_F1 = "val/f1"
 
 
 def get_all_modules_after(

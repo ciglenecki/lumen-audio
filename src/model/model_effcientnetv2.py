@@ -59,21 +59,9 @@ class EfficientNetV2SmallModel(ModelBase):
         logits_pred = self.forward(audio)
         loss = self.loss_function(logits_pred, y)
         y_pred = torch.sigmoid(logits_pred) > 0.5
-        hamming_distance = self.hamming_distance(y, y_pred)
-        f1_score = self.f1_score(y, y_pred)
-
-        data_dict = {
-            "loss": loss,  # the 'loss' key needs to be present
-            f"{type}/loss": loss,
-            f"{type}/hamming_distance": hamming_distance,
-            f"{type}/f1_score": f1_score,
-        }
-
-        log_dict = data_dict.copy()
-        log_dict.pop("loss", None)
-        self.log_dict(log_dict, on_step=True, on_epoch=True, logger=True, prog_bar=True)
-
-        return data_dict
+        return self.log_and_return_loss_step(
+            loss=loss, y_pred=y_pred, y_true=y, type=type
+        )
 
     def training_step(self, batch, batch_idx):
         return self._step(batch, batch_idx, type="train")

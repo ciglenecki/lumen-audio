@@ -148,19 +148,19 @@ class IRMASDataModule(pl.LightningDataModule):
 
     def _sanity_check_difference(
         self,
-        val_indices: np.ndarray,
-        test_indices: np.ndarray,
+        indices_a: np.ndarray,
+        indices_b: np.ndarray,
     ):
         """Checks if there are overlaping val and test indicies to avoid data leakage."""
 
-        for ind_a, ind_b in combinations([val_indices, test_indices], 2):
+        for ind_a, ind_b in combinations([indices_a, indices_b], 2):
             assert (
                 len(np.intersect1d(ind_a, ind_b)) == 0
             ), f"Some indices share an index {np.intersect1d(ind_a, ind_b)}"
-        set_ind = set(val_indices)
-        set_ind.update(test_indices)
+        set_ind = set(indices_a)
+        set_ind.update(indices_b)
         assert len(set_ind) == (
-            len(val_indices) + len(test_indices)
+            len(indices_a) + len(indices_b)
         ), "Some indices might contain non-unqiue values"
 
     def train_dataloader(self) -> DataLoader:
