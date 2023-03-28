@@ -6,47 +6,65 @@ Check the code architecture drawing: https://docs.google.com/drawings/d/1DDG480M
 
 Experiments: https://docs.google.com/spreadsheets/d/1DK04mzl79wB_NNKNJFpf8HrG24TvEzwpreovirgSjGY/edit?usp=sharing
 
+
 ## Notes
 
-### Meet 2 (2023-03-11, sub)
 
 Tasks:
 
-- [ ] include relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
+- [ ] check the assumption that label instrument is present thought the whole audio (check n=200 samples and check how many occourances)
+- [ ] create random classifier
+  - [ ] best accuracy = all zeros
+  - [ ] best f1 = randomly mark 2-4 instruments as True
+  - [ ] best recall = all ones
 - [ ] implement audio and spectrogram normalization
 - [ ] include files which are NOT instruments
-- [ ] download non instrument audio files and write data loader which are NOT instruments (@matej)
 - [ ] create eval script which will caculate ALL metrics for the whole dataset
-- [ ] try MFCC instead of spectrogram
+- [ ] add method to save augmented examples to a new dataset. We need this for pretraining
+- [ ] implement chunking of the audio in inference and perform multiple forward pass
+- [ ] add tripplet loss or (classification + perceptual distance)
+
 
 Low priority tasks:
-
 - [ ] convert all augmentations so they happen on the GPU
 - [ ] make sure augmetantions happen in batch
 - [ ] attempt error analysis by looking where the gradients are large
-
-Matej:
-
 - [ ] compare Mirko's wavelet transform with scipy's native transformation
   - run experiments in both cases
-- [ ] check AST edge cases (0.1 sec, 30 sec)
-- [ ] comapre batch size n=8 vs n=1 forward pass speed. We want to see if we can split the 8sec audio in 1sec sequences to perform forward pass fast
-- [ ] perform validation on Rep's corected dataset to check how many labels are correctly marked in the original dataset
-  - check if all instruments are correct
-  - check if at least one instrument is correct
-- [ ] check what's up with wav2vec2 padding
-
-Mirko:
-
-- [ ] finish experiments and interpretation of the wavelet transformation
-- [ ] implement Fluffy on AST, multi-head
 - [ ] reserach the BEATs model and incorporate it to the existing training structure as fast as possible so we get concrete results. BEATs links are down below.
 - [ ] think about and reserach what happens with variable sampling rate and how can we avoid issues with time length change
 
+
+Matej:
+
+- [ ] add more augmentations
+- [ ] check if wavelet works
+- [ ] check for all models edge cases (0.1 sec, 30 sec)
+- [ ] include relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
+- [ ] perform validation on Rep's corected dataset to check how many labels are correctly marked in the original dataset
+  - check if all instruments are correct
+  - check if at least one instrument is correct
+- [ ] (???) check what's up with wav2vec2 padding (probably pad tokens)
+- [ ] download non instrument audio files and write data loader which are NOT instruments (@matej)
+
+
+Mirko:
+
+- [ ] validate that chunking is written well for our codebase
+- [ ] implement Fluffy on AST, multi-head
+
 Ivan:
 
-- [ ] implement spectrogram cropping and zero padding instead of resizing
-- [ ] implement ResNeXt 50_32x4d
+- [ ] train  ResNeXt 50_32x4d on MelSpectrogram
+  - [ ] with no augmentations
+  - [ ] with augmentations
+  - [ ] (optional a lot of work because of Spark framework) with pretraining. Ping @matej if performance issues arise.
+- [ ] train  ResNeXt 50_32x4d on MFCC
+  - [ ] with no augmentations
+  - [ ] with augmentations
+  - [ ] pretraining
+- [ ] implement Fluffy nn.Module
+- [ ] use Fluffy on Torch CNN, multi-head
 
 Vinko:
 
@@ -55,8 +73,7 @@ Vinko:
 - [ ] implement SVM model which uses classical audio features for mutlilabel classification
   - [ ] research if SVM can perform multilabel classification or use 11 SVMs
 
-### Meet 1
-
+Else
 - audio features in the context of traditional approach => baseline
 
   - https://en.wikipedia.org/wiki/Mel-frequency_cepstrum
@@ -124,6 +141,23 @@ General links:
 - Music and Instrument Classification using Deep Learning Technics: https://cs230.stanford.edu/projects_fall_2019/reports/26225883.pdf
 - AUDIO MANIPULATION WITH TORCHAUDIO: https://pytorch.org/tutorials/beginner/audio_preprocessing_tutorial.html
 
+### Resizing and chunking
+
+Chunking should happen only in inference in the following way:
+- preprocess 20sec audio normally, send the spectrogram to the model and chunk the spectrogram inside of the `predict_step`.
+
+We don't do chunking in the train step because we can't chunk **the label**.
+
+Time window of spectrogram is defined by maximum audio lenght of some train sample. If we chunk that sample, we don't know if the label will appear in every of those chunks.
+
+
+### Visualizations
+
+Add low dim (t-Sne) plot of features to check clusters. How to that:
+- forward pass every example
+- now you have embedding
+- take t-sne
+
 ### Pretraining
 
 Masked Autoencoders (MAE)
@@ -132,8 +166,24 @@ Masked Autoencoders (MAE)
 
 
 https://huggingface.co/docs/transformers/model_doc/vit_mae#transformers.ViTMAEForPreTraining
+
+Has script for pretrain but does it work? Written in nn.Module
 - https://github.com/YuanGongND/ssast
-- https://github.com/AlanBaade/MAE-AST-Public
+
+Pretraining on CNN-s:
+- SparK: https://github.com/keyu-tian/SparK
+- timm: https://github.com/huggingface/pytorch-image-models/tree/main/
+
+
+### Adapter transformer training
+
+Instead of training the transformer backbone, add layers in between the backbone and train those layers. Those layers are called adapters.
+
+https://docs.adapterhub.ml/
+https://docs.adapterhub.ml/adapter_composition.html
+- parameter efficient tuninng (possible adapters): https://github.com/huggingface/peft
+
+
 ### Normalization
 
 Normalization of the audio in time domain (amplitude). Librosa already does this?
@@ -173,6 +223,24 @@ OpenMIC-2018 https://zenodo.org/record/1432913#.W6dPeJNKjOR
 - instruments: 20
 - duration: 10sec
 
+
+### Distance between classes
+
+Some instruments are similar and their class should be (somehow) close together.
+
+Standard classification loss + (alpha * distance between two classes)
+1. distance is probably embedings from some pretrained audio model (audio transformer)
+
+https://kevinmusgrave.github.io/pytorch-metric-learning/losses/
+
+Tripplet loss, how do we form triplets
+1. real: guitar
+2. postive: guitar
+3. negative: not guitar?
+
+Softmax loss and center loss:
+https://hav4ik.github.io/articles/deep-metric-learning-survey
+
 ### Audio which are not instruments
 
 Reserach audio files which are NOT instruments. Both background noises and sounds SIMILAR to instruments! Download the datasets and write dataset loader for them (@matej). Label everything [0, ..., 0]
@@ -208,9 +276,16 @@ Idea: introduce multiple MLP (fully conneted layer) heads. Each head will detect
 
 Idea: train on single wav, then later introduce `irmas_combinatorics` dataset which contains multiple wav
 
+
+#### SVM
+
+Introduce SVM and train it additionally on high level features of spectrogram (MFCC). For example, one can caculate entropy of a audio/spectrogram for a given timeframe (@vinko)
+
+If you have audio of 3 sec, caculate ~30 entropies every 0.1 sec and use those entropies as SVM features. Also try using a lot more librosa features.
+
 #### ➕ Ensamble
 
-Introduce SVM and train it additionally on high level features of spectrogram. For example, one can caculate entropy of a spectrogram for a given timeframe.
+Ensamble should be features of some backbone and Vinko's SVM.
 
 ### Audio knowledge
 
@@ -293,6 +368,9 @@ hop_length
 Tasks:
 - [x] implement argument which accepts list of numbers [1000, 500, 4] and will create appropriate deep cnn
   - use module called deep head and pass it as a argument
+- [x] finish experiments and interpretation of the wavelet transformation
+- [x] implement spectrogram cropping and zero padding instead of resizing
+
 ______________________________________________________________________
 
 ## 🏆 Team members
