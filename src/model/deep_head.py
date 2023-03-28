@@ -6,7 +6,7 @@ class DeepHead(nn.Module):
         """List of input and output features which will create N - 1 fully connected layers.
 
         Args:
-            dimensions: list[int]
+            dimensions: list[int], e.g [128, 64]
         """
         assert len(dimensions) >= 2, "Dimensions have to contain at least two ints"
 

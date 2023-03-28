@@ -136,7 +136,14 @@ class ModelBase(pl.LightningModule, ABC):
         """Has to return dictionary with 'loss'.
 
         Lightning uses loss variable to perform backwards
+
+        metric_dict = {
+            "train/loss": ...,
+            "train/f1": ...,
+            "val/loss"...,
+        }
         """
+
         metric_dict = add_prefix_to_keys(
             get_metrics(
                 y_pred=y_pred,
