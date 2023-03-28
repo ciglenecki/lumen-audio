@@ -2,8 +2,6 @@
 
 Check the code architecture drawing: https://docs.google.com/drawings/d/1DDG480MVKn_C3fZktl5t6uvWeh57Vx2wgtH9GJYsGAU/edit?usp=sharing
 
-Experiments: https://docs.google.com/spreadsheets/d/1DK04mzl79wB_NNKNJFpf8HrG24TvEzwpreovirgSjGY/edit?usp=sharing
-
 ![ ](img/code_arh.png)
 
 Experiments: https://docs.google.com/spreadsheets/d/1DK04mzl79wB_NNKNJFpf8HrG24TvEzwpreovirgSjGY/edit?usp=sharing
@@ -28,20 +26,14 @@ Low priority tasks:
 
 Matej:
 
-- [ ] wav2vec2 padding ???
 - [ ] compare Mirko's wavelet transform with scipy's native transformation
-- [ ] implement argument which accepts list of numbers [1000, 500, 4] and will create appropriate deep cnn
-  - use module called deep head and pass it as a argument
-- [ ] compare Mirko's wavelet to scipy wavelet
   - run experiments in both cases
-- [ ] check if AST allows for dynamically long audio sequence (longer spectrogram)
-  - make sure to perform a forwardpass
-  - easiest: resize the spectrogram
-- [ ] check batch size n=8 vs n=1 forward pass speed
-  - we want to see if we can split the 8sec audio in 1sec sequences to perform forward pass fast
+- [ ] check AST edge cases (0.1 sec, 30 sec)
+- [ ] comapre batch size n=8 vs n=1 forward pass speed. We want to see if we can split the 8sec audio in 1sec sequences to perform forward pass fast
 - [ ] perform validation on Rep's corected dataset to check how many labels are correctly marked in the original dataset
   - check if all instruments are correct
   - check if at least one instrument is correct
+- [ ] check what's up with wav2vec2 padding
 
 Mirko:
 
@@ -295,6 +287,11 @@ window_shift = int(sample_frequency * frame_shift * MILLISECONDS_TO_SECONDS)
 Librosa
 hop_length
 
+### Done tasks
+
+Tasks:
+- [x] implement argument which accepts list of numbers [1000, 500, 4] and will create appropriate deep cnn
+  - use module called deep head and pass it as a argument
 ______________________________________________________________________
 
 ## 🏆 Team members
