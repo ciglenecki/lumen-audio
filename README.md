@@ -33,6 +33,7 @@ Low priority tasks:
   - run experiments in both cases
 - [ ] reserach the BEATs model and incorporate it to the existing training structure as fast as possible so we get concrete results. BEATs links are down below.
 - [ ] think about and reserach what happens with variable sampling rate and how can we avoid issues with time length change
+- [ ] Label smoothing. We used label smoothing to account for noisy annotations and absence of birds in “unlucky” 30sec crops.
 
 
 Matej:
@@ -319,6 +320,11 @@ https://youtu.be/4_SH2nfbQZ8
 
 ### 🥴 Augmentations
 
+- https://github.com/asteroid-team/torch-audiomentations
+- https://github.com/iver56/audiomentations
+- https://github.com/Spijkervet/torchaudio-augmentations
+
+
 - https://pytorch.org/audio/main/tutorials/audio_feature_augmentation_tutorial.html#specaugment
 - https://pytorch.org/audio/stable/transforms.html#augmentations
 - https://pytorch.org/audio/stable/generated/torchaudio.sox_effects.effect_names.html#torchaudio.sox_effects.effect_names
@@ -363,7 +369,11 @@ window_shift = int(sample_frequency * frame_shift * MILLISECONDS_TO_SECONDS)
 Librosa
 hop_length
 
-### Done tasks
+### Web
+
+https://github.com/janmyler/web-audio-editor
+
+## Done tasks
 
 Tasks:
 - [x] implement argument which accepts list of numbers [1000, 500, 4] and will create appropriate deep cnn
