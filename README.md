@@ -51,6 +51,7 @@ Matej:
 
 Mirko:
 
+- [ ] write summary of Wavelet transform and how it affects the results
 - [ ] validate that chunking is written well for our codebase
 - [ ] implement Fluffy nn.Module
 - [ ] use Fluffy on Torch CNN, multi-head
