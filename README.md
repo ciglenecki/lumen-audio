@@ -23,7 +23,7 @@ Tasks:
 - [ ] add method to save augmented examples to a new dataset. We need this for pretraining
 - [ ] implement chunking of the audio in inference and perform multiple forward pass
 - [ ] add tripplet loss or (classification + perceptual distance)
-
+- [ ] design an augmentation that we can use for progressive training
 
 Low priority tasks:
 - [ ] convert all augmentations so they happen on the GPU
