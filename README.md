@@ -72,8 +72,6 @@ Vinko:
 
 - [ ] research audio augmentations
 - [ ] research classical audio features
-- [ ] implement SVM model which uses classical audio features for mutlilabel classification
-  - [ ] research if SVM can perform multilabel classification or use 11 SVMs
 
 Else
 - audio features in the context of traditional approach => baseline
@@ -381,7 +379,8 @@ Tasks:
   - use module called deep head and pass it as a argument
 - [x] finish experiments and interpretation of the wavelet transformation
 - [x] implement spectrogram cropping and zero padding instead of resizing
-
+- [x] implement SVM model which uses classical audio features for mutlilabel classification
+  - [x] research if SVM can perform multilabel classification or use 11 SVMs
 ______________________________________________________________________
 
 ## 🏆 Team members
