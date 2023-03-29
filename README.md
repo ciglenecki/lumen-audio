@@ -52,7 +52,9 @@ Matej:
 Mirko:
 
 - [ ] validate that chunking is written well for our codebase
-- [ ] implement Fluffy on AST, multi-head
+- [ ] implement Fluffy nn.Module
+- [ ] use Fluffy on Torch CNN, multi-head
+- [ ] train some model Fluffy
 
 Ivan:
 
@@ -64,8 +66,7 @@ Ivan:
   - [ ] with no augmentations
   - [ ] with augmentations
   - [ ] pretraining
-- [ ] implement Fluffy nn.Module
-- [ ] use Fluffy on Torch CNN, multi-head
+
 
 Vinko:
 
