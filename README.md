@@ -24,6 +24,7 @@ Tasks:
 - [ ] implement chunking of the audio in inference and perform multiple forward pass
 - [ ] add tripplet loss or (classification + perceptual distance)
 - [ ] design an augmentation that we can use for progressive training
+- [ ] use validation examples in train (without data leakage)
 
 Low priority tasks:
 - [ ] convert all augmentations so they happen on the GPU
@@ -142,6 +143,11 @@ General links:
 - paperswithcode Audio Classification: https://paperswithcode.com/task/audio-classification
 - Music and Instrument Classification using Deep Learning Technics: https://cs230.stanford.edu/projects_fall_2019/reports/26225883.pdf
 - AUDIO MANIPULATION WITH TORCHAUDIO: https://pytorch.org/tutorials/beginner/audio_preprocessing_tutorial.html
+
+### Train and validation dataset, move some validation examples to train
+
+Do this without introducing data leakage, but make sure that we still have enough validation data.
+
 
 ### Resizing and chunking
 
