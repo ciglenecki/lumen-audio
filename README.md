@@ -51,13 +51,11 @@ Matej:
 
 
 Mirko:
-
-- [ ] write summary of Wavelet transform and how it affects the results
-- [ ] write summary of LSTM results
 - [ ] validate that chunking is written well for our codebase
 - [ ] implement Fluffy nn.Module
 - [ ] use Fluffy on Torch CNN, multi-head
 - [ ] train some model Fluffy
+- [ ] Wav2Vec2 feature extractor only
 
 Ivan:
 
@@ -285,6 +283,22 @@ Idea: introduce multiple MLP (fully conneted layer) heads. Each head will detect
 Idea: train on single wav, then later introduce `irmas_combinatorics` dataset which contains multiple wav
 
 
+
+#### LSTM and Melspectrograms (Mirko)
+Trained LSTM (with and without Bahdanau attention) on melspectrogram and MFCC features, for single and multiple insturment classification.
+Adding instruments accroding to genre and randomly was also explored. This approach retains high accuracy due to the class imbalance of the train and validation set, however the F1 metric, with macro averaging in the multi instrument case, remains low in the 0.26 - 0.35 interval. All instruments with higher F1 metrics __use__ Bahdanau attention.
+
+#### LSTM and Wavelet (Mirko)
+Aside from sliding wavelet filters, the output of the wavelet transform needs to be logsacled or preferably trasformed with `amplitude_to_db`. This does not seem to improve or degrade the performance of the LSTM model with attention, and the F1 score remains in similar margins.
+
+#### Wav2Vec backbone (Mirko)
+Training a single insturment classifier (Fluffy logic) with Wav2Vec2 as a backbone yields a higher F1 metric ~0.47 with a slight reduction in accuracy ~0.7, due to the slow training time further experiementation is needed with longer training times.
+
+#### Adding instruments (Mirko :( )
+Adding instrument waveforms to imitate the examples with multiple insturments needs to be handled with greater care, otherwise it only improves the F1 metric slightly (LSTM) or even lowers it (Wav2Vec2 backbone)
+
+
+
 #### SVM
 
 Introduce SVM and train it additionally on high level features of spectrogram (MFCC). For example, one can caculate entropy of a audio/spectrogram for a given timeframe (@vinko)
@@ -383,6 +397,9 @@ https://github.com/janmyler/web-audio-editor
 ## Done tasks
 
 Tasks:
+- [x] write summary of Wavelet transform and how it affects the results
+- [x] Wav2Vec results, and train
+- [x] write summary of LSTM results
 - [x] implement argument which accepts list of numbers [1000, 500, 4] and will create appropriate deep cnn
   - use module called deep head and pass it as a argument
 - [x] finish experiments and interpretation of the wavelet transformation
