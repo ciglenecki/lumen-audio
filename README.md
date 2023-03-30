@@ -295,7 +295,7 @@ Aside from sliding wavelet filters, the output of the wavelet transform needs to
 Training a single insturment classifier (Fluffy logic) with Wav2Vec2 as a backbone yields a higher F1 metric ~0.47 with a slight reduction in accuracy ~0.7, due to the slow training time further experiementation is needed with longer training times.
 
 #### Adding instruments (Mirko :( )
-Adding instrument waveforms to imitate the examples with multiple insturments needs to be handled with greater care, otherwise it only improves the F1 metric slightly (LSTM) or even lowers it (Wav2Vec2 backbone)
+~~Adding instrument waveforms to imitate the examples with multiple insturments needs to be handled with greater care, otherwise it only improves the F1 metric slightly (LSTM) or even lowers it (Wav2Vec2 backbone)~~. A bug was present that I did not catch before. I'm redoing the expereiments.
 
 
 
