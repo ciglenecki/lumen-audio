@@ -142,6 +142,10 @@ General links:
 - Music and Instrument Classification using Deep Learning Technics: https://cs230.stanford.edu/projects_fall_2019/reports/26225883.pdf
 - AUDIO MANIPULATION WITH TORCHAUDIO: https://pytorch.org/tutorials/beginner/audio_preprocessing_tutorial.html
 
+### Irmas dataset issues
+
+Use cleanlab to find bad lables: https://docs.cleanlab.ai/stable/tutorials/audio.html?highlight=encoderclassifier
+
 ### Train and validation dataset, move some validation examples to train
 
 Do this without introducing data leakage, but make sure that we still have enough validation data.
