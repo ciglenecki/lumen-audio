@@ -3,37 +3,19 @@ from abc import ABC, abstractmethod
 import librosa
 import numpy as np
 import torch
+import torch_audiomentations
 import torchvision.transforms.functional as F
 from torchaudio.transforms import FrequencyMasking, TimeMasking
 from torchvision.transforms import RandomErasing
 from transformers import ASTFeatureExtractor, Wav2Vec2FeatureExtractor
 
 import src.config.config_defaults as config_defaults
+from src.features.supported_augmentations import (
+    AudioTransforms,
+    SupportedAugmentations,
+    UnsupportedAudioTransforms,
+)
 from src.utils.utils_audio import stereo_to_mono, time_stretch
-from src.utils.utils_functions import EnumStr
-
-
-class UnsupportedAudioTransforms(ValueError):
-    pass
-
-
-class AudioTransforms(EnumStr):
-    """List of supported AudioTransforms we use."""
-
-    AST = "ast"
-    MEL_SPECTROGRAM_RESIZE_REPEAT = "mel_spectrogram_resize_repeat"
-    MEL_SPECTROGRAM_FIXED_REPEAT = "mel_spectrogram_fixed_repeat"
-    WAV2VEC = "wav2vec"
-
-
-class SupportedAugmentations(EnumStr):
-    """List of supported spectrogram augmentations we use."""
-
-    TIME_STRETCH = "time_stretch"
-    FREQ_MASK = "freq_mask"
-    TIME_MASK = "time_mask"
-    RANDOM_ERASE = "random_erase"
-    RANDOM_PIXELS = "radnom_pixels"
 
 
 class AudioTransformBase(ABC):
@@ -47,13 +29,7 @@ class AudioTransformBase(ABC):
     def __init__(
         self,
         sampling_rate: int,
-        augmentation_enums: list[SupportedAugmentations] = [
-            SupportedAugmentations.TIME_STRETCH,
-            SupportedAugmentations.FREQ_MASK,
-            SupportedAugmentations.TIME_MASK,
-            SupportedAugmentations.RANDOM_ERASE,
-            SupportedAugmentations.RANDOM_PIXELS,
-        ],
+        augmentation_enums: list[SupportedAugmentations],
         stretch_factors=[0.8, 1.2],
         freq_mask_param=30,
         time_mask_param=30,
@@ -104,8 +80,48 @@ class AudioTransformAST(AudioTransformBase):
     ):
         super().__init__(*args, **kwargs)
         self.feature_extractor = ASTFeatureExtractor.from_pretrained(pretrained_tag)
+        self.color_noise = torch_audiomentations.AddColoredNoise(
+            min_snr_in_db=3,
+            max_snr_in_db=15,
+            p=1,
+            sample_rate=self.sampling_rate,
+        )
+        self.bandpass_filter = torch_audiomentations.BandPassFilter(
+            p=1, sample_rate=self.sampling_rate
+        )
+        self.pitch_shift = torch_audiomentations.PitchShift(
+            p=1, sample_rate=self.sampling_rate
+        )
+        self.timeinv = torch_audiomentations.TimeInversion(
+            p=0.5, sample_rate=self.sampling_rate
+        )
 
-    def apply_augmentations(self, spectrogram: torch.Tensor):
+    def apply_waveform_augmentations(self, audio):
+        if SupportedAugmentations.TIME_STRETCH in self.augmentation_enums:
+            l, r = self.stretch_factors
+            stretch_rate = np.random.uniform(l, r)
+            # size_before = len(audio)
+            audio = librosa.effects.time_stretch(y=audio, rate=stretch_rate)
+            # audio = audio[:size_before]
+
+        audio = torch.tensor(audio).unsqueeze(0).unsqueeze(0)
+
+        if SupportedAugmentations.PITCH in self.augmentation_enums:
+            audio = self.pitch_shift(audio)
+
+        if SupportedAugmentations.BANDPASS_FILTER in self.augmentation_enums:
+            audio = self.bandpass_filter(audio)
+
+        if SupportedAugmentations.COLOR_NOISE in self.augmentation_enums:
+            # if min_snr_in_db and max_snr_in_db are lower than the noise is louder
+            audio = self.color_noise(audio)
+
+        if SupportedAugmentations.TIMEINV in self.augmentation_enums:
+            audio = self.timeinv(audio)
+
+        return audio.squeeze(0).squeeze(0).numpy()
+
+    def apply_spec_augmentations(self, spectrogram: torch.Tensor):
         if SupportedAugmentations.FREQ_MASK in self.augmentation_enums:
             spectrogram = FrequencyMasking(freq_mask_param=self.freq_mask_param)(
                 spectrogram
@@ -129,6 +145,7 @@ class AudioTransformAST(AudioTransformBase):
             )
 
             spectrogram[mask] = noise
+
         return spectrogram
 
     def process(
@@ -136,14 +153,11 @@ class AudioTransformAST(AudioTransformBase):
         audio: torch.Tensor | np.ndarray,
         original_sr: int,
     ) -> tuple[torch.Tensor, torch.Tensor]:
+        audio = librosa.resample(
+            y=audio, orig_sr=original_sr, target_sr=self.sampling_rate
+        )
         audio = stereo_to_mono(audio)
-
-        if SupportedAugmentations.TIME_STRETCH in self.augmentation_enums:
-            l, r = self.stretch_factors
-            stretch_rate = np.random.uniform(l, r)
-            # size_before = len(audio)
-            audio = librosa.effects.time_stretch(y=audio, rate=stretch_rate)
-            # audio = audio[:size_before]
+        audio = self.apply_waveform_augmentations(audio)
 
         features = self.feature_extractor(
             audio,
@@ -156,7 +170,7 @@ class AudioTransformAST(AudioTransformBase):
         assert (
             len(spectrogram.shape) == 3
         ), "Spectrogram has to have 3 dimensions before torch augmentations!"
-        spectrogram = self.apply_augmentations(spectrogram)
+        spectrogram = self.apply_spec_augmentations(spectrogram)
         spectrogram = spectrogram.squeeze(dim=0)
 
         return spectrogram
@@ -213,7 +227,6 @@ class MelSpectrogramResize(MelSpectrogramOurs):
         audio: torch.Tensor | np.ndarray,
         original_sr: int,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-
         spectrogram = super().process(audio, original_sr)
 
         spectrogram = spectrogram.reshape(1, 1, *spectrogram.shape)
@@ -255,7 +268,6 @@ class MelSpectrogramFixed(MelSpectrogramOurs):
         audio: torch.Tensor | np.ndarray,
         original_sr: int,
     ) -> tuple[torch.Tensor]:
-
         spectrogram = super().process(audio, original_sr)
 
         spectrogram_padded = np.zeros(self.seq_dim)
@@ -285,7 +297,6 @@ class MelSpectrogramFixedRepeated(MelSpectrogramFixed):
         audio: torch.Tensor | np.ndarray,
         original_sr: int,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-
         spectrogram = super().process(audio, original_sr)
         spectrogram = spectrogram.repeat(1, self.repeat, 1, 1)[0]
 
@@ -307,7 +318,6 @@ class MelSpectrogramResizedRepeated(MelSpectrogramFixed):
         audio: torch.Tensor | np.ndarray,
         original_sr: int,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-
         spectrogram = super().process(audio, original_sr)
         spectrogram = spectrogram.repeat(1, self.repeat, 1, 1)[0]
 
@@ -357,7 +367,6 @@ def get_audio_transform(
     dim: tuple[int, int],
     **aug_kwargs,
 ) -> AudioTransformBase:
-
     if audio_transform_enum is AudioTransforms.AST:
         return AudioTransformAST(
             sampling_rate=sampling_rate,

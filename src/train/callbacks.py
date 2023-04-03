@@ -151,7 +151,6 @@ class FinetuningCallback(BaseFinetuning):
     def setup(
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", stage: str
     ) -> None:
-
         """Freeze before training can't be called here because setup happens before state dict
         load.
 
@@ -202,7 +201,6 @@ class FinetuningCallback(BaseFinetuning):
         pl_module: "pl.LightningModule",
         epoch: int,
         optimizer: Optimizer,
-        opt_idx: int,
     ) -> None:
         """Once the epoch reaches `unfreeze_at_epoch` the trainable backbone is unfrozen and it's
         parameteres are added to the existing optimizer.

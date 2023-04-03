@@ -17,7 +17,6 @@ from src.utils.utils_train import MetricMode, OptimizeMetric, get_all_modules_af
 
 
 class ModelBase(pl.LightningModule, ABC):
-
     loggers: list[TensorBoardLogger]
 
     def __init__(
@@ -261,19 +260,20 @@ class ModelBase(pl.LightningModule, ABC):
 
         Mupltiplicator is the finetune_lr_nominator
         """
+
         old_lr = self.trainer.optimizers[optimizer_idx].param_groups[0]["lr"]
         new_lr = old_lr * self.finetune_lr_nominator
         self._set_lr(new_lr)
         return
 
-    def lr_scheduler_step(self, scheduler, optimizer_idx, metric):
+    def lr_scheduler_step(self, scheduler, metric=None):
         """We ignore the lr scheduler in the fine tuning phase and update lr maunally.
 
         Once the finetuning phase is over we start using the lr scheduler
         """
 
         if self.is_finetuning_phase():
-            self._lr_finetuning_step(optimizer_idx)
+            self._lr_finetuning_step(optimizer_idx=0)
             return
 
         if metric is None:
@@ -287,7 +287,6 @@ class ModelBase(pl.LightningModule, ABC):
             self._set_lr(self.lr_warmup)
 
     def configure_optimizers(self):
-
         if self.unfreeze_at_epoch is not None:
             scheduler_epochs = self.epochs - self.unfreeze_at_epoch
             total_lr_sch_steps = self.num_of_steps_in_epoch * scheduler_epochs

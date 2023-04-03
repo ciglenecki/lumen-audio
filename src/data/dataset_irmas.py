@@ -135,7 +135,6 @@ class IRMASDatasetTest(Dataset):
         """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)"""
         for dataset_dir in self.dataset_dirs:
             for audio_file in tqdm(dataset_dir.rglob(glob_expression)):
-
                 path_without_ext = os.path.splitext(audio_file)[0]
                 txt_path = Path(path_without_ext + ".txt")
 
@@ -168,6 +167,7 @@ class IRMASDatasetTest(Dataset):
         audio, original_sr = load_audio_from_file(
             audio_path, method="librosa", normalize=self.normalize_audio
         )
+
         if self.audio_transform is None:
             return audio, labels
 
@@ -185,7 +185,6 @@ class InstrumentInference(Dataset):
 if __name__ == "__main__":  # for testing only
     ds = IRMASDatasetTrain(audio_transform=AudioTransformAST())
     for i in range(0, 30):
-
         print(ds[i][1], ds[i][2])
     # import matplotlib.pyplot as plt
 

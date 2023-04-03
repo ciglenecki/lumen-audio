@@ -288,6 +288,12 @@ def function_kwargs(func):
     return inspect.getfullargspec(func)
 
 
+def print_tensor(t, name=None):
+    print(f"{name}: {t.shape}")
+    print("Min:", t.min(), "Max", t.max())
+    print()
+
+
 nato_alphabet = [
     "Alpha",
     "Bravo",

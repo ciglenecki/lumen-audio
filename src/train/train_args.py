@@ -9,10 +9,12 @@ import argparse
 
 import pytorch_lightning as pl
 import torch
+from pytorch_lightning.trainer import Trainer
 
 import src.config.config_defaults as config_defaults
 import src.utils.utils_functions as utils_functions
-from src.features.audio_transform import AudioTransforms, SupportedAugmentations
+from src.features.audio_transform import AudioTransforms
+from src.features.supported_augmentations import SupportedAugmentations
 from src.model.model import SupportedModels
 from src.model.optimizers import OptimizerType, SchedulerType
 from src.utils.utils_exceptions import InvalidArgument
@@ -26,13 +28,14 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
-    lightning_parser = pl.Trainer.add_argparse_args(parser)
-    lightning_parser.set_defaults(
-        log_every_n_steps=config_defaults.DEFAULT_LOG_EVERY_N_STEPS,
-        epochs=config_defaults.DEFAULT_EPOCHS,
-        accelerator="gpu" if torch.cuda.is_available() else "cpu",
-        devices=-1,  # use all devices
-    )
+    # TODO: fix
+    # lightning_parser = pl.Trainer.add_argparse_args(parser)
+    # lightning_parser.set_defaults(
+    #     log_every_n_steps=config_defaults.DEFAULT_LOG_EVERY_N_STEPS,
+    #     epochs=config_defaults.DEFAULT_EPOCHS,
+    #     accelerator="gpu" if torch.cuda.is_available() else "cpu",
+    #     devices=-1,  # use all devices
+    # )
 
     user_group = parser.add_argument_group(ARGS_GROUP_NAME)
 
@@ -169,7 +172,17 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
 
     user_group.add_argument(
         "--augmentations",
-        default=None,
+        default=[
+            SupportedAugmentations.TIME_STRETCH,
+            SupportedAugmentations.PITCH,
+            SupportedAugmentations.BANDPASS_FILTER,
+            SupportedAugmentations.COLOR_NOISE,
+            SupportedAugmentations.TIMEINV,
+            SupportedAugmentations.FREQ_MASK,
+            SupportedAugmentations.TIME_MASK,
+            SupportedAugmentations.RANDOM_ERASE,
+            SupportedAugmentations.RANDOM_PIXELS,
+        ],
         nargs="+",
         choices=list(SupportedAugmentations),
         type=SupportedAugmentations.from_string,
@@ -309,7 +322,14 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         if group.title:
             args_dict[group.title] = argparse.Namespace(**group_dict)
 
-    args, pl_args = args_dict[ARGS_GROUP_NAME], args_dict["pl.Trainer"]
+    # TODO: fix
+    # args, pl_args = args_dict[ARGS_GROUP_NAME], args_dict["pl.Trainer"]
+    args, pl_args = args_dict[ARGS_GROUP_NAME], argparse.Namespace(
+        log_every_n_steps=config_defaults.DEFAULT_LOG_EVERY_N_STEPS,
+        accelerator="gpu" if torch.cuda.is_available() else "cpu",
+        max_epochs=args.epochs,
+        devices=-1,  # use all devices
+    )
 
     """User arguments which override PyTorch Lightning arguments"""
     if args.quick:

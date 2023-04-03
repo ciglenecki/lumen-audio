@@ -388,11 +388,21 @@ How to sample?
 
 ### Kaldi vs Librosa terminilogy
 
+
+Best results for AST feature extraction, use torchaudio.load with resampling.
+
+Librosa is better with resampling on load compared to resample
+
 Kaldi
-window_shift = int(sample_frequency * frame_shift * MILLISECONDS_TO_SECONDS)
+
+window_shift = int(sample_frequency * frame_shift * 0.001)
+window_size = int(sample_frequency * frame_length * 0.001)
+
 
 Librosa
 hop_length
+               #ms    #len
+1/(1 / 44100 * 1000) * 20
 
 ### Web
 

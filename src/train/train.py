@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import pytorch_lightning as pl
+import torch
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import (
     EarlyStopping,
@@ -10,6 +11,7 @@ from pytorch_lightning.callbacks import (
     TQDMProgressBar,
 )
 
+from src.config import config_defaults
 from src.data.datamodule import IRMASDataModule
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
 from src.model.model import get_model
@@ -141,12 +143,14 @@ if __name__ == "__main__":
 
     callbacks.append(ModelSummary(max_depth=4))
 
-    trainer: pl.Trainer = pl.Trainer.from_argparse_args(
-        pl_args,
+    # TODO; fix pl.Trainer.from_argparse_args(
+    # auto_lr_find=args.scheduler == SchedulerType.AUTO_LR,
+    # epochs=config_defaults.DEFAULT_EPOCHS,
+    trainer: pl.Trainer = pl.Trainer(
+        **vars(pl_args),
         logger=[tensorboard_logger],
         default_root_dir=output_dir,
         callbacks=callbacks,
-        auto_lr_find=args.scheduler == SchedulerType.AUTO_LR,
     )
 
     if args.scheduler == SchedulerType.AUTO_LR.value:
