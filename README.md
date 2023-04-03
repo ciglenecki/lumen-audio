@@ -294,13 +294,20 @@ Adding instruments accroding to genre and randomly was also explored. This appro
 
 #### LSTM and Wavelet (Mirko)
 Aside from sliding wavelet filters, the output of the wavelet transform needs to be logsacled or preferably trasformed with `amplitude_to_db`. This does not seem to improve or degrade the performance of the LSTM model with attention, and the F1 score remains in similar margins.
+Still doing some resarch on Wavelets April 3rd...
 
-#### Wav2Vec backbone (Mirko)
-Training a single insturment classifier (Fluffy logic) with Wav2Vec2 as a backbone yields a higher F1 metric ~0.47 with a slight reduction in accuracy ~0.7, due to the slow training time further experiementation is needed with longer training times.
 
 #### Adding instruments (Mirko :( )
 ~~Adding instrument waveforms to imitate the examples with multiple insturments needs to be handled with greater care, otherwise it only improves the F1 metric slightly (LSTM) or even lowers it (Wav2Vec2 backbone)~~. A bug was present that I did not catch before. I'm redoing the expereiments.
 
+### Fluffy
+The idea was to implement a pretrained feature extractor with multiple FCNN (but not necessarily FCNN) heads that serve as disconected binary instrument classifiers. E.g. we wan to classify 5 instruments, hence we use a backbone with 5 FCNNs, and each FCNN searches for it's "own" instrument among the 5.
+
+#### Fluffy with Wav2Vec2 feature extractor backbone
+As was already mentioned, we used only the feature extractor of the pretrained Wav2Vec2 model, and completely disposed of the transformer component for effiency. Up untill this point, the training was performed for ~35 epochs and while the average validation f1 metric remains in the 0.5-0.6 region, it varies significantly across instruments. For most instruments the f1 score remains in the 0.6-0.7 range with numerous outliers, on the high end we have the acoustic guitar and the human voice with f1 above 0.8. This is to be expected, considering the backbone was trained on many instances of human voices. On the low end we have the organ with f1 of ~0.2, and most likely due do bugs in the code the electric guitar with f1 of 0. This could also be atributed to it's similarity with other instruments such as violin or acoustic guitar. This leaves us with a "deathrattle" of sort for this whole "let's use only IRMAS" idea. The idea is to pretrain a feature extractor based on contrastive loss, aslo margins within genres and instrument families should be applied. If this doesn't produce better results the only solution I propose is getting more data, e.g. open MIC.
+
+#### Fluffy with entire Wav2Vec2
+This model has been trained for far fewer epochs ~7, and so far it exhibits the same issues as Fluffy with just the feature extractor. Perhaps more training would be needed, however using such large models requires considerable memory usage, and it's use durign __inference__ time might be limited.
 
 
 #### SVM
