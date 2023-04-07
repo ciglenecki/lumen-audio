@@ -94,6 +94,8 @@ Else
     - problem with Kiklop but it's manifseted in number of weights
   - Fluffy problem: class disbalans, what's the appropriate loss function. Will the training be stable?
 
+- link for the [Experiment sheet](https://docs.google.com/spreadsheets/d/17wctX1I3rz1vQsjdwkBjo_iNFGvBCI7i6wYUDeliGBQ/edit#gid=0)
+
 ## Setup
 
 ### Python Virtual Environment
