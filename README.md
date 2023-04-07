@@ -25,6 +25,9 @@ Tasks:
 - [ ] add tripplet loss or (classification + perceptual distance)
 - [ ] design an augmentation that we can use for progressive training
 - [ ] use validation examples in train (without data leakage)
+- [ ] try out focal loss
+- [ ] try out label smoothing
+
 
 Low priority tasks:
 - [ ] convert all augmentations so they happen on the GPU
