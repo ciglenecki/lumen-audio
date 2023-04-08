@@ -4,6 +4,7 @@ from itertools import combinations
 from pathlib import Path
 
 import numpy as np
+import torch
 import pytorch_lightning as pl
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, SubsetRandomSampler
@@ -73,7 +74,7 @@ class IRMASDataModule(pl.LightningDataModule):
             normalize_audio=self.normalize_audio,
         )
 
-        if not self.train_only:
+        if self.train_only:
             self.test_dataset = IRMASDatasetTrain(
                 dataset_dirs=self.train_dirs,
                 audio_transform=self.val_audio_transform,
@@ -163,6 +164,8 @@ class IRMASDataModule(pl.LightningDataModule):
             len(indices_a) + len(indices_b)
         ), "Some indices might contain non-unqiue values"
 
+
+
     def train_dataloader(self) -> DataLoader:
         return DataLoader(
             self.train_dataset,
@@ -170,6 +173,7 @@ class IRMASDataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             sampler=self.train_sampler,
             drop_last=self.drop_last_sample,
+            collate_fn=collate_fn,  
         )
 
     def val_dataloader(self) -> DataLoader:
@@ -182,6 +186,7 @@ class IRMASDataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             sampler=self.val_sampler,
             drop_last=self.drop_last_sample,
+            collate_fn=collate_fn,
         )
 
     def test_dataloader(self) -> DataLoader:
@@ -191,4 +196,19 @@ class IRMASDataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             sampler=self.test_sampler,
             drop_last=self.drop_last_sample,
+            collate_fn=collate_fn,
         )
+    
+def collate_fn(examples) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    lens = [len(x) for x, _ in examples]
+    max_len = np.max(lens)
+
+    tensor_shape = examples[0][0][0].shape
+    all_examples, all_labels, ex_ids = [], [], []
+    for i, (audio, label) in enumerate(examples):
+        all_examples.append(torch.cat(tuple([j.unsqueeze(0) for j in audio]), dim=0))
+        all_labels.append(torch.cat(tuple([label.unsqueeze(0) for _ in audio]), dim=0))
+        for _ in range(len(audio)):
+            ex_ids.append(i)
+
+    return torch.cat(tuple(all_examples), dim=0), torch.cat(tuple(all_labels), dim=0), torch.tensor(ex_ids)

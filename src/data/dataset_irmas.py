@@ -119,11 +119,13 @@ class IRMASDatasetTest(Dataset):
         sanity_checks=config_defaults.DEFAULT_SANITY_CHECKS,
         audio_transform: AudioTransformBase | None = None,
         sampling_rate=config_defaults.DEFAULT_SAMPLING_RATE,
+        normalize_audio=config_defaults.DEFAULT_NORMALIZE_AUDIO,
     ):
         self.num_classes = num_classes
         self.audio_transform = audio_transform
         self.dataset: list[tuple[Path, np.ndarray]] = []
         self.dataset_dirs = dataset_dirs
+        self.normalize_audio = normalize_audio
         self._populate_dataset()
 
         if sanity_checks:

@@ -23,6 +23,7 @@ class AudioTransforms(EnumStr):
     AST = "ast"
     MEL_SPECTROGRAM_RESIZE_REPEAT = "mel_spectrogram_resize_repeat"
     MEL_SPECTROGRAM_FIXED_REPEAT = "mel_spectrogram_fixed_repeat"
+    MFCC_FIXED_REPEATED = "mfcc_fixed_repeated"
     WAV2VEC = "wav2vec"
 
 
@@ -33,7 +34,7 @@ class SupportedAugmentations(EnumStr):
     FREQ_MASK = "freq_mask"
     TIME_MASK = "time_mask"
     RANDOM_ERASE = "random_erase"
-    RANDOM_PIXELS = "radnom_pixels"
+    RANDOM_PIXELS = "random_pixels"
 
 
 class AudioTransformBase(ABC):
@@ -87,7 +88,126 @@ class AudioTransformBase(ABC):
             tuple[torch.Tensor, torch.Tensor]: _description_
         """
 
+######################################################################################################################################################
 
+class MFCC(AudioTransformBase):
+    """Resamples audio, converts it to mono, calculates MFCC (mel-frequency cepstral coefficients) from audio."""
+    def __init__(
+        self,
+        n_mfcc: int,
+        dct_type: int,
+        n_fft: int = config_defaults.DEFAULT_N_FFT,
+        hop_length: int = config_defaults.DEFAULT_HOP_LENGTH,
+        n_mels: int = config_defaults.DEFAULT_N_MELS,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.n_mfcc = n_mfcc
+        self.dct_type = dct_type
+        self.n_fft = n_fft
+        self.hop_length = hop_length
+        self.n_mels = n_mels
+        
+    def process(
+        self,
+        audio: torch.Tensor | np.ndarray,
+        original_sr: int,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        audio = stereo_to_mono(audio)
+        audio_resampled = librosa.resample(
+            audio,
+            orig_sr=original_sr,
+            target_sr=self.sampling_rate,
+        )
+
+        spectrogram = librosa.feature.mfcc(
+            y=audio_resampled,
+            sr=self.sampling_rate,
+            n_mfcc=self.n_mfcc,
+            dct_type=self.dct_type,
+            n_fft=self.n_fft,
+            hop_length=self.hop_length,
+            n_mels=self.n_mels,
+        )
+        
+        return spectrogram
+
+class MFCCFixed(MFCC):
+    """Resamples audio, extracts MFCC from audio and pads the original spectrogram to
+    dimension of spectrogram for max_len sequence."""
+
+    def __init__(self, max_len: int, dim: tuple[int, int], *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.max_len = max_len
+        self.dim = dim
+
+        FAKE_SAMPLE_RATE = 44_100
+        dummy_audio = np.random.random(size=(max_len * FAKE_SAMPLE_RATE,))
+        audio_resampled = librosa.resample(
+            dummy_audio,
+            orig_sr=FAKE_SAMPLE_RATE,
+            target_sr=self.sampling_rate,
+        )
+
+        spectrogram = librosa.feature.mfcc(
+            y=audio_resampled,
+            sr=self.sampling_rate,
+            n_mfcc=self.n_mfcc,
+            dct_type=self.dct_type,
+            n_fft=self.n_fft,
+            hop_length=self.hop_length,
+            n_mels=self.n_mels,
+        )
+        
+        self.seq_dim = spectrogram.shape
+
+    def process(
+        self,
+        audio: torch.Tensor | np.ndarray,
+        original_sr: int,
+    ) -> tuple[torch.Tensor]:
+
+        spectrogram = super().process(audio, original_sr)
+        chunks = list(torch.tensor(spectrogram).split(self.seq_dim[1], dim=1))
+        
+        
+        # if theyre not exact padding is added for last chunk
+        if not spectrogram.shape[1] % self.seq_dim[1] == 0:
+            w, h = chunks[-1].shape
+            chunk_padded = torch.zeros(size=self.seq_dim)
+            chunk_padded[:w, :h] = chunks[-1]
+            chunks[-1] = chunk_padded
+            
+        for i, c in enumerate(chunks):
+            chunks[i] = chunks[i].reshape(1, 1, *self.seq_dim)
+            chunks[i] = F.resize(chunks[i], size=self.dim, antialias=True)[0][0]
+            chunks[i] = chunks[i].type(torch.float32)
+
+        return chunks
+
+class MFCCFixedRepeated(MFCCFixed):
+    """Calls MFCC and repeats the output 3 times. This is useful for mocking RGB channels."""
+
+    def __init__(self, repeat=3, **kwargs):
+        super().__init__(**kwargs)
+        self.repeat = repeat
+    
+    def process(
+        self,
+        audio: torch.Tensor | np.ndarray,
+        original_sr: int,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+
+        spectrogram_chunks = super().process(audio, original_sr)
+        for i, c in enumerate(spectrogram_chunks):
+            spectrogram_chunks[i] = spectrogram_chunks[i].repeat(1, self.repeat, 1, 1)[0]
+
+        return spectrogram_chunks
+
+######################################################################################################################################################
+
+    
 class AudioTransformAST(AudioTransformBase):
 
     """Resamples audio, converts it to mono, does AST feature extraction which extracts spectrogram
@@ -161,6 +281,8 @@ class AudioTransformAST(AudioTransformBase):
 
         return spectrogram
 
+
+######################################################################################################################################################
 
 class MelSpectrogramOurs(AudioTransformBase):
     """Resamples audio and extracts melspectrogram from audio."""
@@ -257,17 +379,21 @@ class MelSpectrogramFixed(MelSpectrogramOurs):
     ) -> tuple[torch.Tensor]:
 
         spectrogram = super().process(audio, original_sr)
+        chunks = list(torch.tensor(spectrogram).split(self.seq_dim[1], dim=1))
+        
+        # if theyre not exact padding is added for last chunk
+        if not spectrogram.shape[1] % self.seq_dim[1] == 0:
+            w, h = chunks[-1].shape
+            chunk_padded = torch.zeros(size=self.seq_dim)
+            chunk_padded[:w, :h] = chunks[-1]
+            chunks[-1] = chunk_padded
+            
+        for i, c in enumerate(chunks):
+            chunks[i] = chunks[i].reshape(1, 1, *self.seq_dim)
+            chunks[i] = F.resize(chunks[i], size=self.dim, antialias=True)[0][0]
+            chunks[i] = chunks[i].type(torch.float32)
 
-        spectrogram_padded = np.zeros(self.seq_dim)
-        w, h = spectrogram.shape
-        spectrogram_padded[:w, :h] = spectrogram
-        spectrogram_padded = spectrogram_padded.reshape(1, 1, *self.seq_dim)
-        spectrogram_padded = F.resize(
-            torch.tensor(spectrogram_padded), size=self.dim, antialias=True
-        )
-        spectrogram_padded = spectrogram_padded.reshape(1, *self.dim)
-
-        return spectrogram_padded.type(torch.float32)
+        return chunks
 
 
 class MelSpectrogramFixedRepeated(MelSpectrogramFixed):
@@ -279,20 +405,21 @@ class MelSpectrogramFixedRepeated(MelSpectrogramFixed):
     def __init__(self, repeat=3, **kwargs):
         super().__init__(**kwargs)
         self.repeat = repeat
-
+    
     def process(
         self,
         audio: torch.Tensor | np.ndarray,
         original_sr: int,
     ) -> tuple[torch.Tensor, torch.Tensor]:
+            
+        spectrogram_chunks = super().process(audio, original_sr)
+        for i, c in enumerate(spectrogram_chunks):
+            spectrogram_chunks[i] = spectrogram_chunks[i].repeat(1, self.repeat, 1, 1)[0]
 
-        spectrogram = super().process(audio, original_sr)
-        spectrogram = spectrogram.repeat(1, self.repeat, 1, 1)[0]
-
-        return spectrogram
+        return spectrogram_chunks
 
 
-class MelSpectrogramResizedRepeated(MelSpectrogramFixed):
+class MelSpectrogramResizedRepeated(MelSpectrogramResize):
     """Calls MelSpectrogramResize and repeats the output 3 times.
 
     This is useful for mocking RGB channels.
@@ -313,6 +440,8 @@ class MelSpectrogramResizedRepeated(MelSpectrogramFixed):
 
         return spectrogram
 
+
+######################################################################################################################################################
 
 class AudioTransformWav2Vec2(AudioTransformBase):
     def __init__(
@@ -350,6 +479,8 @@ class AudioTransformWav2Vec2(AudioTransformBase):
         return features
 
 
+######################################################################################################################################################
+
 def get_audio_transform(
     audio_transform_enum: AudioTransforms,
     sampling_rate: int,
@@ -369,21 +500,35 @@ def get_audio_transform(
         return MelSpectrogramFixedRepeated(
             sampling_rate=sampling_rate,
             dim=dim,
-            repeat=3,
-            max_len=20,
+            repeat=config_defaults.DEFAULT_REPEAT,
+            max_len=config_defaults.DEFAULT_MAX_LEN,
+            **aug_kwargs
         )
-
     elif audio_transform_enum is AudioTransforms.MEL_SPECTROGRAM_RESIZE_REPEAT:
         return MelSpectrogramResizedRepeated(
             sampling_rate=sampling_rate,
             dim=dim,
-            repeat=3,
+            repeat=config_defaults.DEFAULT_REPEAT,
+            **aug_kwargs
         )
     elif audio_transform_enum is AudioTransforms.WAV2VEC:
         return AudioTransformWav2Vec2(
             sampling_rate=sampling_rate,
             pretrained_tag=config_defaults.DEFAULT_WAV2VEC_PRETRAINED_TAG,
             augmentation_enums=augmentation_enums,
+            **aug_kwargs,
+        )    
+    elif audio_transform_enum is AudioTransforms.MFCC_FIXED_REPEATED:
+        return MFCCFixedRepeated(
+            sampling_rate=sampling_rate,
+            dim=dim,
+            n_mfcc=config_defaults.DEFAULT_N_MFCC,
+            dct_type=config_defaults.DEFAULT_DCT_TYPE,
+            repeat=config_defaults.DEFAULT_REPEAT,
+            n_fft=config_defaults.DEFAULT_N_FFT,
+            hop_length=config_defaults.DEFAULT_HOP_LENGTH,
+            n_mels=config_defaults.DEFAULT_N_MELS,
+            max_len=config_defaults.DEFAULT_MAX_LEN,
             **aug_kwargs,
         )
     raise UnsupportedAudioTransforms(f"Unsupported transform {audio_transform_enum}")
