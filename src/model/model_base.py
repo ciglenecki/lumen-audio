@@ -4,7 +4,6 @@ from typing import Any, Optional, Union
 
 import numpy as np
 import pytorch_lightning as pl
-import torch
 import torch.nn as nn
 from pytorch_lightning.callbacks import BaseFinetuning
 from pytorch_lightning.loggers import TensorBoardLogger
@@ -17,13 +16,13 @@ from src.utils.utils_train import MetricMode, OptimizeMetric, get_all_modules_af
 
 
 class ModelBase(pl.LightningModule, ABC):
-
     loggers: list[TensorBoardLogger]
 
     def __init__(
         self,
         batch_size: int = config_defaults.DEFAULT_BATCH_SIZE,
         epochs: Optional[int] = config_defaults.DEFAULT_EPOCHS,
+        freeze_train_bn: bool = config_defaults.DEFAULT_FREEZE_TRAIN_BN,
         head_after: str | None = None,
         backbone_after: str | None = None,
         lr: float = config_defaults.DEFAULT_LR,
@@ -48,6 +47,7 @@ class ModelBase(pl.LightningModule, ABC):
 
             epochs: number of training epochs. Used only if the LR scheduler depends on epochs size (onecycle, cosine...). Reduce on plateau LR scheduler doesn't get affected by this argument.
 
+            freeze_train_bn: Whether or not to train the batch norm during the frozen stage of the training.
             head_after: Name of the submodule after which the all submodules are considered as head, e.g. classifier.dense
 
             backbone_after: Name of the submodule after which the all submodules are considered as backbone, e.g. layer.11.dense"
@@ -82,6 +82,7 @@ class ModelBase(pl.LightningModule, ABC):
         self.backbone_after = backbone_after
         self.batch_size = batch_size
         self.epochs = epochs
+        self.freeze_train_bn = freeze_train_bn
         self.has_finetuning = unfreeze_at_epoch is not None
         self.head_after = head_after
         self.log_per_instrument_metrics = log_per_instrument_metrics
@@ -99,6 +100,7 @@ class ModelBase(pl.LightningModule, ABC):
         self.weight_decay = weight_decay
 
         if self.lr_warmup:
+            # Initially set to learning rate to warmup. later ot will change to 'normal' lr
             self.lr = self.lr_warmup
         else:
             self.lr = lr
@@ -117,14 +119,14 @@ class ModelBase(pl.LightningModule, ABC):
         self.backup_instruments = config_defaults.INSTRUMENT_TO_IDX
 
     def setup(self, stage: str) -> None:
-        """Freezes everything except trainable backbone and head."""
+        """Freezes (turn off require_grads) every submodule except trainable backbone and head."""
         out = super().setup(stage)
         self.num_of_steps_in_epoch = int(
             self.trainer.estimated_stepping_batches / self.trainer.max_epochs
         )
 
         if self.head() is not None and self.trainable_backbone() is not None:
-            BaseFinetuning.freeze(self, train_bn=False)
+            BaseFinetuning.freeze(self, train_bn=self.freeze_train_bn)
             BaseFinetuning.make_trainable(self.trainable_backbone())
             BaseFinetuning.make_trainable(self.head())
 
@@ -144,18 +146,27 @@ class ModelBase(pl.LightningModule, ABC):
         }
         """
 
-        metric_dict = add_prefix_to_keys(
-            get_metrics(
-                y_pred=y_pred,
-                y_true=y_true,
-                num_labels=self.num_labels,
-                return_per_instrument=self.log_per_instrument_metrics,
-            ),
-            f"{type}/",
+        metric_dict = get_metrics(
+            y_pred=y_pred,
+            y_true=y_true,
+            num_labels=self.num_labels,
+            return_per_instrument=self.log_per_instrument_metrics,
         )
+
+        # add "loss" metric which will be converted to "train/loss", "val/loss"...
+        metric_dict.update({"loss": loss})
+
+        # skip adding "train" / "test" to per instrument metrics to avoid clutter in tensorboard
+        metric_dict = add_prefix_to_keys(
+            dict=metric_dict,
+            prefix=f"{type}/",
+            filter_fn=lambda x: x.startswith("instruments"),
+        )
+
         self.log_dict(
             metric_dict, on_step=True, on_epoch=True, logger=True, prog_bar=True
         )
+        # add "loss" metric which is required for gradient caculation
         metric_dict.update({"loss": loss})
         return metric_dict
 
@@ -261,19 +272,20 @@ class ModelBase(pl.LightningModule, ABC):
 
         Mupltiplicator is the finetune_lr_nominator
         """
+
         old_lr = self.trainer.optimizers[optimizer_idx].param_groups[0]["lr"]
         new_lr = old_lr * self.finetune_lr_nominator
         self._set_lr(new_lr)
         return
 
-    def lr_scheduler_step(self, scheduler, optimizer_idx, metric):
+    def lr_scheduler_step(self, scheduler, metric=None):
         """We ignore the lr scheduler in the fine tuning phase and update lr maunally.
 
         Once the finetuning phase is over we start using the lr scheduler
         """
 
         if self.is_finetuning_phase():
-            self._lr_finetuning_step(optimizer_idx)
+            self._lr_finetuning_step(optimizer_idx=0)
             return
 
         if metric is None:
@@ -287,7 +299,6 @@ class ModelBase(pl.LightningModule, ABC):
             self._set_lr(self.lr_warmup)
 
     def configure_optimizers(self):
-
         if self.unfreeze_at_epoch is not None:
             scheduler_epochs = self.epochs - self.unfreeze_at_epoch
             total_lr_sch_steps = self.num_of_steps_in_epoch * scheduler_epochs

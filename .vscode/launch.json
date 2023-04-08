@@ -10,7 +10,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --dataset-dir data/raw/train --batch-size 2 --num-workers 6 --audio-transform ast --model ast --augmentations time_stretch radnom_pixels --epochs 60 --unfreeze-at-epoch 10 --patience 500 --backbone-after layer.11.output --head-after deep_head --lr 1e-5 --lr-onecycle-max 5e-4 --lr-warmup 1e-4 --quick",
+			"args": "--dataset-dir data/raw/train --batch-size 2 --num-workers 6 --audio-transform ast --model ast --epochs 33 --unfreeze-at-epoch 1 --patience 500 --backbone-after backbone.classifier --head-after backbone.classifier --lr 1e-5 --lr-onecycle-max 5e-4 --lr-warmup 1e-4",
 			"justMyCode": false
 		},
 		{
@@ -38,6 +38,15 @@
 			"program": "src/train.py",
 			"console": "integratedTerminal",
 			"args": "--dataset-dir data/raw/train --lr 1e-4 --lr-warmup 5e-4 --num-workers 1 --quick",
+			"justMyCode": false
+		},
+		{
+			"name": "Train AST main",
+			"type": "python",
+			"request": "launch",
+			"program": "src/model/model_ast.py",
+			"console": "integratedTerminal",
+			"args": "",
 			"justMyCode": false
 		},
 	]

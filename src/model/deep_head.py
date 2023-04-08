@@ -23,7 +23,6 @@ class DeepHead(nn.Module):
             modules.add_module("linear", linear)
         else:
             for i in range(len(self.dimensions) - 1):
-
                 layer = nn.Sequential()
 
                 in_features, out_features = self.dimensions[i], self.dimensions[i + 1]

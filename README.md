@@ -42,16 +42,14 @@ Low priority tasks:
 
 Matej:
 
-- [ ] add more augmentations
-- [ ] check if wavelet works
+- [ ] download non instrument audio files and write data loader which are NOT instruments (@matej)
 - [ ] check for all models edge cases (0.1 sec, 30 sec)
 - [ ] include relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
 - [ ] perform validation on Rep's corected dataset to check how many labels are correctly marked in the original dataset
   - check if all instruments are correct
   - check if at least one instrument is correct
 - [ ] (???) check what's up with wav2vec2 padding (probably pad tokens)
-- [ ] download non instrument audio files and write data loader which are NOT instruments (@matej)
-
+- [ ] use AST's features for tensorboard embedder https://projector.tensorflow.org/
 
 Mirko:
 - [ ] validate that chunking is written well for our codebase
@@ -279,6 +277,8 @@ https://paperswithcode.com/sota/audio-classification-on-audioset
 - pretrained model: https://huggingface.co/MIT/ast-finetuned-audioset-10-10-0.4593
 - hugging face: https://huggingface.co/docs/transformers/model_doc/audio-spectrogram-transformer
 
+AST max duration is 10.23 sec for 16_000hz audio
+
 Notes:
 
 - They used 16kHz audio for the pretrained model, so if you want to use the pretrained model, please prepare your data in 16kHz
@@ -290,7 +290,6 @@ Idea: introduce multiple MLP (fully conneted layer) heads. Each head will detect
   - https://pytorch.org/functorch/stable/notebooks/ensembling.html
 
 Idea: train on single wav, then later introduce `irmas_combinatorics` dataset which contains multiple wav
-
 
 
 #### LSTM and Melspectrograms (Mirko)
@@ -398,13 +397,25 @@ How to sample?
   - START-----x---x----------x--------x----------END
 - cutoff the audio sequence at max length?
 
-### Kaldi vs Librosa terminilogy
+### Torch, Librosa and Kaldi
+
+Librosa and Torch give the same array (sound) if both are normalized and converted to mono.
+
+Librosa is gives same array if you load it with sr=None, resample compared to resampling on load.
+
+Best results for AST feature extraction, use torchaudio.load with resampling.
+
 
 Kaldi
-window_shift = int(sample_frequency * frame_shift * MILLISECONDS_TO_SECONDS)
+
+window_shift = int(sample_frequency * frame_shift * 0.001)
+window_size = int(sample_frequency * frame_length * 0.001)
+
 
 Librosa
 hop_length
+               #ms    #len
+1/(1 / 44100 * 1000) * 20
 
 ### Web
 
@@ -422,6 +433,9 @@ Tasks:
 - [x] implement spectrogram cropping and zero padding instead of resizing
 - [x] implement SVM model which uses classical audio features for mutlilabel classification
   - [x] research if SVM can perform multilabel classification or use 11 SVMs
+- [x] add more augmentations
+- [x] check if wavelet works
+
 ______________________________________________________________________
 
 ## 🏆 Team members
