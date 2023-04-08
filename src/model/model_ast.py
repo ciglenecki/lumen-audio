@@ -47,7 +47,6 @@ class ASTModelWrapper(ModelBase):
         #     math.sqrt(config.hidden_size * self.num_labels) + self.num_labels
         # )
 
-        # TODO: use middle_size
         self.backbone.classifier = DeepHead([config.hidden_size, self.num_labels])
 
         self.save_hyperparameters()

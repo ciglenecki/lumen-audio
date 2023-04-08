@@ -75,10 +75,12 @@ class IRMASDataModule(pl.LightningDataModule):
         """Has to be implemented to avoid object has no attribute 'prepare_data_per_node' error."""
 
     def get_sample_class_weights(self, dataset: torch.utils.data.Dataset):
-        """For n samples in the dataset the function returns n weights which are caculated as 1 /
-        class_count of a particular example."""
+        """The function returns n weights for n samples in the dataset.
 
-        print("Caculating sample classes")
+        Weights are caculated as (1 / class_count) of a particular example.
+        """
+
+        print("Caculating sample classes...")
         one_hots = []
         for _, one_hot, _ in tqdm(dataset):
             one_hots.append(one_hot)
@@ -118,6 +120,7 @@ class IRMASDataModule(pl.LightningDataModule):
             train_indices = np.arange(len(self.train_dataset))
             val_test_indices = np.arange(len(self.test_dataset))
             val_indices, test_indices = split_by_ratio(val_test_indices, 0.8, 0.2)
+            self._sanity_check_difference(val_indices, test_indices)
 
         if self.dataset_fraction != 1:
             train_indices = np.random.choice(
@@ -164,7 +167,7 @@ class IRMASDataModule(pl.LightningDataModule):
             test_indices[-5:],
         )
 
-        if self.use_weighted_train_sampler and stage not in ["fit", "test", "predict"]:
+        if self.use_weighted_train_sampler and stage["train"]:
             samples_weight = self.get_sample_class_weights(self.train_dataset)
             self.train_sampler = WeightedRandomSampler(
                 samples_weight, len(samples_weight)

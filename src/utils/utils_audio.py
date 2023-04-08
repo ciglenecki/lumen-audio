@@ -59,17 +59,27 @@ def load_audio_from_file(
     normalize=True,
     target_sr: int | None = config_defaults.DEFAULT_SAMPLING_RATE,
 ) -> tuple[torch.Tensor | np.ndarray, int]:
+    """Performs loading of the audio file.
+
+    Depending on the arguments, the function will normalize, mono and resample the audio.
+    """
+
     if method == "librosa":
         waveform, original_sr = librosa.load(audio_path, sr=target_sr, mono=True)
-        waveform = librosa.util.normalize(waveform)
+        if normalize:
+            waveform = librosa.util.normalize(waveform)
+
     elif method == "torch":
         # default normalize for torch is True
         waveform, original_sr = torchaudio.load(audio_path, normalize=normalize)
+        torch.mean(waveform, dim=0, keepdim=waveform)
         if target_sr is not None:
             torchaudio.functional.resample(
                 waveform, orig_freq=original_sr, new_freq=target_sr
             )
-    return waveform, original_sr
+
+    return_sr = target_sr if target_sr is not None else original_sr
+    return waveform, return_sr
 
 
 def spec_to_npy(spectrogram: torch.Tensor):

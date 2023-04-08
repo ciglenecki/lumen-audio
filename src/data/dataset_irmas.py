@@ -73,7 +73,7 @@ class IRMASDatasetTrain(Dataset):
         self.instrument_idx_list = {
             k.value: [] for k in config_defaults.InstrumentEnums
         }
-        for dataset_dir in self.dataset_dirs:
+        for item_idx, dataset_dir in enumerate(self.dataset_dirs):
             for audio_path in tqdm(dataset_dir.rglob(glob_expression)):
                 filename = str(audio_path.stem)
                 characteristics = re.findall(
@@ -91,46 +91,79 @@ class IRMASDatasetTrain(Dataset):
                 drums_vector = encode_drums(drums)
                 genre_vector = encode_genre(genre)
 
-                instrument_idx = config_defaults.INSTRUMENT_TO_IDX[instrument]
-                instrument_fullname = config_defaults.INSTRUMENT_TO_FULLNAME[instrument]
+                instrument_idx = config_defaults.INSTRUMENT_TO_IDX[instrument]  # 2
                 instrument_indices = []
-                instrument_indices.append(instrument_idx)
+                instrument_indices.append(instrument_idx)  # [2]
 
                 labels = multi_hot_indices(
                     instrument_indices,
                     config_defaults.DEFAULT_NUM_LABELS,
                 )
+                labels = torch.tensor(labels).float()  # [0, 0, 1, 0...]
 
-                labels = torch.tensor(labels).float()
-
-                self.dataset.append(
-                    (
-                        str(audio_path),
-                        labels,
-                        instrument_idx,
-                    )
-                )
-
-                item_index = len(self.dataset) - 1
-                self.instrument_idx_list[instrument].append(item_index)
+                self.dataset.append((str(audio_path), labels, instrument))
+                self.instrument_idx_list[instrument].append(item_idx)
 
     def __len__(self) -> int:
         return len(self.dataset)
 
-    def _get_another_random_sample_idx(self, instrument_idx):
+    def _get_another_random_sample_idx(self, not_instrument_idx: int) -> int:
+        """Returns a random sample whose label is NOT not_instrument_idx.
+
+        Example:
+            not_instrument_idx = 1
+            random_instrument_idx = 3 # note: this index cannot be 1
+            random_sample_idx ...
+            return random_sample_idx
+        Args:
+            not_instrument_idx: Label instrument whose sampels won't be considered.
+
+        Returns:
+            random dataset index
+        """
         random_instrument_idx = np.random.choice(
-            self.all_instrument_indices[self.all_instrument_indices != instrument_idx]
+            self.all_instrument_indices[
+                self.all_instrument_indices != not_instrument_idx
+            ]
         )
         instrument = config_defaults.IDX_TO_INSTRUMENT[random_instrument_idx]
         random_sample_idx = random.choice(self.instrument_idx_list[instrument])
         return random_sample_idx
 
-    def __getitem__(self, index) -> tuple[torch.Tensor, torch.Tensor]:
-        (
-            audio_path,
-            labels,
-            instrument_idx,
-        ) = self.dataset[index]
+    def _sum_with_another_sample(
+        self, audio: np.ndarray, labels: np.ndarray, instrument_idx: int
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Sum two examples from the dataset in the following way:
+
+            - audio: sum and divide by 2
+            - labels: logical or, union of ones
+        Args:
+            audio
+            labels
+            instrument_idx
+
+        Returns:
+            tuple[np.ndarray, np.ndarray]: audio, label
+        """
+
+        # Load random sample
+        random_sample_idx = self._get_another_random_sample_idx(instrument_idx)
+        other_audio_path, other_labels, _ = self.dataset[random_sample_idx]
+        other_audio, _ = load_audio_from_file(
+            other_audio_path,
+            method="librosa",
+            normalize=self.normalize_audio,
+            target_sr=self.sampling_rate,
+        )
+
+        # Sum audio and labels
+        audio = (audio + other_audio) / 2
+        labels = np.logical_or(labels, other_labels).astype(labels.dtype)
+        return audio, labels
+
+    def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
+        audio_path, labels, instrument = self.dataset[index]
+        instrument_idx = config_defaults.INSTRUMENT_TO_IDX[instrument]
 
         audio, _ = load_audio_from_file(
             audio_path,
@@ -140,20 +173,7 @@ class IRMASDatasetTrain(Dataset):
         )
 
         if self.concat_two_samples:
-            random_sample_idx = self._get_another_random_sample_idx(instrument_idx)
-            other_audio_path, other_labels, _ = self.dataset[random_sample_idx]
-
-            other_audio, _ = load_audio_from_file(
-                other_audio_path,
-                method="librosa",
-                normalize=self.normalize_audio,
-                target_sr=self.sampling_rate,
-            )
-
-            # Sum audio and labels
-            audio = (audio + other_audio) / 2
-            labels = labels + other_labels
-            labels[labels > 1] = 1
+            audio, labels = self._sum_with_another_sample(audio, labels, instrument_idx)
 
         if self.audio_transform is None:
             return audio, labels, audio_path
@@ -211,13 +231,13 @@ class IRMASDatasetTest(Dataset):
                 )
                 labels = torch.tensor(labels).float()
 
-                self.dataset.append((str(audio_file), labels))
+                self.dataset.append((str(audio_file), labels, instrument))
 
     def __len__(self) -> int:
         return len(self.dataset)
 
     def __getitem__(self, index) -> tuple[torch.Tensor, torch.Tensor]:
-        audio_path, labels = self.dataset[index]
+        audio_path, labels, _ = self.dataset[index]
 
         audio, _ = load_audio_from_file(
             audio_path,
@@ -227,9 +247,9 @@ class IRMASDatasetTest(Dataset):
         )
 
         if self.audio_transform is None:
-            return audio, labels
+            return audio, labels, audio_path
 
-        features = self.audio_transform.process(audio=audio)
+        features = self.audio_transform.process(audio)
         return features, labels, audio_path
 
 
