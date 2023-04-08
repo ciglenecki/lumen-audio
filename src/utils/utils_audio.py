@@ -92,6 +92,7 @@ def spec_to_npy(spectrogram: torch.Tensor):
     return spectrogram.numpy()
 
 
+# TODO: FIX all plots and add comments
 def plot_spec_general(spectrogram: np.ndarray, sr: int, type="mel", fmax=8000):
     spectrogram = spec_to_npy(spectrogram)
     if len(spectrogram.shape) == 3:

@@ -6,7 +6,6 @@ import librosa
 import numpy as np
 import torch
 import torch_audiomentations
-import torchaudio
 import torchvision.transforms.functional as F
 from torchaudio.transforms import FrequencyMasking, TimeMasking
 from torchvision.transforms import RandomErasing
@@ -133,7 +132,7 @@ class AudioTransformAST(AudioTransformBase):
             audio = librosa.effects.time_stretch(y=audio, rate=stretch_rate)
             # audio = audio[:size_before]
 
-        audio = torch.tensor(audio).unsqueeze(0).unsqueeze(0)
+        audio = torch.tensor(audio[np.newaxis, np.newaxis, :])
 
         if SupportedAugmentations.PITCH in self.augmentation_enums:
             audio = self.pitch_shift(audio)
@@ -148,7 +147,7 @@ class AudioTransformAST(AudioTransformBase):
         if SupportedAugmentations.TIMEINV in self.augmentation_enums:
             audio = self.timeinv(audio)
 
-        return audio.squeeze(0).squeeze(0).numpy()
+        return audio[0, 0, :].numpy()  # same as x2 squeeze(0)
 
     def apply_spec_augmentations(self, spectrogram: torch.Tensor):
         if SupportedAugmentations.FREQ_MASK in self.augmentation_enums:
@@ -181,6 +180,7 @@ class AudioTransformAST(AudioTransformBase):
         self,
         audio: torch.Tensor | np.ndarray,
     ) -> tuple[torch.Tensor, torch.Tensor]:
+        # TODO: extract this function out
         audio = self.apply_waveform_augmentations(audio)
 
         spectrogram = self.feature_extractor(
