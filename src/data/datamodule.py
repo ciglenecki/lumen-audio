@@ -48,7 +48,7 @@ class IRMASDataModule(pl.LightningDataModule):
         train_dirs: list[Path] = [config_defaults.PATH_IRMAS_TRAIN],
         val_dirs: list[Path] = [config_defaults.PATH_IRMAS_VAL],
         test_dirs: list[Path] = [config_defaults.PATH_IRMAS_TEST],
-        train_only_dataset: bool = False,
+        train_only_dataset: bool = config_defaults.DEFAULT_ONLY_TRAIN_DATASET,
         normalize_audio: bool = config_defaults.DEFAULT_NORMALIZE_AUDIO,
         concat_two_samples: bool = SupportedAugmentations.CONCAT_TWO
         in config_defaults.DEFAULT_AUGMENTATIONS,
@@ -65,7 +65,7 @@ class IRMASDataModule(pl.LightningDataModule):
         self.train_dirs = train_dirs
         self.val_dirs = val_dirs
         self.test_dirs = test_dirs
-        self.train_only = train_only_dataset
+        self.train_only_dataset = train_only_dataset
         self.normalize_audio = normalize_audio
         self.concat_two_samples = concat_two_samples
         self.use_weighted_train_sampler = use_weighted_train_sampler
@@ -99,7 +99,7 @@ class IRMASDataModule(pl.LightningDataModule):
             concat_two_samples=self.concat_two_samples,
         )
 
-        if self.train_only:
+        if self.train_only_dataset:
             self.test_dataset = self.train_dataset
         else:
             self.test_dataset = IRMASDatasetTest(
@@ -108,7 +108,7 @@ class IRMASDataModule(pl.LightningDataModule):
                 normalize_audio=self.normalize_audio,
             )
 
-        if self.train_only:
+        if self.train_only_dataset:
             indices = np.arange(len(self.train_dataset))
             train_indices, val_indices = train_test_split(indices, test_size=0.2)
             test_indices = np.array([])

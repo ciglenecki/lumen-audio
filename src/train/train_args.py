@@ -126,7 +126,7 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         "--train-only-dataset",
         help="Use only the train portion of the dataset and split it 0.8 0.2",
         action="store_true",
-        default=False,
+        default=config_defaults.DEFAULT_ONLY_TRAIN_DATASET,
     )
     user_group.add_argument(
         "--drop-last",
