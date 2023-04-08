@@ -2,7 +2,6 @@ import os
 from pathlib import Path
 
 import pytorch_lightning as pl
-import torch
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import (
     EarlyStopping,
@@ -11,9 +10,9 @@ from pytorch_lightning.callbacks import (
     TQDMProgressBar,
 )
 
-from src.config import config_defaults
 from src.data.datamodule import IRMASDataModule
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
+from src.features.supported_augmentations import SupportedAugmentations
 from src.model.model import get_model
 from src.model.optimizers import SchedulerType
 from src.train.callbacks import (
@@ -44,6 +43,7 @@ if __name__ == "__main__":
     normalize_audio = args.normalize_audio
     aug_kwargs = args.aug_kwargs
     dim = args.dim
+    use_weighted_train_sampler = args.use_weighted_train_sampler
 
     timestamp = get_timestamp()
     experiment_codeword = random_codeword()
@@ -79,6 +79,9 @@ if __name__ == "__main__":
         train_audio_transform=train_audio_transform,
         val_audio_transform=val_audio_transform,
         normalize_audio=normalize_audio,
+        train_only_dataset=args.train_only_dataset,
+        concat_two_samples=SupportedAugmentations.CONCAT_TWO in args.augmentations,
+        use_weighted_train_sampler=use_weighted_train_sampler,
     )
 
     train_dataloader_size = len(datamodule.train_dataloader())
@@ -145,7 +148,6 @@ if __name__ == "__main__":
 
     # TODO; fix pl.Trainer.from_argparse_args(
     # auto_lr_find=args.scheduler == SchedulerType.AUTO_LR,
-    # epochs=config_defaults.DEFAULT_EPOCHS,
     trainer: pl.Trainer = pl.Trainer(
         **vars(pl_args),
         logger=[tensorboard_logger],

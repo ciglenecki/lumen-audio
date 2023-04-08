@@ -17,7 +17,6 @@ def get_metrics(
     num_labels=config_defaults.DEFAULT_NUM_LABELS,
     return_per_instrument=False,
 ):
-
     kwargs = dict(preds=y_pred, target=y_true, num_labels=num_labels)
 
     accuracy = multilabel_accuracy(**kwargs)

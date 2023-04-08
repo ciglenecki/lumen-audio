@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pyrootutils
 
+from src.features.supported_augmentations import SupportedAugmentations
 from src.model.optimizers import OptimizerType, SchedulerType
 from src.utils.utils_train import MetricMode, OptimizeMetric
 
@@ -12,7 +13,7 @@ DEFAULT_IRMAS_TRAIN_SIZE = 6705
 DEFAULT_IRMAS_TEST_SIZE = 2874
 DEFAULT_BATCH_SIZE = 2
 DEFAULT_NUM_WORKERS = 4
-DEFAULT_LOG_EVERY_N_STEPS = 100
+DEFAULT_LOG_EVERY_N_STEPS = 20
 DEFAULT_DATASET_FRACTION = 1.0
 DEFAULT_LR = 1e-5
 
@@ -45,18 +46,36 @@ DEFAULT_HOP_LENGTH = DEFAULT_N_FFT // 2
 DEFAULT_DIM = (384, 384)
 DEFAULT_FC = []
 DEFAULT_PRETRAINED_WEIGHTS = "DEFAULT"
-DEFAULT_LOG_PER_INSTRUMENT_METRICS = False
+DEFAULT_LOG_PER_INSTRUMENT_METRICS = True
 DEFAULT_MAX_SEQ_LENGTH = 20
+DEFAULT_FREEZE_TRAIN_BN = True
+DEFAULT_USE_WEIGHTED_TRAIN_SAMPLER = False
 
+DEFAULT_AUGMENTATIONS = [
+    SupportedAugmentations.TIME_STRETCH,
+    SupportedAugmentations.PITCH,
+    SupportedAugmentations.BANDPASS_FILTER,
+    SupportedAugmentations.COLOR_NOISE,
+    SupportedAugmentations.TIMEINV,
+    SupportedAugmentations.FREQ_MASK,
+    SupportedAugmentations.TIME_MASK,
+    SupportedAugmentations.RANDOM_ERASE,
+    SupportedAugmentations.RANDOM_PIXELS,
+    SupportedAugmentations.CONCAT_TWO,
+]
 # ===============
 # PATHS START
 # ===============
 
 PATH_WORK_DIR = pyrootutils.find_root(search_from=__file__, indicator=".project-root")
 PATH_DATA = Path(PATH_WORK_DIR, "data")
-PATH_TRAIN = Path(PATH_DATA, "irmas", "train")
-PATH_VAL = Path(PATH_DATA, "irmas", "val")
-PATH_TEST = Path(PATH_DATA, "irmas", "test")
+PATH_IRMAS = Path(PATH_DATA, "irmas")
+PATH_IRMAS_TRAIN = Path(PATH_IRMAS, "train")
+PATH_IRMAS_VAL = Path(PATH_IRMAS, "val")
+PATH_IRMAS_TEST = Path(PATH_IRMAS, "test")
+PATH_IRMAS_TRAIN_FEATURES = Path(PATH_IRMAS, "train_features")
+
+PATH_OPENMIC = Path(PATH_DATA, "openmic")
 PATH_MODELS = Path(PATH_WORK_DIR, "models")
 
 # ===============
@@ -143,6 +162,7 @@ GENRE_TO_IDX = {
     GenreKeys.LATINO_SOUL.value: 3,
     GenreKeys.JAZZ_BLUES.value: 4,
 }
+
 
 IDX_TO_GENRE = {v: k for k, v in GENRE_TO_IDX.items()}
 

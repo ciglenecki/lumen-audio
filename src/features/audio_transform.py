@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
+from pathlib import Path
+from typing import Literal
 
 import librosa
 import numpy as np
 import torch
 import torch_audiomentations
+import torchaudio
 import torchvision.transforms.functional as F
 from torchaudio.transforms import FrequencyMasking, TimeMasking
 from torchvision.transforms import RandomErasing
@@ -15,7 +18,7 @@ from src.features.supported_augmentations import (
     SupportedAugmentations,
     UnsupportedAudioTransforms,
 )
-from src.utils.utils_audio import stereo_to_mono, time_stretch
+from src.utils.utils_audio import load_audio_from_file, stereo_to_mono, time_stretch
 
 
 class AudioTransformBase(ABC):
@@ -63,6 +66,32 @@ class AudioTransformBase(ABC):
             tuple[torch.Tensor, torch.Tensor]: _description_
         """
 
+    def process_from_file(
+        self,
+        audio_file_path: Path,
+        method: Literal["torch", "librosa"],
+        normalize: bool,
+    ) -> tuple[torch.Tensor]:
+        """Calls the process() but loads the file beforehand.
+
+        Args:
+            audio_path: audio file path
+            original_sr: _description_
+
+        Returns:
+            tuple[torch.Tensor, torch.Tensor]: _description_
+        """
+        audio, original_sr = load_audio_from_file(
+            audio_file_path,
+            method=method,
+            normalize=normalize,
+            target_sr=self.sampling_rate,
+        )
+        return self.process(
+            audio,
+            original_sr=original_sr,
+        )
+
 
 class AudioTransformAST(AudioTransformBase):
 
@@ -82,7 +111,7 @@ class AudioTransformAST(AudioTransformBase):
         self.feature_extractor = ASTFeatureExtractor.from_pretrained(pretrained_tag)
         self.color_noise = torch_audiomentations.AddColoredNoise(
             min_snr_in_db=3,
-            max_snr_in_db=15,
+            max_snr_in_db=25,
             p=1,
             sample_rate=self.sampling_rate,
         )
@@ -151,28 +180,21 @@ class AudioTransformAST(AudioTransformBase):
     def process(
         self,
         audio: torch.Tensor | np.ndarray,
-        original_sr: int,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        audio = librosa.resample(
-            y=audio, orig_sr=original_sr, target_sr=self.sampling_rate
-        )
-        audio = stereo_to_mono(audio)
         audio = self.apply_waveform_augmentations(audio)
 
-        features = self.feature_extractor(
+        spectrogram = self.feature_extractor(
             audio,
             sampling_rate=self.sampling_rate,
             return_tensors="pt",
-        )
+        )["input_values"]
 
-        # mel filter banks
-        spectrogram = features["input_values"]
         assert (
             len(spectrogram.shape) == 3
         ), "Spectrogram has to have 3 dimensions before torch augmentations!"
         spectrogram = self.apply_spec_augmentations(spectrogram)
         spectrogram = spectrogram.squeeze(dim=0)
-
+        assert len(spectrogram.shape) == 2, "Spectrogram has to be a 2D image"
         return spectrogram
 
 

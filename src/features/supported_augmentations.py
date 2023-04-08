@@ -26,3 +26,4 @@ class SupportedAugmentations(EnumStr):
     BANDPASS_FILTER = "bandpass"
     PITCH = "pitch"
     TIMEINV = "timeinv"
+    CONCAT_TWO = "concat_two"

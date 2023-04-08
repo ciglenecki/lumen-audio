@@ -1,5 +1,8 @@
 {
 	"python.linting.pylintEnabled": true,
 	"python.linting.enabled": false,
-	"python.analysis.typeCheckingMode": "off"
+	"python.analysis.typeCheckingMode": "off",
+	"python.analysis.extraPaths": [
+		"./src/model"
+	]
 }

@@ -5,7 +5,7 @@ import config_defaults as cd
 
 val_dict = {}
 
-for file_name in cd.PATH_VAL.rglob("*.wav"):
+for file_name in cd.PATH_IRMAS_VAL.rglob("*.wav"):
     with wave.open(str(file_name), "rb") as wave_file:
         frame_rate = wave_file.getframerate()
         if frame_rate not in val_dict:
@@ -14,7 +14,7 @@ for file_name in cd.PATH_VAL.rglob("*.wav"):
 
 train_dict = {}
 
-for file_name in cd.PATH_TRAIN.rglob("*.wav"):
+for file_name in cd.PATH_IRMAS_TRAIN.rglob("*.wav"):
     with wave.open(str(file_name), "rb") as wave_file:
         frame_rate = wave_file.getframerate()
         if frame_rate not in train_dict:

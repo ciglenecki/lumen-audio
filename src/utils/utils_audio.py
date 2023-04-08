@@ -13,6 +13,7 @@ import torch_audiomentations
 import torchaudio
 from pydub.utils import get_player_name
 
+from src.config import config_defaults
 from src.utils.utils_functions import print_tensor
 
 
@@ -53,13 +54,21 @@ def time_stretch(audio: np.ndarray, min_stretch, max_stretch, trim=True):
 
 
 def load_audio_from_file(
-    audio_path: Path | str, method: str = "torch", normalize=True
+    audio_path: Path | str,
+    method: str = "librosa",
+    normalize=True,
+    target_sr: int | None = config_defaults.DEFAULT_SAMPLING_RATE,
 ) -> tuple[torch.Tensor | np.ndarray, int]:
     if method == "librosa":
-        waveform, original_sr = librosa.load(audio_path, sr=None)
+        waveform, original_sr = librosa.load(audio_path, sr=target_sr, mono=True)
+        waveform = librosa.util.normalize(waveform)
     elif method == "torch":
         # default normalize for torch is True
         waveform, original_sr = torchaudio.load(audio_path, normalize=normalize)
+        if target_sr is not None:
+            torchaudio.functional.resample(
+                waveform, orig_freq=original_sr, new_freq=target_sr
+            )
     return waveform, original_sr
 
 
@@ -191,6 +200,24 @@ def example_audio_mel_audio():
 
     play_audio(audio, sr=16_000, max_seconds=3)
     play_audio(audio_reconstructed, sr=16_000, max_seconds=3)
+
+
+def ast_feature_inverse(spectrogram: torch.Tensor):
+    n_fft = 400
+    hop = 160
+    inverse_mel = torchaudio.transforms.InverseMelScale(
+        n_stft=n_fft // 2 + 1, sample_rate=config_defaults.DEFAULT_SAMPLING_RATE
+    )
+    griffin_lim = torchaudio.transforms.GriffinLim(
+        n_fft=n_fft, hop_length=hop, n_iter=54
+    )
+
+    with torch.enable_grad():
+        spectrogram = spectrogram.clone().cpu()[0, :, :].T
+        tmp = inverse_mel(spectrogram)
+        audio = griffin_lim(tmp)
+
+    return audio.squeeze(0).numpy()
 
 
 if __name__ == "__main__":

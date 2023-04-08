@@ -38,6 +38,7 @@ def get_model(args, pl_args):
         head_after=args.head_after,
         lr_onecycle_max=args.lr_onecycle_max,
         log_per_instrument_metrics=args.log_per_instrument_metrics,
+        freeze_train_bn=args.freeze_train_bn,
     )
 
     if model_enum == SupportedModels.AST:

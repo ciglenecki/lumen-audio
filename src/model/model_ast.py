@@ -1,34 +1,16 @@
-import math
 from typing import Any
 
 import librosa
-import numpy as np
 import torch
 import torchaudio
-import torchmetrics
-from matplotlib import pyplot as plt
 from pytorch_lightning.loggers import TensorBoardLogger
-from torchmetrics.classification import MultilabelF1Score
-from transformers import (
-    ASTConfig,
-    ASTFeatureExtractor,
-    ASTForAudioClassification,
-    Wav2Vec2FeatureExtractor,
-)
+from transformers import ASTConfig, ASTFeatureExtractor, ASTForAudioClassification
 from transformers.modeling_outputs import SequenceClassifierOutput
 
 import src.config.config_defaults as config_defaults
 from src.model.deep_head import DeepHead
 from src.model.model_base import ModelBase
-from src.train.metrics import get_metrics
-from src.utils.utils_audio import (
-    example_audio_mel_audio,
-    load_audio_from_file,
-    play_audio,
-    plot_spec_general,
-    plot_spec_general_no_scale,
-)
-from src.utils.utils_functions import add_prefix_to_keys, print_tensor
+from src.utils.utils_audio import load_audio_from_file, play_audio
 
 
 class ASTModelWrapper(ModelBase):
@@ -61,13 +43,12 @@ class ASTModelWrapper(ModelBase):
             )
         )
 
-        middle_size = int(
-            math.sqrt(config.hidden_size * self.num_labels) + self.num_labels
-        )
+        # middle_size = int(
+        #     math.sqrt(config.hidden_size * self.num_labels) + self.num_labels
+        # )
 
-        self.backbone.classifier = DeepHead(
-            [config.hidden_size, middle_size, self.num_labels]
-        )
+        # TODO: use middle_size
+        self.backbone.classifier = DeepHead([config.hidden_size, self.num_labels])
 
         self.save_hyperparameters()
 
@@ -81,9 +62,9 @@ class ASTModelWrapper(ModelBase):
         return out.loss, out.logits
 
     def _step(self, batch, batch_idx, type: str):
-        audio, y = batch
+        spectrogram, y, _ = batch
 
-        loss, logits_pred = self.forward(audio, labels=y)
+        loss, logits_pred = self.forward(spectrogram, labels=y)
         y_pred_prob = torch.sigmoid(logits_pred)
         y_pred = y_pred_prob >= 0.5
         return self.log_and_return_loss_step(
@@ -106,26 +87,8 @@ class ASTModelWrapper(ModelBase):
         pass
 
 
-def invert_ast_feature(
-    spectrogram: torch.Tensor,
-    n_fft=400,
-    hop=160,
-    target_sr=config_defaults.DEFAULT_SAMPLING_RATE,
-):
-    """play_audio(invert_ast_feature(features_torch, n_fft, hop), sr=target_sr, max_seconds=3)"""
-    spectrogram = spectrogram.T
-    spectrogram.requires_grad = True
-    inv = torchaudio.transforms.InverseMelScale(
-        n_stft=n_fft // 2 + 1, sample_rate=target_sr
-    )
-    grif = torchaudio.transforms.GriffinLim(n_fft=n_fft, hop_length=hop, n_iter=54)
-    # torchaudio.functional.inverse_spectrogram()
-    tmp = inv(spectrogram)
-    audio = grif(tmp)
-    return audio
-
-
 if __name__ == "__main__":
+    # example_audio_mel_audio()
     config = ASTConfig.from_pretrained(
         pretrained_model_name_or_path=config_defaults.DEFAULT_AST_PRETRAINED_TAG,
         id2label=config_defaults.IDX_TO_INSTRUMENT,
@@ -183,7 +146,9 @@ if __name__ == "__main__":
     inv = torchaudio.transforms.InverseMelScale(
         n_stft=n_fft // 2 + 1, sample_rate=target_sr
     )
-    grif = torchaudio.transforms.GriffinLim(n_fft=n_fft, hop_length=hop, n_iter=54)
+    grif = torchaudio.transforms.GriffinLim(
+        n_fft=n_fft, hop_length=hop, n_iter=54, power=2
+    )
     inv_torch = grif(inv(torch.tensor(torch_spec)))
     inv_lib = grif(inv(torch.tensor(lib_spec)))
 
@@ -193,7 +158,11 @@ if __name__ == "__main__":
     lib_reconstruct = librosa.feature.inverse.mel_to_audio(
         lib_spec, sr=target_sr, n_fft=n_fft, hop_length=hop
     )
-    play_audio(torch_reconstructed, sr=target_sr, max_seconds=3)
-    play_audio(lib_reconstruct, sr=target_sr, max_seconds=3)
+
+    print(librosa.get_duration(y=lib_reconstruct, sr=16_000))
+    print(len(lib_reconstruct) / 16_000)
+
+    # play_audio(torch_reconstructed, sr=target_sr, max_seconds=3)
+    # play_audio(lib_reconstruct, sr=target_sr, max_seconds=3)
     play_audio(inv_torch.squeeze(0).numpy(), sr=target_sr, max_seconds=3)
     play_audio(inv_lib.squeeze(0).numpy(), sr=target_sr, max_seconds=3)

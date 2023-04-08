@@ -206,14 +206,22 @@ def reset_sockets():
     sys.stderr = sys.__stderr__
 
 
-def add_prefix_to_keys(dict: dict, prefix) -> dict:
+def add_prefix_to_keys(
+    dict: dict, prefix: str, filter_fn: callable = lambda x: False
+) -> dict:
     """
     Example:
         dict = {"a": 1, "b": 2}
         prefix = "text_"
         returns {"text_a": 1, "text_b": 2}
+
+    Example:
+        dict = {"abra": 1, "abrakadabra": 2, "nothing": 3}
+        prefix = "text_"
+        filter = lambda x: x.startswith("abra")
+        returns {"text_abra": 1, "text_abrakadabra": 2, "nothing": 3}
     """
-    return {prefix + k: v for k, v in dict.items()}
+    return {(k if filter_fn(k) else prefix + k): v for k, v in dict.items()}
 
 
 def flatten(list):
