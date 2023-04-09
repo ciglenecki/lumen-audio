@@ -176,10 +176,10 @@ class IRMASDatasetTrain(Dataset):
             audio, labels = self._sum_with_another_sample(audio, labels, instrument_idx)
 
         if self.audio_transform is None:
-            return audio, labels, audio_path
+            return audio, labels
 
         features = self.audio_transform.process(audio)
-        return features, labels, audio_path
+        return features, labels
 
 
 class IRMASDatasetTest(Dataset):
@@ -247,10 +247,10 @@ class IRMASDatasetTest(Dataset):
         )
 
         if self.audio_transform is None:
-            return audio, labels, audio_path
+            return audio, labels
 
         features = self.audio_transform.process(audio)
-        return features, labels, audio_path
+        return features, labels
 
 
 class InstrumentInference(Dataset):

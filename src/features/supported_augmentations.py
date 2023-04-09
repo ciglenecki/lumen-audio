@@ -12,6 +12,7 @@ class AudioTransforms(EnumStr):
     MEL_SPECTROGRAM_RESIZE_REPEAT = "mel_spectrogram_resize_repeat"
     MEL_SPECTROGRAM_FIXED_REPEAT = "mel_spectrogram_fixed_repeat"
     WAV2VEC = "wav2vec"
+    MFCC_FIXED_REPEAT = "mfcc_fixed_repeat"
 
 
 class SupportedAugmentations(EnumStr):

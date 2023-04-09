@@ -4,6 +4,7 @@ import librosa
 import torch
 import torchaudio
 from pytorch_lightning.loggers import TensorBoardLogger
+from torch_scatter import scatter_max
 from transformers import ASTConfig, ASTFeatureExtractor, ASTForAudioClassification
 from transformers.modeling_outputs import SequenceClassifierOutput
 
@@ -61,11 +62,34 @@ class ASTModelWrapper(ModelBase):
         return out.loss, out.logits
 
     def _step(self, batch, batch_idx, type: str):
-        spectrogram, y, _ = batch
+        spectrogram, y, files_id = batch
 
         loss, logits_pred = self.forward(spectrogram, labels=y)
         y_pred_prob = torch.sigmoid(logits_pred)
-        y_pred = y_pred_prob >= 0.5
+        y_pred = (y_pred_prob >= 0.5).float()
+
+        if type != "train":
+            """
+            >>> a
+            tensor([[0.6744, 0.7307, 0.6614],
+                    [0.1346, 0.0142, 0.5730],
+                    [0.3153, 0.0235, 0.7663],
+                    [0.4487, 0.9715, 0.9067],
+                    [0.3930, 0.9055, 0.6433]])
+            >>> ids = torch.tensor([0,0,0,1,2])
+            >>> ids
+            tensor([0, 0, 0, 1, 2])
+            >>> scatter_max(a,ids,dim=0)
+            (tensor([[0.6744, 0.7307, 0.7663],
+                    [0.4487, 0.9715, 0.9067],
+                    [0.3930, 0.9055, 0.6433]]), tensor([[0, 0, 2],
+                    [3, 3, 3],
+                    [4, 4, 4]]))
+            """
+
+            y_final_out, _ = scatter_max(y_pred, files_id, dim=0)
+            print(y_final_out)
+
         return self.log_and_return_loss_step(
             loss=loss, y_pred=y_pred, y_true=y, type=type
         )

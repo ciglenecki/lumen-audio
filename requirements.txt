@@ -1,3 +1,4 @@
+-f https://data.pyg.org/whl/torch-2.0.0+cu117.html
 numpy
 matplotlib
 pandas
@@ -16,6 +17,7 @@ tensorboardX
 torchaudio
 pytorch-lightning
 torchmetrics
+torch-scatter
 
 # --------- others --------- #
 pyrootutils     # standardizing the project root setup

@@ -103,20 +103,17 @@ class IRMASDataModule(pl.LightningDataModule):
 
         if self.train_only_dataset:
             self.test_dataset = self.train_dataset
-        else:
-            self.test_dataset = IRMASDatasetTest(
-                dataset_dirs=self.test_dirs,
-                audio_transform=self.val_audio_transform,
-                normalize_audio=self.normalize_audio,
-            )
-
-        if self.train_only_dataset:
             indices = np.arange(len(self.train_dataset))
             train_indices, val_indices = train_test_split(indices, test_size=0.2)
             test_indices = np.array([])
             # test_indices = val_indices
             self._sanity_check_difference(train_indices, val_indices)
         else:
+            self.test_dataset = IRMASDatasetTest(
+                dataset_dirs=self.test_dirs,
+                audio_transform=self.val_audio_transform,
+                normalize_audio=self.normalize_audio,
+            )
             train_indices = np.arange(len(self.train_dataset))
             val_test_indices = np.arange(len(self.test_dataset))
             val_indices, test_indices = split_by_ratio(val_test_indices, 0.8, 0.2)
@@ -201,6 +198,7 @@ class IRMASDataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             sampler=self.train_sampler,
             drop_last=self.drop_last_sample,
+            collate_fn=collate_fn,
         )
 
     def val_dataloader(self) -> DataLoader:
@@ -212,6 +210,7 @@ class IRMASDataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             sampler=self.val_sampler,
             drop_last=self.drop_last_sample,
+            collate_fn=collate_fn,
         )
 
     def test_dataloader(self) -> DataLoader:
@@ -221,4 +220,33 @@ class IRMASDataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             sampler=self.test_sampler,
             drop_last=self.drop_last_sample,
+            collate_fn=collate_fn,
         )
+
+
+def collate_fn(
+    examples: list[tuple[torch.Tensor], torch.Tensor]
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    # TODO: remove this comment once you verify that collate_fn works
+    """
+    examples: list[tuple[chunk tensor], label tensor]
+    all_audio_chunks:
+    Args:
+        examples: _description_
+
+    Returns:
+        tuple[torch.Tensor, torch.Tensor, torch.Tensor]: _description_
+    """
+
+    all_audio_chunks, all_labels, file_ids = [], [], []
+    for i, (audio_chunks, label) in enumerate(examples):
+        for audio_chunk in audio_chunks:
+            all_audio_chunks.append(audio_chunk.unsqueeze(0))
+            all_labels.append(label.unsqueeze(0))
+            file_ids.append(i)
+
+    return (
+        torch.cat(tuple(all_audio_chunks), dim=0),
+        torch.cat(tuple(all_labels), dim=0),
+        torch.tensor(file_ids),
+    )
