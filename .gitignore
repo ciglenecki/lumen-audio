@@ -4,6 +4,13 @@
 
 data/**/*.txt
 data/**/*.wav
+data/**/*.ogg
+data/**/*.json
+data/irmas/train_features/**/*.tsv
+data/irmas/train_features/**/*.json
+
+data/openmic
+data/nsynth-train
 models/**
 models_archive/
 # =============================================
@@ -16,7 +23,8 @@ models_archive/
 *.wav
 *.zip
 .directory
-.vscode
+.vscode/
+.vscode/*
 *.tar*
 # =============================================
 # https://raw.githubusercontent.com/github/gitignore/main/Python.gitignore

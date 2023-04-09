@@ -104,8 +104,8 @@ class TorchvisionModel(ModelBase):
         return out
 
     def _step(self, batch, batch_idx, type: str):
-        audio, y, id_ = batch
-        
+        audio, y, files_id = batch
+
         logits_pred = self.forward(audio)
         loss = self.loss_function(logits_pred, y)
         y_pred = torch.sigmoid(logits_pred) > 0.5

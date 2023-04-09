@@ -4,14 +4,18 @@ from itertools import combinations
 from pathlib import Path
 
 import numpy as np
-import torch
 import pytorch_lightning as pl
+import torch
+import torch.utils
+import torch.utils.data
 from sklearn.model_selection import train_test_split
-from torch.utils.data import DataLoader, SubsetRandomSampler
+from torch.utils.data import DataLoader, SubsetRandomSampler, WeightedRandomSampler
+from tqdm import tqdm
 
 import src.config.config_defaults as config_defaults
 from src.data.dataset_irmas import IRMASDatasetTest, IRMASDatasetTrain
 from src.features.audio_transform import AudioTransformBase
+from src.features.supported_augmentations import SupportedAugmentations
 from src.utils.utils_functions import split_by_ratio
 
 
@@ -41,11 +45,14 @@ class IRMASDataModule(pl.LightningDataModule):
         drop_last_sample: bool,
         train_audio_transform: AudioTransformBase,
         val_audio_transform: AudioTransformBase,
-        train_dirs: list[Path] = [config_defaults.PATH_TRAIN],
-        val_dirs: list[Path] = [config_defaults.PATH_VAL],
-        test_dirs: list[Path] = [config_defaults.PATH_TEST],
-        train_only: bool = False,
+        train_dirs: list[Path] = [config_defaults.PATH_IRMAS_TRAIN],
+        val_dirs: list[Path] = [config_defaults.PATH_IRMAS_VAL],
+        test_dirs: list[Path] = [config_defaults.PATH_IRMAS_TEST],
+        train_only_dataset: bool = config_defaults.DEFAULT_ONLY_TRAIN_DATASET,
         normalize_audio: bool = config_defaults.DEFAULT_NORMALIZE_AUDIO,
+        concat_two_samples: bool = SupportedAugmentations.CONCAT_TWO
+        in config_defaults.DEFAULT_AUGMENTATIONS,
+        use_weighted_train_sampler=config_defaults.DEFAULT_USE_WEIGHTED_TRAIN_SAMPLER,
     ):
         super().__init__()
         self.batch_size = batch_size
@@ -58,12 +65,31 @@ class IRMASDataModule(pl.LightningDataModule):
         self.train_dirs = train_dirs
         self.val_dirs = val_dirs
         self.test_dirs = test_dirs
-        self.train_only = train_only
+        self.train_only_dataset = train_only_dataset
         self.normalize_audio = normalize_audio
+        self.concat_two_samples = concat_two_samples
+        self.use_weighted_train_sampler = use_weighted_train_sampler
         self.setup()
 
     def prepare_data(self) -> None:
         """Has to be implemented to avoid object has no attribute 'prepare_data_per_node' error."""
+
+    def get_sample_class_weights(self, dataset: torch.utils.data.Dataset):
+        """The function returns n weights for n samples in the dataset.
+
+        Weights are caculated as (1 / class_count) of a particular example.
+        """
+
+        print("Caculating sample classes...")
+        one_hots = []
+        for _, one_hot, _ in tqdm(dataset):
+            one_hots.append(one_hot)
+        one_hots = torch.stack(one_hots)
+        class_counts = torch.sum(one_hots, dim=0)
+        weight_per_class = 1 / class_counts
+        examples_weights = one_hots * weight_per_class
+        _, example_max_weight = examples_weights.max(dim=-1, keepdim=False)
+        return example_max_weight
 
     def setup(self, stage=None):
         super().setup(stage)
@@ -72,31 +98,26 @@ class IRMASDataModule(pl.LightningDataModule):
             dataset_dirs=self.train_dirs,
             audio_transform=self.train_audio_transform,
             normalize_audio=self.normalize_audio,
+            concat_two_samples=self.concat_two_samples,
         )
 
-        if self.train_only:
-            self.test_dataset = IRMASDatasetTrain(
-                dataset_dirs=self.train_dirs,
-                audio_transform=self.val_audio_transform,
-                normalize_audio=self.normalize_audio,
-            )
-        else:
-            self.test_dataset = IRMASDatasetTest(
-                dataset_dirs=self.test_dirs,
-                audio_transform=self.val_audio_transform,
-                normalize_audio=self.normalize_audio,
-            )
-
-        if self.train_only:
+        if self.train_only_dataset:
+            self.test_dataset = self.train_dataset
             indices = np.arange(len(self.train_dataset))
             train_indices, val_indices = train_test_split(indices, test_size=0.2)
             test_indices = np.array([])
             # test_indices = val_indices
             self._sanity_check_difference(train_indices, val_indices)
         else:
+            self.test_dataset = IRMASDatasetTest(
+                dataset_dirs=self.test_dirs,
+                audio_transform=self.val_audio_transform,
+                normalize_audio=self.normalize_audio,
+            )
             train_indices = np.arange(len(self.train_dataset))
             val_test_indices = np.arange(len(self.test_dataset))
             val_indices, test_indices = split_by_ratio(val_test_indices, 0.8, 0.2)
+            self._sanity_check_difference(val_indices, test_indices)
 
         if self.dataset_fraction != 1:
             train_indices = np.random.choice(
@@ -143,7 +164,13 @@ class IRMASDataModule(pl.LightningDataModule):
             test_indices[-5:],
         )
 
-        self.train_sampler = SubsetRandomSampler(train_indices.tolist())
+        if self.use_weighted_train_sampler and stage["train"]:
+            samples_weight = self.get_sample_class_weights(self.train_dataset)
+            self.train_sampler = WeightedRandomSampler(
+                samples_weight, len(samples_weight)
+            )
+        else:
+            self.train_sampler = SubsetRandomSampler(train_indices.tolist())
         self.val_sampler = SubsetRandomSampler(val_indices.tolist())
         self.test_sampler = SubsetRandomSampler(test_indices.tolist())
 
@@ -164,8 +191,6 @@ class IRMASDataModule(pl.LightningDataModule):
             len(indices_a) + len(indices_b)
         ), "Some indices might contain non-unqiue values"
 
-
-
     def train_dataloader(self) -> DataLoader:
         return DataLoader(
             self.train_dataset,
@@ -173,11 +198,10 @@ class IRMASDataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             sampler=self.train_sampler,
             drop_last=self.drop_last_sample,
-            collate_fn=collate_fn,  
+            collate_fn=collate_fn,
         )
 
     def val_dataloader(self) -> DataLoader:
-
         """Uses test dataset files but sampler takes care that validation and test get different
         files."""
         return DataLoader(
@@ -198,17 +222,31 @@ class IRMASDataModule(pl.LightningDataModule):
             drop_last=self.drop_last_sample,
             collate_fn=collate_fn,
         )
-    
-def collate_fn(examples) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    lens = [len(x) for x, _ in examples]
-    max_len = np.max(lens)
 
-    tensor_shape = examples[0][0][0].shape
-    all_examples, all_labels, ex_ids = [], [], []
-    for i, (audio, label) in enumerate(examples):
-        all_examples.append(torch.cat(tuple([j.unsqueeze(0) for j in audio]), dim=0))
-        all_labels.append(torch.cat(tuple([label.unsqueeze(0) for _ in audio]), dim=0))
-        for _ in range(len(audio)):
-            ex_ids.append(i)
 
-    return torch.cat(tuple(all_examples), dim=0), torch.cat(tuple(all_labels), dim=0), torch.tensor(ex_ids)
+def collate_fn(
+    examples: list[tuple[torch.Tensor], torch.Tensor]
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    # TODO: remove this comment once you verify that collate_fn works
+    """
+    examples: list[tuple[chunk tensor], label tensor]
+    all_audio_chunks:
+    Args:
+        examples: _description_
+
+    Returns:
+        tuple[torch.Tensor, torch.Tensor, torch.Tensor]: _description_
+    """
+
+    all_audio_chunks, all_labels, file_ids = [], [], []
+    for i, (audio_chunks, label) in enumerate(examples):
+        for audio_chunk in audio_chunks:
+            all_audio_chunks.append(audio_chunk.unsqueeze(0))
+            all_labels.append(label.unsqueeze(0))
+            file_ids.append(i)
+
+    return (
+        torch.cat(tuple(all_audio_chunks), dim=0),
+        torch.cat(tuple(all_labels), dim=0),
+        torch.tensor(file_ids),
+    )

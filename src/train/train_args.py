@@ -9,10 +9,12 @@ import argparse
 
 import pytorch_lightning as pl
 import torch
+from pytorch_lightning.trainer import Trainer
 
 import src.config.config_defaults as config_defaults
 import src.utils.utils_functions as utils_functions
-from src.features.audio_transform import AudioTransforms, SupportedAugmentations
+from src.features.audio_transform import AudioTransforms
+from src.features.supported_augmentations import SupportedAugmentations
 from src.model.model import SupportedModels
 from src.model.optimizers import OptimizerType, SchedulerType
 from src.utils.utils_exceptions import InvalidArgument
@@ -26,13 +28,14 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
-    lightning_parser = pl.Trainer.add_argparse_args(parser)
-    lightning_parser.set_defaults(
-        log_every_n_steps=config_defaults.DEFAULT_LOG_EVERY_N_STEPS,
-        epochs=config_defaults.DEFAULT_EPOCHS,
-        accelerator="gpu" if torch.cuda.is_available() else "cpu",
-        devices=-1,  # use all devices
-    )
+    # TODO: fix
+    # lightning_parser = pl.Trainer.add_argparse_args(parser)
+    # lightning_parser.set_defaults(
+    #     log_every_n_steps=config_defaults.DEFAULT_LOG_EVERY_N_STEPS,
+    #     epochs=config_defaults.DEFAULT_EPOCHS,
+    #     accelerator="gpu" if torch.cuda.is_available() else "cpu",
+    #     devices=-1,  # use all devices
+    # )
 
     user_group = parser.add_argument_group(ARGS_GROUP_NAME)
 
@@ -89,7 +92,7 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         type=str,
         help="Dataset root directories that will be used for training, validation and testing",
         required=True,
-        default=[config_defaults.PATH_TRAIN],
+        default=[config_defaults.PATH_IRMAS_TRAIN],
     )
 
     user_group.add_argument(
@@ -108,12 +111,23 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
     )
 
     user_group.add_argument(
+        "--freeze-train-bn",
+        help="Whether or not to train the batch norm during the frozen stage of the training.",
+        action="store_true",
+        default=config_defaults.DEFAULT_FREEZE_TRAIN_BN,
+    )
+    user_group.add_argument(
         "--normalize-audio",
         help="Normalize audio to [-1, 1]",
         action="store_true",
         default=config_defaults.DEFAULT_NORMALIZE_AUDIO,
     )
-
+    user_group.add_argument(
+        "--train-only-dataset",
+        help="Use only the train portion of the dataset and split it 0.8 0.2",
+        action="store_true",
+        default=config_defaults.DEFAULT_ONLY_TRAIN_DATASET,
+    )
     user_group.add_argument(
         "--drop-last",
         help="Drop last sample if the size of the sample is smaller than batch size",
@@ -169,8 +183,8 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
 
     user_group.add_argument(
         "--augmentations",
-        default=None,
-        nargs="+",
+        default=config_defaults.DEFAULT_AUGMENTATIONS,
+        nargs="*",
         choices=list(SupportedAugmentations),
         type=SupportedAugmentations.from_string,
         help="Transformation which will be performed on audio and labels",
@@ -191,7 +205,12 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         action="store_true",
         default=False,
     )
-
+    user_group.add_argument(
+        "--use-weighted-train-sampler",
+        help="Use weighted train sampler instead of a random one.",
+        action="store_true",
+        default=config_defaults.DEFAULT_USE_WEIGHTED_TRAIN_SAMPLER,
+    )
     user_group.add_argument(
         "--ckpt",
         help=".ckpt file, automatically restores model, epoch, step, LR schedulers, etc...",
@@ -309,7 +328,14 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         if group.title:
             args_dict[group.title] = argparse.Namespace(**group_dict)
 
-    args, pl_args = args_dict[ARGS_GROUP_NAME], args_dict["pl.Trainer"]
+    # TODO: fix
+    # args, pl_args = args_dict[ARGS_GROUP_NAME], args_dict["pl.Trainer"]
+    args, pl_args = args_dict[ARGS_GROUP_NAME], argparse.Namespace(
+        log_every_n_steps=config_defaults.DEFAULT_LOG_EVERY_N_STEPS,
+        accelerator="gpu" if torch.cuda.is_available() else "cpu",
+        max_epochs=args.epochs,
+        devices=-1,  # use all devices
+    )
 
     """User arguments which override PyTorch Lightning arguments"""
     if args.quick:
