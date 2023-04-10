@@ -5,22 +5,8 @@ import torch_audiomentations
 from torchaudio.transforms import FrequencyMasking, TimeMasking
 from torchvision.transforms import RandomErasing
 
-from src.utils.utils_functions import EnumStr
-
-
-class SupportedAugmentations(EnumStr):
-    """List of supported spectrogram augmentations we use."""
-
-    TIME_STRETCH = "time_stretch"
-    FREQ_MASK = "freq_mask"
-    TIME_MASK = "time_mask"
-    RANDOM_ERASE = "random_erase"
-    RANDOM_PIXELS = "radnom_pixels"
-    COLOR_NOISE = "color_noise"
-    BANDPASS_FILTER = "bandpass"
-    PITCH = "pitch"
-    TIMEINV = "timeinv"
-    CONCAT_TWO = "concat_two"
+from src.config.config import config
+from src.enums.enums import SupportedAugmentations
 
 
 class WaveformAugmentation:
@@ -28,8 +14,8 @@ class WaveformAugmentation:
         self,
         augmentation_enums: list[SupportedAugmentations],
         sampling_rate: int,
-        stretch_factors=[0.8, 1.2],
-        time_inversion_p=0.5,
+        stretch_factors,
+        time_inversion_p,
         **kwargs,
     ):
         self.augmentation_enums = augmentation_enums
@@ -85,10 +71,10 @@ class SpectrogramAugmentation:
         self,
         augmentation_enums: list[SupportedAugmentations],
         sampling_rate: int,
-        freq_mask_param=30,
-        time_mask_param=30,
-        hide_random_pixels_p=0.25,
-        std_noise=0.01,
+        freq_mask_param,
+        time_mask_param,
+        hide_random_pixels_p,
+        std_noise,
         **kwargs,
     ):
         self.augmentation_enums = augmentation_enums
@@ -99,12 +85,14 @@ class SpectrogramAugmentation:
         self.std_noise = std_noise
 
     def __call__(self, spectrogram: torch.Tensor | np.ndarray) -> torch.Tensor:
+        if isinstance(spectrogram, np.ndarray):
+            spectrogram = torch.tensor(spectrogram)
+
         if len(self.augmentation_enums) == 0:
             return spectrogram
 
         return_batch_dim = True
-        if isinstance(spectrogram, np.ndarray):
-            spectrogram = torch.tensor(spectrogram)
+
         if len(spectrogram.shape) == 2:
             return_batch_dim = False
             spectrogram = spectrogram.unsqueeze(0)
@@ -141,14 +129,12 @@ class SpectrogramAugmentation:
 
 def get_augmentations(args):
     train_kwargs = dict(
-        augmentation_enums=args.augmentations,
-        sampling_rate=args.sampling_rate,
-        **args.aug_kwargs,
+        augmentation_enums=config.augmentations,
+        sampling_rate=config.sampling_rate,
+        **config.aug_kwargs,
     )
-    val_kwargs = dict(
-        augmentation_enums=[],
-        sampling_rate=args.sampling_rate,
-    )
+    val_kwargs = {**train_kwargs, "augmentation_enums": []}
+
     train_spectrogram_augmentation = SpectrogramAugmentation(**train_kwargs)
     train_waveform_augmentation = WaveformAugmentation(**train_kwargs)
     val_spectrogram_augmentation = SpectrogramAugmentation(**val_kwargs)

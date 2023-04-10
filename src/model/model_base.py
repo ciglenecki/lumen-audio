@@ -9,27 +9,17 @@ from pytorch_lightning.callbacks import BaseFinetuning
 from pytorch_lightning.loggers import TensorBoardLogger
 
 import src.config.config_defaults as config_defaults
-from src.model.optimizers import OptimizerType, SchedulerType, our_configure_optimizers
+from src.config.config import config
+from src.enums.enums import MetricMode, OptimizeMetric, SupportedModels
+from src.model.fluffy import FluffyConfig
+from src.model.optimizers import (
+    SupportedOptimizer,
+    SupportedScheduler,
+    our_configure_optimizers,
+)
 from src.train.metrics import get_metrics
-from src.utils.utils_functions import EnumStr, add_prefix_to_keys
-from src.utils.utils_train import MetricMode, OptimizeMetric, get_all_modules_after
-
-
-class SupportedModels(EnumStr):
-    AST = "ast"
-    EFFICIENT_NET_V2_S = "efficient_net_v2_s"
-    EFFICIENT_NET_V2_M = "efficient_net_v2_m"
-    EFFICIENT_NET_V2_L = "efficient_net_v2_l"
-    RESNEXT50_32X4D = "resnext50_32x4d"
-    RESNEXT101_32X8D = "resnext101_32x8d"
-    RESNEXT101_64X4D = "resnext101_64x4d"
-    WAV2VEC = "wav2vec"
-    WAV2VECCNN = "wav2vec_cnn"
-
-
-class ModelInputDataType:
-    WAVEFORM = "waveform"
-    IMAGE = "image"
+from src.utils.utils_functions import add_prefix_to_keys
+from src.utils.utils_train import get_all_modules_after
 
 
 class ModelBase(pl.LightningModule, ABC):
@@ -37,24 +27,30 @@ class ModelBase(pl.LightningModule, ABC):
 
     def __init__(
         self,
-        batch_size: int = config_defaults.DEFAULT_BATCH_SIZE,
-        epochs: Optional[int] = config_defaults.DEFAULT_EPOCHS,
-        freeze_train_bn: bool = config_defaults.DEFAULT_FREEZE_TRAIN_BN,
-        head_after: str | None = None,
-        backbone_after: str | None = None,
-        lr: float = config_defaults.DEFAULT_LR,
-        lr_onecycle_max: int | None = config_defaults.DEFAULT_LR_ONECYCLE_MAX,
-        lr_warmup: Optional[float] = config_defaults.DEFAULT_LR_WARMUP,
-        metric_mode: MetricMode = config_defaults.DEFAULT_PLATEAU_EPOCH_PATIENCE,
+        batch_size: int = config.batch_size,
+        epochs: Optional[int] = config.epochs,
+        finetune_head: bool = config.finetune_head,
+        finetune_head_epochs: Optional[int] = config.finetune_head_epochs,
+        fluffy_config: FluffyConfig | None = None,
+        freeze_train_bn: bool = config.freeze_train_bn,
+        head_after: str | None = config.head_after,
+        backbone_after: str | None = config.backbone_after,
+        loss_function=config.loss_function,
+        lr: float = config.lr,
+        lr_onecycle_max: int | None = config.lr_onecycle_max,
+        lr_warmup: Optional[float] = config.lr_warmup,
+        metric_mode: MetricMode = config.metric_mode,
+        model_enum: SupportedModels = config.model,
         num_labels: int = config_defaults.DEFAULT_NUM_LABELS,
-        optimization_metric: OptimizeMetric = config_defaults.DEFAULT_METRIC_MODE,
-        optimizer_type: OptimizerType = config_defaults.DEFAULT_OPTIMIZE_METRIC,
-        plateau_epoch_patience: int = config_defaults.DEFAULT_PLATEAU_EPOCH_PATIENCE,
-        pretrained: bool = config_defaults.DEFAULT_PRETRAINED,
-        scheduler_type: SchedulerType = config_defaults.DEFAULT_LR_SCHEDULER,
-        unfreeze_at_epoch: Optional[int] = config_defaults.DEFAULT_UNFREEZE_AT_EPOOCH,
-        weight_decay: float = config_defaults.DEFAULT_WEIGHT_DECAY,
-        log_per_instrument_metrics=config_defaults.DEFAULT_LOG_PER_INSTRUMENT_METRICS,
+        optimization_metric: OptimizeMetric = config.metric,
+        optimizer_type: SupportedOptimizer = config.optimizer,
+        plateau_epoch_patience: int = config.plateau_epoch_patience,
+        pretrained: bool = config.pretrained,
+        scheduler_type: SupportedScheduler = config.scheduler,
+        use_fluffy: bool = config.use_fluffy,
+        weight_decay: float = config.weight_decay,
+        log_per_instrument_metrics=config.log_per_instrument_metrics,
+        pretrained_tag: str = config.pretrained_tag,
         *args,
         **kwargs,
     ) -> None:
@@ -81,15 +77,21 @@ class ModelBase(pl.LightningModule, ABC):
 
             optimization_metric: metric which is responsible for model checkpointing (not done here!) and reducing lr via the reduce on plateau lr scheduler
 
-            optimizer_type: OptimizerType.ADAM, ADAMW
+            optimizer_type: SupportedOptimizer.ADAM, ADAMW
 
             plateau_epoch_patience: how many epochs should pass, without metric getting better, before reduce on plateau scheduler lowers the lr
 
             pretrained: use pretrained model
 
-            scheduler_type: SchedulerType.ONECYCLE, SchedulerType.PLATEAU...
+            pretrained_tag: weights which will be loaded
 
-            unfreeze_at_epoch: at which epoch should the model be unfrozen? warning: unfreezing is not done here. It's done by the finetuning callback.
+            scheduler_type: SupportedScheduler.ONECYCLE, SupportedScheduler.PLATEAU...
+
+            use_fluffy: bool, use or don't use fluffy
+
+            finetune_head: Performs head only finetuning for finetune_head_epochs epochs with starting lr of lr_warmup which eventually becomes lr.
+
+            finetune_head_epochs: at which epoch should the model be unfrozen? warning: unfreezing is not done here. It's done by the finetuning callback.
 
             weight_decay
         """
@@ -99,39 +101,33 @@ class ModelBase(pl.LightningModule, ABC):
         self.backbone_after = backbone_after
         self.batch_size = batch_size
         self.epochs = epochs
+        self.fluffy_config = fluffy_config
         self.freeze_train_bn = freeze_train_bn
-        self.has_finetuning = unfreeze_at_epoch is not None
         self.head_after = head_after
         self.log_per_instrument_metrics = log_per_instrument_metrics
+        self.loss_function = loss_function
         self.lr_backbone = lr  # lr once backbone gets unfrozen
         self.lr_onecycle_max = lr_onecycle_max
         self.lr_warmup = lr_warmup  # starting warmup lr
         self.metric_mode = metric_mode
+        self.model_enum = model_enum
         self.num_labels = num_labels
         self.optimization_metric = optimization_metric
         self.optimizer_type = optimizer_type
         self.plateau_epoch_patience = plateau_epoch_patience
         self.pretrained = pretrained
+        self.pretrained_tag = pretrained_tag
         self.scheduler_type = scheduler_type
-        self.unfreeze_at_epoch = unfreeze_at_epoch
+        self.use_fluffy = use_fluffy
+        self.finetune_head = finetune_head
+        self.finetune_head_epochs = finetune_head_epochs
         self.weight_decay = weight_decay
 
-        if self.lr_warmup:
+        if self.finetune_head:
             # Initially set to learning rate to warmup. later ot will change to 'normal' lr
             self.lr = self.lr_warmup
         else:
             self.lr = lr
-
-        assert int(bool(self.unfreeze_at_epoch)) + int(bool(self.lr_warmup)) in [
-            0,
-            2,
-        ], "Both should exist or both shouldn't exist!"
-
-        assert int(bool(self.head_after)) + int(bool(self.backbone_after)) in [
-            0,
-            2,
-        ], "Both should exist or both shouldn't exist!"
-
         # save in case indices change with config changes
         self.backup_instruments = config_defaults.INSTRUMENT_TO_IDX
 
@@ -147,7 +143,7 @@ class ModelBase(pl.LightningModule, ABC):
             BaseFinetuning.make_trainable(self.trainable_backbone())
             BaseFinetuning.make_trainable(self.head())
 
-        if self.has_finetuning:
+        if self.finetune_head:
             self._set_finetune_until_step()
         return out
 
@@ -239,7 +235,7 @@ class ModelBase(pl.LightningModule, ABC):
         }
 
     def is_finetuning_phase(self):
-        if not self.has_finetuning:
+        if not self.finetune_head:
             return False
 
         return (self.finetune_until_step is not None) and (
@@ -267,12 +263,16 @@ class ModelBase(pl.LightningModule, ABC):
         `finetune_until_step` and learning rate becomes `lr_backbone`, the finetuning phase is
         over.
 
-        lr = ((lr_warmup * numerator) * numerator) ... * numerator))  =  lr_warmup * (numerator)^unfreeze_backbone_at_epoch
-                                                    ^ multiplying unfreeze_backbone_at_epoch times
+        lr = ((lr_warmup * numerator) * numerator) ... * numerator))  =  lr_warmup * (numerator)^finetune_head_epochs
+                                                    ^ multiplying finetune_head_epochs times
         """
-        assert self.unfreeze_at_epoch is not None
+        assert (
+            isinstance(self.finetune_head_epochs, int) and self.finetune_head_epochs > 0
+        )
 
-        self.finetune_until_step = self.num_of_steps_in_epoch * self.unfreeze_at_epoch
+        self.finetune_until_step = (
+            self.num_of_steps_in_epoch * self.finetune_head_epochs
+        )
 
         _a = self.lr_backbone / self.lr_warmup
         _b = self.finetune_until_step - 1
@@ -282,7 +282,7 @@ class ModelBase(pl.LightningModule, ABC):
             np.log(self.lr_backbone),
             np.log(self.lr_warmup)
             + (self.finetune_until_step - 1) * np.log(self.finetune_lr_nominator),
-        ), "should be: lr = lr_warmup * (numerator)^unfreeze_backbone_at_epoch"
+        ), "should be: lr = lr_warmup * (numerator)^finetune_head_epochs"
 
     def _lr_finetuning_step(self, optimizer_idx):
         """Exponential learning rate update.
@@ -316,8 +316,8 @@ class ModelBase(pl.LightningModule, ABC):
             self._set_lr(self.lr_warmup)
 
     def configure_optimizers(self):
-        if self.unfreeze_at_epoch is not None:
-            scheduler_epochs = self.epochs - self.unfreeze_at_epoch
+        if self.finetune_head:
+            scheduler_epochs = self.epochs - self.finetune_head_epochs
             total_lr_sch_steps = self.num_of_steps_in_epoch * scheduler_epochs
 
         else:

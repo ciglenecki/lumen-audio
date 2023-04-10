@@ -4,7 +4,8 @@ import numpy as np
 import torch
 
 from src.config import config_defaults
-from src.utils.utils_exceptions import InvalidDataException
+from src.enums.enums import SupportedDatasets
+from src.utils.utils_exceptions import InvalidArgument, InvalidDataException
 
 
 def encode_drums(drum: str | None) -> np.ndarray:
@@ -36,7 +37,7 @@ def encode_drums(drum: str | None) -> np.ndarray:
     return array
 
 
-def decode_drums(one_hot: np.ndarray) -> tuple[str | None]:
+def decode_drums(one_hot: np.ndarray) -> str:
     """Return key from one hot encoded drum vector."""
     indices = np.where(one_hot == 1)[0]
 
@@ -81,7 +82,7 @@ def encode_genre(genre: str | None) -> np.ndarray:
     return array
 
 
-def decode_genre(one_hot: np.ndarray) -> tuple[str | None]:
+def decode_genre(one_hot: np.ndarray) -> str:
     """Return key from one hot encoded genre vector."""
     indices = np.where(one_hot == 1)[0]
     if len(indices) == 0:
@@ -146,7 +147,9 @@ def collate_fn_spectrogram(
     )
 
 
-def chunk_collate_audio(batch: list[torch.Tensor, torch.Tensor]):
+def chunk_collate_audio(
+    batch: list[tuple[torch.Tensor, torch.Tensor]], max_audio_width
+):
     """Batch is tuple (waveform, label)
 
     Example:
@@ -190,7 +193,7 @@ def chunk_collate_audio(batch: list[torch.Tensor, torch.Tensor]):
     """
     audio_chunks, labels, file_indices = [], [], []
     for file_idx, (audio, label) in enumerate(batch):
-        chunks = list(torch.split(audio, config_defaults.DEFAULT_AUDIO_CHUNK_SIZE))
+        chunks = list(torch.split(audio, max_audio_width))
         audio_chunks.extend(chunks)  # [[5,6], [1,2], [3]]
         repeat_times = len(chunks)
 
@@ -210,6 +213,22 @@ def chunk_collate_audio(batch: list[torch.Tensor, torch.Tensor]):
     file_indices = torch.vstack(file_indices)  # Shape [audio_chunks, 1]
 
     return audio_chunks, labels, file_indices
+
+
+def parse_dataset_enum_dirs(
+    string: str,
+) -> list[tuple[SupportedDatasets, Path]]:
+    pair = string.split(":")
+    if len(pair) != 2:
+        raise InvalidArgument(
+            f"Pair {pair} needs to have two elements. First arg is {list(SupportedDatasets)} and the second is the path "
+        )
+    dataset_name, dataset_path = pair
+    dataset = SupportedDatasets(dataset_name)
+    dataset_path = Path(dataset_path)
+    if not dataset_path.exists():
+        raise InvalidArgument(f"Dataset path {dataset_path} doesn't exist.")
+    return dataset, dataset_path
 
 
 def calc_instrument_weight(per_instrument_count: dict[str, int], as_tensor=True):

@@ -5,17 +5,6 @@ import torch.nn as nn
 from torchmetrics.metric import Metric
 
 from src.utils.utils_exceptions import InvalidModuleStr
-from src.utils.utils_functions import EnumStr
-
-
-class MetricMode(EnumStr):
-    MIN = "min"
-    MAX = "max"
-
-
-class OptimizeMetric(EnumStr):
-    VAL_HAMMING = "val/hamming_distance"
-    VAL_F1 = "val/f1"
 
 
 def get_all_modules_after(
@@ -126,7 +115,6 @@ def get_last_fc_in_channels(
     image_size: int,
     num_channels: int = 3,
 ) -> Any:
-
     """Caculate output of the fully connected layer by forward passing a dummy image throught the
     backbone.
 

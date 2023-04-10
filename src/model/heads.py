@@ -1,14 +1,9 @@
 import torch.nn as nn
 
+from src.enums.enums import SupportedHeads
 from src.model.attention import AttentionLayer
 from src.utils.utils_exceptions import UnsupportedHead
-from src.utils.utils_functions import EnumStr
 from src.utils.utils_model import filter_modules, get_linear_init, initialize_weights
-
-
-class SupportedHeads(EnumStr):
-    DEEP_HEAD = "deep_head"
-    ATTENTION_HEAD = "attention_head"
 
 
 def get_head_constructor(head_enum):

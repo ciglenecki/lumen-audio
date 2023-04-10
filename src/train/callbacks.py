@@ -132,7 +132,7 @@ class FinetuningCallback(BaseFinetuning):
     +---------------------+--------------------------+----------------------+-----------+
     | n=0                 | frozen                   | frozen               | trainable |
     | n=1                 | frozen                   | frozen               | trainable |
-    | n=unfreeze_at_epoch | frozen                   | trainable            | trainable |
+    | n=finetune_head_epochs | frozen                   | trainable            | trainable |
     | n=2                 | frozen                   | trainable            | trainable |
     | n=3                 | frozen                   | trainable            | trainable |
     |                     |                          |                      |           |
@@ -142,9 +142,9 @@ class FinetuningCallback(BaseFinetuning):
     +---------------------+--------------------------+----------------------+-----------+
     """
 
-    def __init__(self, unfreeze_backbone_at_epoch: int, train_bn=False) -> None:
+    def __init__(self, finetune_head_epochs: int, train_bn=False) -> None:
         super().__init__()
-        self.unfreeze_at_epoch = unfreeze_backbone_at_epoch
+        self.finetune_head_epochs = finetune_head_epochs
         self.curr_epoch = 0
         self.train_bn = train_bn
 
@@ -157,7 +157,7 @@ class FinetuningCallback(BaseFinetuning):
         Freeze depends on the state of the dict load.
         """
 
-        ASSUMPTIONS_TEXT = "To use this callback, your Lightning Module has to implement the head() and trainable_backbone() which returns appropriate module parameters."
+        ASSUMPTIONS_TEXT = "To use this callback, your Lightning Module has to implement the head() and trainable_backbone() which returns appropriate module parameters. You should pass module names in the --backbone-after and --head-after arguments. Check the model summary to find the name of some submodule (e.g. encoder.layer.10.output)"
         assert hasattr(pl_module, "head"), ASSUMPTIONS_TEXT
         assert hasattr(pl_module, "trainable_backbone"), ASSUMPTIONS_TEXT
         assert pl_module.head(), ASSUMPTIONS_TEXT
@@ -167,14 +167,14 @@ class FinetuningCallback(BaseFinetuning):
     def state_dict(self) -> Dict[str, Any]:
         return {
             "internal_optimizer_metadata": self._internal_optimizer_metadata,
-            "unfreeze_at_epoch": self.unfreeze_at_epoch,
+            "finetune_head_epochs": self.finetune_head_epochs,
             "curr_epoch": self.curr_epoch,
             "train_bn": self.train_bn,
         }
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
         super().load_state_dict(state_dict)
-        self.unfreeze_at_epoch = state_dict["unfreeze_at_epoch"]
+        self.finetune_head_epochs = state_dict["finetune_head_epochs"]
         self.curr_epoch = state_dict["curr_epoch"]
         self.train_bn = state_dict["train_bn"]
 
@@ -182,7 +182,7 @@ class FinetuningCallback(BaseFinetuning):
         self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"
     ) -> None:
         super().on_fit_start(trainer, pl_module)
-        if self.curr_epoch <= self.unfreeze_at_epoch:
+        if self.curr_epoch <= self.finetune_head_epochs:
             self.freeze_before_training(pl_module)
 
     def freeze_before_training(self, pl_module: "pl.LightningModule") -> None:
@@ -203,8 +203,8 @@ class FinetuningCallback(BaseFinetuning):
         optimizer: Optimizer,
         opt_idx: int,
     ) -> None:
-        """Once the epoch reaches `unfreeze_at_epoch` the trainable backbone is unfrozen and it's
-        parameteres are added to the existing optimizer.
+        """Once the epoch reaches `finetune_head_epochs` the trainable backbone is unfrozen and
+        it's parameteres are added to the existing optimizer.
 
         Args:
             pl_module:
@@ -213,7 +213,7 @@ class FinetuningCallback(BaseFinetuning):
             opt_idx:
         """
         self.curr_epoch = epoch
-        if self.curr_epoch == self.unfreeze_at_epoch:
+        if self.curr_epoch == self.finetune_head_epochs:
             backbone_trainable = pl_module.trainable_backbone()
             BaseFinetuning.make_trainable(backbone_trainable)
             # requires_grad = True because we just made them trainable!

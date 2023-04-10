@@ -28,3 +28,7 @@ class UnsupportedHead(ValueError):
 
 class InvalidModuleStr(ValueError):
     """Invalid submodule string which isn't contained within the parent module."""
+
+
+class UnsupportedAudioTransforms(Exception):
+    pass
