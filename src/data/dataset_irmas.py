@@ -12,8 +12,9 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 
 import src.config.config_defaults as config_defaults
-from src.features.audio_transform import AudioTransformAST, AudioTransformBase
-from src.features.supported_augmentations import SupportedAugmentations
+from src.features.audio_to_ast import AudioTransformAST
+from src.features.audio_transform_base import AudioTransformBase
+from src.features.augmentations import SupportedAugmentations
 from src.utils.utils_audio import load_audio_from_file
 from src.utils.utils_dataset import encode_drums, encode_genre, multi_hot_indices
 from src.utils.utils_exceptions import InvalidDataException
@@ -106,6 +107,33 @@ class IRMASDatasetTrain(Dataset):
 
     def __len__(self) -> int:
         return len(self.dataset)
+
+    def calc_instrument_weight(self, as_tensor=True):
+        """Caculates weight for each class in the following way: count all negative samples and
+        divide them with positive samples.
+
+        Example:
+            guitar: 50       70/50
+            flute: 30        90/30
+            piano: 40        80/40
+        """
+
+        instruments = [k.value for k in config_defaults.InstrumentEnums]
+        weight_dict = {}
+        total = len(self)
+        for instrument in instruments:
+            positive = len(self.instrument_idx_list[instrument])
+            negative = total - positive
+            weight_dict[instrument] = negative / positive
+
+        if as_tensor:
+            weights = torch.zeros(config_defaults.DEFAULT_NUM_LABELS)
+            for instrument in weight_dict.keys():
+                instrument_idx = config_defaults.INSTRUMENT_TO_IDX[instrument]
+                weights[instrument_idx] = weight_dict[instrument]
+            return weights
+        else:
+            return weight_dict
 
     def _get_another_random_sample_idx(self, not_instrument_idx: int) -> int:
         """Returns a random sample whose label is NOT not_instrument_idx.

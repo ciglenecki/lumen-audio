@@ -9,7 +9,7 @@ from torchmetrics.classification import MultilabelF1Score
 from transformers import Wav2Vec2Config, Wav2Vec2Model
 
 import src.config.config_defaults as config_defaults
-from src.model.deep_head import DeepHead
+from src.model.heads import DeepHead
 from src.model.model_base import ModelBase
 
 
@@ -19,14 +19,14 @@ class Wav2VecWrapper(ModelBase):
     def __init__(
         self,
         model_name: str,
-        pooling_mode="mean",
+        time_dim_pooling_mode="mean",
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
 
         self.model_name = model_name
-        self.pooling_mode = pooling_mode
+        self.time_dim_pooling_mode = time_dim_pooling_mode
 
         self.loss_function = nn.BCEWithLogitsLoss()
 
@@ -51,7 +51,7 @@ class Wav2VecWrapper(ModelBase):
 
         self.save_hyperparameters()
 
-    def merged_strategy(self, hidden_states, mode="mean"):
+    def time_dim_pooling(self, hidden_states, mode="mean"):
         if mode == "mean":
             outputs = torch.mean(hidden_states, dim=1)
         elif mode == "sum":
@@ -71,7 +71,9 @@ class Wav2VecWrapper(ModelBase):
             output_attentions=False,
             return_dict=True,
         ).last_hidden_state
-        hidden_states = self.merged_strategy(hidden_states, mode=self.pooling_mode)
+        hidden_states = self.time_dim_pooling(
+            hidden_states, mode=self.time_dim_pooling_mode
+        )
 
         logits_pred = self.classifier(hidden_states)
         return logits_pred

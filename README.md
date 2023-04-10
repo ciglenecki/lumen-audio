@@ -42,6 +42,7 @@ Low priority tasks:
 
 Matej:
 
+- [ ] add fluffy support for all models
 - [ ] download non instrument audio files and write data loader which are NOT instruments (@matej)
 - [ ] check for all models edge cases (0.1 sec, 30 sec)
 - [ ] include relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)

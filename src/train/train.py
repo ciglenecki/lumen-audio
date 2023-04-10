@@ -12,8 +12,13 @@ from pytorch_lightning.callbacks import (
 
 from src.data.datamodule import IRMASDataModule
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
-from src.features.supported_augmentations import SupportedAugmentations
-from src.model.model import get_model
+from src.features.augmentations import (
+    SpectrogramAugmentation,
+    SupportedAugmentations,
+    WaveformAugmentation,
+    get_augmentations,
+)
+from src.model.model import ModelInputDataType, get_data_input_type, get_model
 from src.model.optimizers import SchedulerType
 from src.train.callbacks import (
     FinetuningCallback,
@@ -22,6 +27,7 @@ from src.train.callbacks import (
     TensorBoardHparamFixer,
 )
 from src.train.train_args import parse_args_train
+from src.utils.utils_dataset import chunk_collate_audio, collate_fn_spectrogram
 from src.utils.utils_functions import (
     add_prefix_to_keys,
     get_timestamp,
@@ -57,17 +63,33 @@ if __name__ == "__main__":
     print("Config:", to_yaml(vars(args)), sep="\n")
     print("Config PyTorch Lightning:", to_yaml(vars(pl_args)), sep="\n")
 
+    data_input_type = get_data_input_type(model_enum=args.model)
+    if data_input_type == ModelInputDataType.IMAGE:
+        collate_fn = collate_fn_spectrogram
+    elif data_input_type == ModelInputDataType.WAVEFORM:
+        collate_fn = chunk_collate_audio
+    else:
+        raise Exception(f"Unsupported data input type {data_input_type}")
+
+    (
+        train_spectrogram_augmentation,
+        train_waveform_augmentation,
+        val_spectrogram_augmentation,
+        val_waveform_augmentation,
+    ) = get_augmentations(args)
+
     train_audio_transform: AudioTransformBase = get_audio_transform(
-        args.audio_transform,
+        audio_transform_enum=args.audio_transform,
         sampling_rate=sampling_rate,
-        augmentation_enums=args.augmentations,
+        spectrogram_augmentation=train_spectrogram_augmentation,
+        waveform_augmentation=train_waveform_augmentation,
         dim=dim,
-        **aug_kwargs,
     )
     val_audio_transform: AudioTransformBase = get_audio_transform(
-        args.audio_transform,
+        audio_transform_enum=args.audio_transform,
         sampling_rate=sampling_rate,
-        augmentation_enums=[],
+        spectrogram_augmentation=val_spectrogram_augmentation,
+        waveform_augmentation=val_waveform_augmentation,
         dim=dim,
     )
 
@@ -78,11 +100,15 @@ if __name__ == "__main__":
         drop_last_sample=args.drop_last,
         train_audio_transform=train_audio_transform,
         val_audio_transform=val_audio_transform,
+        collate_fn=collate_fn,
         normalize_audio=normalize_audio,
         train_only_dataset=args.train_only_dataset,
         concat_two_samples=SupportedAugmentations.CONCAT_TWO in args.augmentations,
         use_weighted_train_sampler=use_weighted_train_sampler,
     )
+
+    model = get_model(args, pl_args)
+    print_modules(model)
 
     train_dataloader_size = len(datamodule.train_dataloader())
 
@@ -127,9 +153,6 @@ if __name__ == "__main__":
         version=".",
     )
 
-    model = get_model(args, pl_args)
-    print_modules(model)
-
     callbacks = [
         callback_checkpoint,
         callback_early_stopping,
@@ -146,10 +169,9 @@ if __name__ == "__main__":
 
     callbacks.append(ModelSummary(max_depth=4))
 
-    # TODO; fix pl.Trainer.from_argparse_args(
-    # auto_lr_find=args.scheduler == SchedulerType.AUTO_LR,
-    trainer: pl.Trainer = pl.Trainer(
-        **vars(pl_args),
+    auto_lr_find = args.scheduler == SchedulerType.AUTO_LR
+    trainer: pl.Trainer = pl.Trainer.from_argparse_args(
+        pl_args,
         logger=[tensorboard_logger],
         default_root_dir=output_dir,
         callbacks=callbacks,

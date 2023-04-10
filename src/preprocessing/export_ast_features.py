@@ -13,7 +13,7 @@ from transformers import ASTConfig, ASTModel
 
 import src.config.config_defaults as config_defaults
 from src.data.dataset_irmas import IRMASDatasetTrain
-from src.features.audio_transform import AudioTransformAST
+from src.features.audio_to_ast import AudioTransformAST
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 

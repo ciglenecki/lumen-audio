@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pyrootutils
 
-from src.features.supported_augmentations import SupportedAugmentations
+from src.features.augmentations import SupportedAugmentations
 from src.model.optimizers import OptimizerType, SchedulerType
 from src.utils.utils_train import MetricMode, OptimizeMetric
 
@@ -54,6 +54,8 @@ DEFAULT_MAX_SEQ_LENGTH = 3
 DEFAULT_FREEZE_TRAIN_BN = True
 DEFAULT_USE_WEIGHTED_TRAIN_SAMPLER = False
 DEFAULT_ONLY_TRAIN_DATASET = False
+DEFAULT_AUDIO_CHUNK_SIZE = 16_000 * 3
+DEFAULT_SPECTROGRAM_CHUNK_SIZE = 130
 
 DEFAULT_AUGMENTATIONS = [
     SupportedAugmentations.TIME_STRETCH,

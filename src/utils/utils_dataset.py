@@ -1,4 +1,7 @@
+from pathlib import Path
+
 import numpy as np
+import torch
 
 from src.config import config_defaults
 from src.utils.utils_exceptions import InvalidDataException
@@ -111,6 +114,57 @@ def multi_hot_indices(indices: np.ndarray | list, size: int) -> np.ndarray:
     array = np.zeros(size, dtype=np.int8)
     array[indices] = 1
     return array
+
+
+def collate_fn_spectrogram(
+    examples: list[tuple[torch.Tensor], torch.Tensor]
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """
+    examples: list[tuple[chunk tensor], label tensor]
+    all_audio_chunks:
+    Args:
+        examples: _description_
+
+    Returns:
+        tuple[torch.Tensor, torch.Tensor, torch.Tensor]: _description_
+    """
+
+    all_audio_chunks, all_labels, file_ids = [], [], []
+    for i, (audio_chunks, label) in enumerate(examples):
+        for audio_chunk in audio_chunks:
+            all_audio_chunks.append(audio_chunk.unsqueeze(0))
+            all_labels.append(label.unsqueeze(0))
+            file_ids.append(i)
+
+    return (
+        torch.cat(tuple(all_audio_chunks), dim=0),
+        torch.cat(tuple(all_labels), dim=0),
+        torch.tensor(file_ids),
+    )
+
+
+def chunk_collate_audio(batch: list[torch.Tensor, torch.Tensor]):
+    """
+    batch = [
+        file1_waveform, [1,0,0]
+        file2_waveform, [0,0,1]
+    ]
+    """
+    audios, labels, file_ids = [], [], []
+    for i, (audio, label) in enumerate(batch):
+        chunks = torch.split(audio, config_defaults.DEFAULT_AUDIO_CHUNK_SIZE)
+        labs = label.repeat([len(chunks), 1])
+        audios.extend(chunks)
+        labels.append(labs)
+        file_ids.append(i)
+
+    labels = torch.vstack(labels)
+    return (
+        torch.nn.utils.rnn.pad_sequence(
+            audios, batch_first=True, padding_value=0.0
+        ).view(-1, config_defaults.DEFAULT_AUDIO_CHUNK_SIZE),
+        labels,
+    )
 
 
 if __name__ == "__main__":
