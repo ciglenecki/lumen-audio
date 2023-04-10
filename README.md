@@ -25,9 +25,8 @@ Tasks:
 - [ ] add tripplet loss or (classification + perceptual distance)
 - [ ] design an augmentation that we can use for progressive training
 - [ ] use validation examples in train (without data leakage)
-- [ ] try out focal loss
-- [ ] try out label smoothing
-
+- [ ] try out focal loss, label smoothing
+- [ ] implement saving the embeddings of each model for visualizations using dimensionality reduction
 
 Low priority tasks:
 - [ ] convert all augmentations so they happen on the GPU
@@ -92,8 +91,6 @@ Else
   - problem with multi-head: number of heads depends on the number of instruments
     - problem with Kiklop but it's manifseted in number of weights
   - Fluffy problem: class disbalans, what's the appropriate loss function. Will the training be stable?
-
-- link for the [Experiment sheet](https://docs.google.com/spreadsheets/d/17wctX1I3rz1vQsjdwkBjo_iNFGvBCI7i6wYUDeliGBQ/edit#gid=0)
 
 ## Setup
 
