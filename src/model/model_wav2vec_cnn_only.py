@@ -102,7 +102,7 @@ class Wav2VecCNNWrapper(ModelBase):
         return logits_pred
 
     def _step(self, batch, batch_idx, type: str):
-        audio, y, _ = batch
+        audio, y, file_indices = batch
 
         logits_pred = self.forward(audio)
         y_pred_prob = torch.sigmoid(logits_pred)

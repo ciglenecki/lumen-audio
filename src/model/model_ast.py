@@ -62,7 +62,7 @@ class ASTModelWrapper(ModelBase):
         return out.loss, out.logits
 
     def _step(self, batch, batch_idx, type: str):
-        spectrogram, y, files_id = batch
+        spectrogram, y, file_indices = batch
 
         loss, logits_pred = self.forward(spectrogram, labels=y)
         y_pred_prob = torch.sigmoid(logits_pred)
@@ -87,7 +87,7 @@ class ASTModelWrapper(ModelBase):
                     [4, 4, 4]]))
             """
 
-            y_final_out, _ = scatter_max(y_pred, files_id, dim=0)
+            y_final_out, _ = scatter_max(y_pred, file_indices, dim=0)
             print(y_final_out)
 
         return self.log_and_return_loss_step(
