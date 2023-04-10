@@ -10,8 +10,6 @@ from src.model.heads import AttentionHead, DeepHead
 
 @dataclass
 class FluffyConfig:
-    """Class for keeping track of an item in inventory."""
-
     use_multiple_optimizers: bool = True
     classifer_constructor: Callable = DeepHead
 

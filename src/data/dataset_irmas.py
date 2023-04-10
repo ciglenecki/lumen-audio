@@ -110,7 +110,7 @@ class IRMASDatasetTrain(Dataset):
 
     def calc_instrument_weight(self, as_tensor=True):
         """Caculates weight for each class in the following way: count all negative samples and
-        divide them with positive samples.
+        divide them with positive samples. Positive is the same label, negative is a different one.
 
         Example:
             guitar: 50       70/50
