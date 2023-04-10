@@ -35,4 +35,5 @@ class AudioToWav2Vec2CNN(AudioTransformBase):
 
     def process(self, audio: torch.Tensor | np.ndarray) -> torch.Tensor:
         audio = self.waveform_augmentation(audio)
+        audio = torch.tensor(audio)
         return audio

@@ -201,6 +201,7 @@ class FinetuningCallback(BaseFinetuning):
         pl_module: "pl.LightningModule",
         epoch: int,
         optimizer: Optimizer,
+        opt_idx: int,
     ) -> None:
         """Once the epoch reaches `unfreeze_at_epoch` the trainable backbone is unfrozen and it's
         parameteres are added to the existing optimizer.

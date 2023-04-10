@@ -22,7 +22,7 @@ class OptimizerType(EnumStr):
 
 
 def our_configure_optimizers(
-    per_optim_parameters: list[Iterator[Parameter]],
+    list_of_module_params: list[Iterator[Parameter]],
     scheduler_type: SchedulerType,
     metric_mode: MetricMode,
     plateau_epoch_patience: int,
@@ -37,7 +37,7 @@ def our_configure_optimizers(
 ) -> tuple[list[torch.optim.Optimizer], list[torch.optim.lr_scheduler.LRScheduler]]:
     """
 
-    WARNING: returns N optimizers for each parameter group in `per_optim_parameters`. You should almost always send a single module.parameters() wrapped with a list []
+    WARNING: returns N optimizers for each parameter group in `list_of_module_params`. You should almost always send a single module.parameters() wrapped with a list []
     Set optimizer's learning rate to backbone. Why?
 
     - lr scheduler starts modifying lr after finetuning, it's starting lr is `lr_backbone`
@@ -50,11 +50,11 @@ def our_configure_optimizers(
     optimizers = []
     schedulers = []
 
-    if len(per_optim_parameters) > 1:
+    if len(list_of_module_params) > 1:
         print(
             "WARNING: you are creating multiple optimizers instead of using just one."
         )
-    for parameters in per_optim_parameters:
+    for parameters in list_of_module_params:
         if optimizer_type is OptimizerType.ADAMW:
             optimizer = torch.optim.AdamW(
                 parameters,

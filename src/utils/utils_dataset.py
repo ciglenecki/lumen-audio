@@ -150,21 +150,21 @@ def chunk_collate_audio(batch: list[torch.Tensor, torch.Tensor]):
         file2_waveform, [0,0,1]
     ]
     """
-    audios, labels, file_ids = [], [], []
-    for i, (audio, label) in enumerate(batch):
-        chunks = torch.split(audio, config_defaults.DEFAULT_AUDIO_CHUNK_SIZE)
-        labs = label.repeat([len(chunks), 1])
-        audios.extend(chunks)
-        labels.append(labs)
-        file_ids.append(i)
+    audio_chunks, labels, file_ids = [], [], []
+    for file_idx, (audio, label) in enumerate(batch):
+        chunks = list(torch.split(audio, config_defaults.DEFAULT_AUDIO_CHUNK_SIZE))
+        audio_chunks.extend(chunks)
+        repeated_labels = label.repeat([len(chunks), 1])
+        labels.extend(repeated_labels)
+        file_ids.extend(torch.full([len(chunks)], file_idx))
 
-    labels = torch.vstack(labels)
-    return (
-        torch.nn.utils.rnn.pad_sequence(
-            audios, batch_first=True, padding_value=0.0
-        ).view(-1, config_defaults.DEFAULT_AUDIO_CHUNK_SIZE),
-        labels,
+    audio_chunks = torch.nn.utils.rnn.pad_sequence(
+        audio_chunks, batch_first=True, padding_value=0.0
     )
+    labels = torch.vstack(labels)
+    file_ids = torch.vstack(file_ids)
+
+    return audio_chunks, labels, file_ids
 
 
 if __name__ == "__main__":

@@ -9,7 +9,7 @@ from torchmetrics.classification import MultilabelF1Score
 from transformers import Wav2Vec2Config, Wav2Vec2Model
 
 import src.config.config_defaults as config_defaults
-from src.model.fluffy import Fluffy
+from src.model.fluffy import Fluffy, FluffyConfig
 from src.model.heads import AttentionHead, DeepHead
 from src.model.model_base import ModelBase
 from src.model.optimizers import our_configure_optimizers
@@ -22,20 +22,22 @@ class Wav2VecCNNWrapper(ModelBase):
     def __init__(
         self,
         model_name: str,
+        fluffy_config: None | FluffyConfig = FluffyConfig(),
         time_dim_pooling_mode="mean",
-        is_fluffy=True,
         num_layers=2,
         hidden_size=64,
-        one_optim_for_all_heads=False,
         loss_function=nn.BCEWithLogitsLoss(),
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        self.one_optim_for_all_heads = one_optim_for_all_heads
         self.model_name = model_name
-        self.time_dim_pooling_mode = time_dim_pooling_mode
-
+        self.time_dim_pooling_mode = (
+            "attention"
+            if fluffy_config.classifer_constructor == AttentionHead
+            else time_dim_pooling_mode
+        )
+        self.fluffy_config = fluffy_config
         self.loss_function = loss_function
 
         self.hamming_distance = torchmetrics.HammingDistance(
@@ -43,7 +45,7 @@ class Wav2VecCNNWrapper(ModelBase):
         )
         self.f1_score = MultilabelF1Score(num_labels=self.num_labels)
 
-        config = Wav2Vec2Config(
+        self.config = Wav2Vec2Config(
             pretrained_model_name_or_path=model_name,
             id2label=config_defaults.IDX_TO_INSTRUMENT,
             label2id=config_defaults.IDX_TO_INSTRUMENT,
@@ -52,32 +54,24 @@ class Wav2VecCNNWrapper(ModelBase):
             problem_type="multi_label_classification",
         )
         self.backbone = Wav2Vec2Model.from_pretrained(
-            model_name, config=config, ignore_mismatched_sizes=True
+            model_name, config=self.config, ignore_mismatched_sizes=True
         ).feature_extractor
         output_size = self.config.conv_dim[-1]
 
-        if is_fluffy:
+        if fluffy_config:
             dimensions = [output_size]
             dimensions.extend([hidden_size] * num_layers)
             dimensions.append(1)
 
-            self.classifer_constructor = DeepHead
-
-            if isinstance(self.classifer_constructor, AttentionHead):
-                self.time_dim_pooling_mode = "attention"
-                print(
-                    "WARNING: overrding time dimensionality pooling to:",
-                    self.time_dim_pooling_mode,
-                )
             classifer_kwargs = dict(dimensions=dimensions)
             self.classifier = Fluffy(
-                head_constructor=self.classifer_constructor,
+                head_constructor=self.fluffy_config.classifer_constructor,
                 head_kwargs=classifer_kwargs,
             )
         else:
             self.classifier = DeepHead([output_size, self.num_labels])
 
-        self.automatic_optimization = self.one_optim_for_all_heads
+        self.automatic_optimization = not self.fluffy_config.use_multiple_optimizers
         self.save_hyperparameters()
 
     def time_dim_pooling(self, hidden_states):
@@ -110,7 +104,7 @@ class Wav2VecCNNWrapper(ModelBase):
     def _step(self, batch, batch_idx, type: str):
         audio, y, _ = batch
 
-        logits_pred = self.forward(audio, labels=y)
+        logits_pred = self.forward(audio)
         y_pred_prob = torch.sigmoid(logits_pred)
         y_pred = y_pred_prob >= 0.5
         loss = self.loss_function(logits_pred, y)
@@ -120,9 +114,7 @@ class Wav2VecCNNWrapper(ModelBase):
         )
 
     def training_step(self, batch, batch_idx):
-        if self.one_optim_for_all_heads:
-            return self._step(batch, batch_idx, type="train")
-        else:
+        if self.fluffy_config and self.fluffy_config.use_multiple_optimizers:
             optimizers = self.optimizers()
             schedulers = self.lr_schedulers()
             for opt in optimizers:
@@ -135,6 +127,8 @@ class Wav2VecCNNWrapper(ModelBase):
                 optimizer.step()
                 scheduler.step(loss)
             return outputs
+        else:
+            return self._step(batch, batch_idx, type="train")
 
     def validation_step(self, batch, batch_idx):
         return self._step(batch, batch_idx, type="val")
@@ -157,13 +151,19 @@ class Wav2VecCNNWrapper(ModelBase):
             scheduler_epochs = self.epochs
             total_lr_sch_steps = self.num_of_steps_in_epoch * self.epochs
 
-        if self.one_optim_for_all_heads:
-            per_optim_parameters = flatten(self.classifier.heads.values())
-        else:
-            per_optim_parameters = self.classifier.heads.values()
+        if self.fluffy_config.use_multiple_optimizers and isinstance(
+            self.classifier, Fluffy
+        ):
+            list_of_module_params = []
+            for head in self.classifier.heads.values():
+                list_of_module_params.append(head.parameters())
+        elif self.fluffy_config.use_multiple_optimizers and isinstance(
+            self.classifier, DeepHead
+        ):
+            list_of_module_params = self.classifier.parameters()
 
         out = our_configure_optimizers(
-            per_optim_parameters=per_optim_parameters,
+            list_of_module_params=list_of_module_params,
             scheduler_type=self.scheduler_type,
             metric_mode=self.metric_mode,
             plateau_epoch_patience=(self.plateau_epoch_patience // 2) + 1,

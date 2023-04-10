@@ -1,10 +1,16 @@
 from typing import Callable
 
+import pytorch_lightning as pl
+import pytorch_lightning.callbacks
 import torch.nn as nn
 
 
 def filter_modules(module: nn.Module, module_type=nn.Linear):
-    return [submodule for submodule in module if isinstance(submodule, module_type)]
+    output = []
+    for submodule in pytorch_lightning.callbacks.BaseFinetuning.flatten_modules(module):
+        if isinstance(submodule, module_type):
+            output.append(submodule)
+    return output
 
 
 def initialize_weights(module: nn.Module, initialization: Callable, kwargs: dict):

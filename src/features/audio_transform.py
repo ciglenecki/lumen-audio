@@ -11,11 +11,7 @@ from src.features.audio_transform_base import (
     AudioTransforms,
     UnsupportedAudioTransforms,
 )
-from src.features.augmentations import (
-    SpectrogramAugmentation,
-    SupportedAugmentations,
-    WaveformAugmentation,
-)
+from src.features.augmentations import SpectrogramAugmentation, WaveformAugmentation
 
 
 def get_audio_transform(
@@ -68,10 +64,6 @@ def get_audio_transform(
         )
     elif audio_transform_enum is AudioTransforms.WAV2VECCNN:
         return AudioToWav2Vec2CNN(
-            dim=dim,
-            n_mfcc=config_defaults.DEFAULT_N_MFCC,
-            dct_type=config_defaults.DEFAULT_DCT_TYPE,
-            max_len=config_defaults.DEFAULT_MAX_LEN,
             **base_kwargs,
         )
     raise UnsupportedAudioTransforms(f"Unsupported transform {audio_transform_enum}")

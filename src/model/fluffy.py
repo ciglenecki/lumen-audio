@@ -1,7 +1,22 @@
+from dataclasses import dataclass
+from typing import Callable, Type, Union
+
 import torch
 import torch.nn as nn
 
 import src.config.config_defaults as config_defaults
+from src.model.heads import AttentionHead, DeepHead
+
+
+@dataclass
+class FluffyConfig:
+    """Class for keeping track of an item in inventory."""
+
+    use_multiple_optimizers: bool = True
+    classifer_constructor: Callable = DeepHead
+
+    def __post_init__(self):
+        assert self.classifer_constructor in [DeepHead, AttentionHead]
 
 
 class Fluffy(nn.Module):
@@ -17,17 +32,17 @@ class Fluffy(nn.Module):
         self,
         head_constructor,
         head_kwargs,
-        instrument_list: list[config_defaults.InstrumentEnums] = list(
-            config_defaults.InstrumentEnums
-        ),
     ):
         super().__init__()
-        self.heads = nn.ModuleDict(
-            {
-                instrument.value: head_constructor(**head_kwargs)
-                for instrument in instrument_list
-            }
-        )
+
+        heads_dict = {}
+        for idx in range(config_defaults.DEFAULT_NUM_LABELS):
+            instrument_name = config_defaults.IDX_TO_INSTRUMENT[idx]
+            key = instrument_name
+            value = head_constructor(**head_kwargs)
+            heads_dict[key] = value
+
+        self.heads = nn.ModuleDict(heads_dict)
 
     def forward(self, features):
         out = [self.heads[instrument](features) for instrument in self.heads.keys()]
@@ -42,5 +57,3 @@ class Fluffy(nn.Module):
         """
         for param in self.heads[instrument].parameters():
             param.requires_grad = False
-        # TODO: before using this function check implications of .eval()
-        # self.heads[instrument].eval()

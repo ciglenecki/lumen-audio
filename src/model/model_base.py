@@ -325,7 +325,7 @@ class ModelBase(pl.LightningModule, ABC):
             total_lr_sch_steps = self.num_of_steps_in_epoch * self.epochs
 
         out = our_configure_optimizers(
-            per_optim_parameters=[self.parameters()],
+            list_of_module_params=[self.parameters()],
             scheduler_type=self.scheduler_type,
             metric_mode=self.metric_mode,
             plateau_epoch_patience=(self.plateau_epoch_patience // 2) + 1,
