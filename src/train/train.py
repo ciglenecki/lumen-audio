@@ -12,12 +12,7 @@ from pytorch_lightning.callbacks import (
 
 from src.data.datamodule import IRMASDataModule
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
-from src.features.augmentations import (
-    SpectrogramAugmentation,
-    SupportedAugmentations,
-    WaveformAugmentation,
-    get_augmentations,
-)
+from src.features.augmentations import SupportedAugmentations, get_augmentations
 from src.model.model import ModelInputDataType, get_data_input_type, get_model
 from src.model.optimizers import SchedulerType
 from src.train.callbacks import (
