@@ -46,7 +46,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --dataset-dir data/raw/train --lr 5e-4 --batch-size 4 --num-workers 1 --audio-transform wav2veccnn --model wav2vec_cnn --epochs 20 --lr-onecycle-max 1e-4 --quick --num_sanity_val_steps 0",
+			"args": "--accelerator gpu --devices -1 --dataset-dir data/raw/train --lr 5e-4 --batch-size 4 --num-workers 4 --audio-transform wav2veccnn --model wav2vec_cnn --epochs 20 --lr-onecycle-max 1e-4 --loss-function cross_entropy_pos_weight --quick",
 			"justMyCode": false
 		},
 		{

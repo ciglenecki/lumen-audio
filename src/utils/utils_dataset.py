@@ -160,7 +160,7 @@ def chunk_collate_audio(batch: list[torch.Tensor, torch.Tensor]):
             [2, 5, 3, 1, 7], [0,1,0]
         ]
 
-        output_image_batch = [
+        output_audio_batch = [
             [5, 6],
             [1, 2],
             [3, 0],
@@ -210,6 +210,37 @@ def chunk_collate_audio(batch: list[torch.Tensor, torch.Tensor]):
     file_indices = torch.vstack(file_indices)  # Shape [audio_chunks, 1]
 
     return audio_chunks, labels, file_indices
+
+
+def calc_instrument_weight(per_instrument_count: dict[str, int], as_tensor=True):
+    """Caculates weight for each class in the following way: count all negative samples and divide
+    them with positive samples. Positive is the same label, negative is a different one.
+
+    Example:
+        guitar: 50       70/50
+        flute: 30        90/30
+        piano: 40        80/40
+    """
+
+    instruments = [k.value for k in config_defaults.InstrumentEnums]
+    weight_dict = {}
+    total = 0
+    for count in per_instrument_count.values():
+        total += count
+
+    for instrument in instruments:
+        positive = per_instrument_count[instrument]
+        negative = total - positive
+        weight_dict[instrument] = negative / positive
+
+    if as_tensor:
+        weights = torch.zeros(config_defaults.DEFAULT_NUM_LABELS)
+        for instrument in weight_dict.keys():
+            instrument_idx = config_defaults.INSTRUMENT_TO_IDX[instrument]
+            weights[instrument_idx] = weight_dict[instrument]
+        return weights
+    else:
+        return weight_dict
 
 
 if __name__ == "__main__":

@@ -14,6 +14,7 @@ import src.config.config_defaults as config_defaults
 import src.utils.utils_functions as utils_functions
 from src.features.audio_transform_base import AudioTransforms
 from src.features.augmentations import SupportedAugmentations
+from src.model.loss_function import SupportedLossFunctions
 from src.model.model import SupportedModels
 from src.model.optimizers import OptimizerType, SchedulerType
 from src.utils.utils_exceptions import InvalidArgument
@@ -308,6 +309,20 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
         default=config_defaults.DEFAULT_DIM,
         type=tuple[int, int],
         help="The dimension to resize the image to.",
+    )
+
+    user_group.add_argument(
+        "--loss-function",
+        type=SupportedLossFunctions,
+        help="Loss function",
+        default=SupportedLossFunctions.CROSS_ENTROPY,
+    )
+
+    user_group.add_argument(
+        "--loss-function-kwargs",
+        type=dict,
+        help="Loss function kwargs",
+        default={},
     )
 
     user_group.add_argument(

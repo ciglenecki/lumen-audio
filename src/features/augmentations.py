@@ -99,6 +99,9 @@ class SpectrogramAugmentation:
         self.std_noise = std_noise
 
     def __call__(self, spectrogram: torch.Tensor | np.ndarray) -> torch.Tensor:
+        if len(self.augmentation_enums) == 0:
+            return spectrogram
+
         return_batch_dim = True
         if isinstance(spectrogram, np.ndarray):
             spectrogram = torch.tensor(spectrogram)

@@ -25,7 +25,9 @@ def get_data_input_type(model_enum: SupportedModels) -> ModelInputDataType:
     )
 
 
-def get_model(args, pl_args) -> tuple[pl.LightningModule, ModelInputDataType]:
+def get_model(
+    args, pl_args, loss_function=torch.nn.modules.loss
+) -> tuple[pl.LightningModule, ModelInputDataType]:
     from src.model.model_torch import TORCHVISION_CONSTRUCTOR_DICT, TorchvisionModel
 
     model_enum = args.model
@@ -73,7 +75,7 @@ def get_model(args, pl_args) -> tuple[pl.LightningModule, ModelInputDataType]:
     elif model_enum == SupportedModels.WAV2VECCNN:
         model = Wav2VecCNNWrapper(
             model_name=config_defaults.DEFAULT_WAV2VEC_PRETRAINED_TAG,
-            loss_function=torch.nn.BCEWithLogitsLoss(),
+            loss_function=loss_function,
             **model_base_kwargs,
         )
         return model

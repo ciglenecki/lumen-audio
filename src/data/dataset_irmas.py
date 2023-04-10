@@ -61,6 +61,7 @@ class IRMASDatasetTrain(Dataset):
         self.sampling_rate = sampling_rate
         self.normalize_audio = normalize_audio
         self.concat_two_samples = concat_two_samples
+        self.instrument_idx_list: dict[str, list[int]] = {}
         self._populate_dataset()
 
         if sanity_checks:
@@ -69,7 +70,12 @@ class IRMASDatasetTrain(Dataset):
             ), f"IRMAS train set should contain {config_defaults.DEFAULT_IRMAS_TRAIN_SIZE} samples"
 
     def _populate_dataset(self):
-        """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)"""
+        """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)
+        self.instrument_idx_list = {
+            "guitar": [0, 3, 5, 9, 13, 15]
+            "flute": [2,4,6,7,8]
+        }
+        """
 
         self.instrument_idx_list = {
             k.value: [] for k in config_defaults.InstrumentEnums
@@ -107,33 +113,6 @@ class IRMASDatasetTrain(Dataset):
 
     def __len__(self) -> int:
         return len(self.dataset)
-
-    def calc_instrument_weight(self, as_tensor=True):
-        """Caculates weight for each class in the following way: count all negative samples and
-        divide them with positive samples. Positive is the same label, negative is a different one.
-
-        Example:
-            guitar: 50       70/50
-            flute: 30        90/30
-            piano: 40        80/40
-        """
-
-        instruments = [k.value for k in config_defaults.InstrumentEnums]
-        weight_dict = {}
-        total = len(self)
-        for instrument in instruments:
-            positive = len(self.instrument_idx_list[instrument])
-            negative = total - positive
-            weight_dict[instrument] = negative / positive
-
-        if as_tensor:
-            weights = torch.zeros(config_defaults.DEFAULT_NUM_LABELS)
-            for instrument in weight_dict.keys():
-                instrument_idx = config_defaults.INSTRUMENT_TO_IDX[instrument]
-                weights[instrument_idx] = weight_dict[instrument]
-            return weights
-        else:
-            return weight_dict
 
     def _get_another_random_sample_idx(self, not_instrument_idx: int) -> int:
         """Returns a random sample whose label is NOT not_instrument_idx.

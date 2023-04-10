@@ -13,6 +13,7 @@ from pytorch_lightning.callbacks import (
 from src.data.datamodule import IRMASDataModule
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
 from src.features.augmentations import SupportedAugmentations, get_augmentations
+from src.model.loss_function import get_loss_fn
 from src.model.model import ModelInputDataType, get_data_input_type, get_model
 from src.model.optimizers import SchedulerType
 from src.train.callbacks import (
@@ -102,7 +103,12 @@ if __name__ == "__main__":
         use_weighted_train_sampler=use_weighted_train_sampler,
     )
 
-    model = get_model(args, pl_args)
+    loss_function = get_loss_fn(
+        args.loss_function,
+        datamodule=datamodule,
+        **args.loss_function_kwargs,
+    )
+    model = get_model(args, pl_args, loss_function=loss_function)
     print_modules(model)
 
     train_dataloader_size = len(datamodule.train_dataloader())

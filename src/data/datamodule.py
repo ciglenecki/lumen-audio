@@ -203,6 +203,10 @@ class IRMASDataModule(pl.LightningDataModule):
             len(indices_a) + len(indices_b)
         ), "Some indices might contain non-unqiue values"
 
+    def count_classes(self) -> dict[str, int]:
+        # WARNING: irmas only function
+        return {k: len(v) for k, v in self.train_dataset.instrument_idx_list.items()}
+
     def train_dataloader(self) -> DataLoader:
         return DataLoader(
             self.train_dataset,
