@@ -50,10 +50,10 @@ def our_configure_optimizers(
     optimizers = []
     schedulers = []
 
-    if len(list_of_module_params) > 1:
-        print(
-            "WARNING: you are creating multiple optimizers instead of using just one."
-        )
+    input(
+        f"WARNING: you are using n={len(list_of_module_params)} optimziers, press enter to continue:"
+    )
+
     for parameters in list_of_module_params:
         if optimizer_type is OptimizerType.ADAMW:
             optimizer = torch.optim.AdamW(

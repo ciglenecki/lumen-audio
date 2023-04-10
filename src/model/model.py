@@ -2,6 +2,8 @@ import pytorch_lightning as pl
 import torch
 
 import src.config.config_defaults as config_defaults
+from src.model.fluffy import FluffyConfig
+from src.model.heads import get_head_constructor
 from src.model.model_ast import ASTModelWrapper
 from src.model.model_base import ModelInputDataType, SupportedModels
 from src.model.model_wav2vec import Wav2VecWrapper
@@ -73,9 +75,17 @@ def get_model(
         )
         return model
     elif model_enum == SupportedModels.WAV2VECCNN:
+        head_constructor = get_head_constructor(head_enum=args.head)
+
+        fluffy_config = FluffyConfig(
+            use_multiple_optimizers=args.use_multiple_optimizers,
+            classifer_constructor=head_constructor,
+        )
+
         model = Wav2VecCNNWrapper(
             model_name=config_defaults.DEFAULT_WAV2VEC_PRETRAINED_TAG,
             loss_function=loss_function,
+            fluffy_config=fluffy_config,
             **model_base_kwargs,
         )
         return model

@@ -14,6 +14,7 @@ import src.config.config_defaults as config_defaults
 import src.utils.utils_functions as utils_functions
 from src.features.audio_transform_base import AudioTransforms
 from src.features.augmentations import SupportedAugmentations
+from src.model.heads import SupportedHeads
 from src.model.loss_function import SupportedLossFunctions
 from src.model.model import SupportedModels
 from src.model.optimizers import OptimizerType, SchedulerType
@@ -326,10 +327,24 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
     )
 
     user_group.add_argument(
+        "--head",
+        type=SupportedHeads,
+        help="classifier head",
+        default=config_defaults.DEAFULT_HEAD,
+    )
+
+    user_group.add_argument(
         "--log-per-instrument-metrics",
         help="Along with aggregated metrics, also log per instrument metrics.",
         action="store_true",
         default=config_defaults.DEFAULT_LOG_PER_INSTRUMENT_METRICS,
+    )
+
+    user_group.add_argument(
+        "--use-multiple-optimizers",
+        help="Use multiple optimizers for fluffy",
+        action="store_true",
+        default=config_defaults.DEFAULT_USE_MULTIPLE_OPTIMIZERS,
     )
 
     args = parser.parse_args()
@@ -372,6 +387,10 @@ def parse_args_train() -> tuple[argparse.Namespace, argparse.Namespace]:
     if args.scheduler == SchedulerType.ONECYCLE and args.lr_onecycle_max is None:
         raise InvalidArgument(
             f"You have to pass the --lr-onecycle-max if you use the {args.scheduler}",
+        )
+    if args.model != SupportedModels.WAV2VECCNN and args.use_multiple_optimizers:
+        raise InvalidArgument(
+            "You can't use mutliple optimizers if you are not using Fluffy!",
         )
     return args, pl_args
 

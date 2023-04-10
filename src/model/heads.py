@@ -1,7 +1,23 @@
 import torch.nn as nn
 
 from src.model.attention import AttentionLayer
+from src.utils.utils_exceptions import UnsupportedHead
+from src.utils.utils_functions import EnumStr
 from src.utils.utils_model import filter_modules, get_linear_init, initialize_weights
+
+
+class SupportedHeads(EnumStr):
+    DEEP_HEAD = "deep_head"
+    ATTENTION_HEAD = "attention_head"
+
+
+def get_head_constructor(head_enum):
+    if SupportedHeads.DEEP_HEAD == head_enum:
+        return DeepHead
+    if SupportedHeads.ATTENTION_HEAD == head_enum:
+        return AttentionHead
+    else:
+        raise UnsupportedHead(f"Head {str(head_enum)} not supported")
 
 
 class DeepHead(nn.Module):
@@ -64,19 +80,13 @@ class AttentionHead(nn.Module):
 
     def __init__(
         self,
-        input_size: int,
-        num_layers: int,
-        hidden_size: int,
+        dimensions: list[int],
         activation=nn.ReLU(),
         dropout_p=0.3,
     ) -> None:
         super().__init__()
-        self.attention_layer = AttentionLayer(input_size=input_size)
-
-        dimensions = [input_size]
-        dimensions.extend([hidden_size] * num_layers)
-        dimensions.append(1)
-
+        input_dim = dimensions[0]
+        self.attention_layer = AttentionLayer(input_size=input_dim)
         self.classifer = DeepHead(
             dimensions=dimensions,
             dropout_p=dropout_p,

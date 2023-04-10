@@ -13,7 +13,6 @@ from src.model.fluffy import Fluffy, FluffyConfig
 from src.model.heads import AttentionHead, DeepHead
 from src.model.model_base import ModelBase
 from src.model.optimizers import our_configure_optimizers
-from src.utils.utils_functions import flatten
 
 
 class Wav2VecCNNWrapper(ModelBase):
@@ -151,19 +150,22 @@ class Wav2VecCNNWrapper(ModelBase):
             scheduler_epochs = self.epochs
             total_lr_sch_steps = self.num_of_steps_in_epoch * self.epochs
 
+        if self.fluffy_config.use_multiple_optimizers and not isinstance(
+            self.classifier, Fluffy
+        ):
+            raise Exception("You cant use multiple optimizers without using Fluffy.")
+
         if self.fluffy_config.use_multiple_optimizers and isinstance(
             self.classifier, Fluffy
         ):
             list_of_module_params = []
             for head in self.classifier.heads.values():
                 list_of_module_params.append(head.parameters())
-        elif self.fluffy_config.use_multiple_optimizers and isinstance(
-            self.classifier, DeepHead
-        ):
-            list_of_module_params = self.classifier.parameters()
+        else:  # any other normal classifier
+            list_of_module_params = [self.classifier.parameters()]
 
         out = our_configure_optimizers(
-            list_of_module_params=list_of_module_params,
+            list_of_module_params=list_of_module_params,  # [Modul1, Modul2, Modul3], [Modul]
             scheduler_type=self.scheduler_type,
             metric_mode=self.metric_mode,
             plateau_epoch_patience=(self.plateau_epoch_patience // 2) + 1,
