@@ -14,7 +14,7 @@ from torchvision.models import (
     resnext101_64x4d,
 )
 
-import src.config.config_defaults as config_defaults
+from src.model.heads import DeepHead
 from src.model.model import SupportedModels
 from src.model.model_base import ModelBase
 
@@ -35,19 +35,19 @@ class TorchvisionModel(ModelBase):
 
     def __init__(
         self,
-        model_enum: str,
-        fc: list[int] = config_defaults.DEFAULT_FC,
-        pretrained_weights: Optional[str] = config_defaults.DEFAULT_PRETRAINED_WEIGHTS,
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        self.model_enum = model_enum
-        self.pretrained_weights = pretrained_weights
-        self.fc = fc
 
-        self.backbone = TORCHVISION_CONSTRUCTOR_DICT[model_enum](
-            weights=pretrained_weights, progress=True
+        self.hamming_distance = torchmetrics.HammingDistance(
+            task="multilabel", num_labels=self.num_labels
+        )
+
+        self.f1_score = MultilabelF1Score(num_labels=self.num_labels)
+
+        self.backbone = TORCHVISION_CONSTRUCTOR_DICT[self.model_enum](
+            weights=self.pretrained_tag, progress=True
         )
 
         print("------------------------------------------")
@@ -69,21 +69,7 @@ class TorchvisionModel(ModelBase):
             else last_module.in_features
         )
 
-        new_fc = []
-        if isinstance(last_module, nn.Sequential):
-            for k in last_module[
-                :-1
-            ]:  # in case of existing dropouts in final fc module
-                new_fc.append(k)
-
-        fc.insert(0, last_dim)
-        fc.append(self.num_labels)
-        for i, _ in enumerate(fc[:-1]):
-            new_fc.append(
-                nn.Linear(in_features=fc[i], out_features=fc[i + 1], bias=True)
-            )
-
-        setattr(self.backbone, last_module_name, nn.Sequential(*new_fc))
+        setattr(self.backbone, last_module_name, DeepHead([last_dim, self.num_labels]))
 
         print("\n")
         print("Backbone after changing the classifier:")
@@ -91,12 +77,6 @@ class TorchvisionModel(ModelBase):
         print("\n")
         print("------------------------------------------")
 
-        self.hamming_distance = torchmetrics.HammingDistance(
-            task="multilabel", num_labels=self.num_labels
-        )
-
-        self.f1_score = MultilabelF1Score(num_labels=self.num_labels)
-        self.loss_function = nn.BCEWithLogitsLoss()
         self.save_hyperparameters()
 
     def forward(self, audio: torch.Tensor):

@@ -9,6 +9,7 @@ from transformers import ASTConfig, ASTFeatureExtractor, ASTForAudioClassificati
 from transformers.modeling_outputs import SequenceClassifierOutput
 
 import src.config.config_defaults as config_defaults
+from src.config.config import config
 from src.model.heads import DeepHead
 from src.model.model_base import ModelBase
 from src.utils.utils_audio import load_audio_from_file, play_audio
@@ -19,18 +20,15 @@ class ASTModelWrapper(ModelBase):
 
     def __init__(
         self,
-        model_name: str = config_defaults.DEFAULT_AST_PRETRAINED_TAG,
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
 
-        self.model_name = model_name
-
-        config = ASTConfig.from_pretrained(
-            pretrained_model_name_or_path=model_name,
+        ast_config = ASTConfig.from_pretrained(
+            pretrained_model_name_or_path=self.pretrained_tag,
             id2label=config_defaults.IDX_TO_INSTRUMENT,
-            label2id=config_defaults.IDX_TO_INSTRUMENT,
+            label2id=config_defaults.INSTRUMENT_TO_IDX,
             num_labels=self.num_labels,
             finetuning_task="audio-classification",
             problem_type="multi_label_classification",
@@ -38,8 +36,8 @@ class ASTModelWrapper(ModelBase):
 
         self.backbone: ASTForAudioClassification = (
             ASTForAudioClassification.from_pretrained(
-                model_name,
-                config=config,
+                self.pretrained_tag,
+                config=ast_config,
                 ignore_mismatched_sizes=True,
             )
         )
@@ -88,7 +86,6 @@ class ASTModelWrapper(ModelBase):
             """
 
             y_final_out, _ = scatter_max(y_pred, file_indices, dim=0)
-            print(y_final_out)
 
         return self.log_and_return_loss_step(
             loss=loss, y_pred=y_pred, y_true=y, type=type
@@ -112,18 +109,18 @@ class ASTModelWrapper(ModelBase):
 
 if __name__ == "__main__":
     # example_audio_mel_audio()
-    config = ASTConfig.from_pretrained(
+    config_ = ASTConfig.from_pretrained(
         pretrained_model_name_or_path=config_defaults.DEFAULT_AST_PRETRAINED_TAG,
         id2label=config_defaults.IDX_TO_INSTRUMENT,
         label2id=config_defaults.IDX_TO_INSTRUMENT,
-        num_labels=11,
+        num_labels=config_defaults.DEFAULT_NUM_LABELS,
         finetuning_task="audio-classification",
         problem_type="multi_label_classification",
     )
 
     backbone: ASTForAudioClassification = ASTForAudioClassification.from_pretrained(
         config_defaults.DEFAULT_AST_PRETRAINED_TAG,
-        config=config,
+        config=config_,
         ignore_mismatched_sizes=True,
     )
     target_sr = 16_000

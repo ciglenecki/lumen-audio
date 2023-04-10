@@ -6,6 +6,7 @@ To see the list of all arguments call `pyhton3 src/train.py -h`
 from __future__ import annotations
 
 import argparse
+from operator import attrgetter
 
 import configargparse
 import pytorch_lightning as pl
@@ -13,21 +14,34 @@ import torch
 
 import src.config.config_defaults as config_defaults
 import src.utils.utils_functions as utils_functions
-from src.features.audio_transform_base import AudioTransforms
-from src.features.augmentations import SupportedAugmentations
-from src.model.model import SupportedModels
-from src.model.optimizers import OptimizerType, SchedulerType
+from src.enums.enums import (
+    AudioTransforms,
+    MetricMode,
+    OptimizeMetric,
+    SupportedAugmentations,
+    SupportedHeads,
+    SupportedLossFunctions,
+    SupportedModels,
+    SupportedOptimizer,
+    SupportedScheduler,
+)
 from src.utils.utils_dataset import parse_dataset_enum_dirs
 from src.utils.utils_exceptions import InvalidArgument
-from src.utils.utils_train import MetricMode, OptimizeMetric
 
 __all__ = ["config", "pl_args"]
 
-ARGS_GROUP_NAME = "General arguments"
 
-parser = configargparse.get_argument_parser(
-    formatter_class=argparse.ArgumentDefaultsHelpFormatter
-)
+class SortingHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
+    """Alphabetically sort -h."""
+
+    def add_arguments(self, actions):
+        actions = sorted(actions, key=attrgetter("option_strings"))
+        super().add_arguments(actions)
+
+
+# Intialize parser and it's groups
+ARGS_GROUP_NAME = "General arguments"
+parser = configargparse.get_argument_parser(formatter_class=SortingHelpFormatter)
 
 lightning_parser = pl.Trainer.add_argparse_args(parser)
 lightning_parser.set_defaults(
@@ -36,7 +50,6 @@ lightning_parser.set_defaults(
     accelerator="gpu" if torch.cuda.is_available() else "cpu",
     devices=-1,  # use all devices
 )
-
 user_group = parser.add_argument_group(ARGS_GROUP_NAME)
 
 user_group.add_argument(
@@ -76,6 +89,7 @@ user_group.add_argument(
     type=float,
     metavar="float",
     help="warmup learning rate",
+    default=config_defaults.DEFAULT_LR_WARMUP,
 )
 
 user_group.add_argument(
@@ -83,7 +97,17 @@ user_group.add_argument(
     type=float,
     metavar="float",
     help="Maximum lr OneCycle scheduler reaches",
+    default=config_defaults.DEFAULT_LR_ONECYCLE_MAX,
 )
+
+user_group.add_argument(
+    "--weight-decay",
+    type=float,
+    metavar="float",
+    help="Maximum lr OneCycle scheduler reaches",
+    default=config_defaults.DEFAULT_WEIGHT_DECAY,
+)
+
 
 user_group.add_argument(
     "--train-dirs",
@@ -113,14 +137,14 @@ user_group.add_argument(
 
 user_group.add_argument(
     "--pretrained",
-    help="Use the pretrained model.",
+    help="Use a pretrained model loaded from the web.",
     action="store_true",
     default=config_defaults.DEFAULT_PRETRAINED,
 )
 
 user_group.add_argument(
     "--freeze-train-bn",
-    help="Whether or not to train the batch norm during the frozen stage of the training.",
+    help="If true, the batch norm will be trained even if module is frozen.",
     action="store_true",
     default=config_defaults.DEFAULT_FREEZE_TRAIN_BN,
 )
@@ -209,16 +233,18 @@ user_group.add_argument(
 user_group.add_argument(
     "-q",
     "--quick",
-    help="Simulates --limit_train_batches 2 --limit_val_batches 2 --limit_test_batches 2",
+    help="For testing bugs. Simulates --limit_train_batches 2 --limit_val_batches 2 --limit_test_batches 2",
     action="store_true",
     default=False,
 )
+
 user_group.add_argument(
     "--use-weighted-train-sampler",
     help="Use weighted train sampler instead of a random one.",
     action="store_true",
     default=config_defaults.DEFAULT_USE_WEIGHTED_TRAIN_SAMPLER,
 )
+
 user_group.add_argument(
     "--ckpt",
     help=".ckpt file, automatically restores model, epoch, step, LR schedulers, etc...",
@@ -227,7 +253,7 @@ user_group.add_argument(
 )
 
 user_group.add_argument(
-    "--patience",
+    "--plateau-epoch-patience",
     help="Number of checks with no improvement after which training will be stopped. Under the default configuration, one check happens after every training epoch",
     metavar="int",
     default=config_defaults.DEFAULT_PLATEAU_EPOCH_PATIENCE,
@@ -242,9 +268,11 @@ user_group.add_argument(
 )
 
 user_group.add_argument(
-    "--unfreeze-at-epoch",
+    "--finetune-head-epochs",
     metavar="int",
     type=int,
+    help="Epoch at which the backbone will be unfrozen.",
+    default=config_defaults.DEFAULT_FINETUNE_HEAD_EPOCHS,
 )
 
 user_group.add_argument(
@@ -256,16 +284,16 @@ user_group.add_argument(
 
 user_group.add_argument(
     "--scheduler",
-    default=SchedulerType.ONECYCLE,
-    type=SchedulerType,
-    choices=list(SchedulerType),
+    default=SupportedScheduler.ONECYCLE,
+    type=SupportedScheduler,
+    choices=list(SupportedScheduler),
 )
 
 user_group.add_argument(
     "--optimizer",
-    default=OptimizerType.ADAMW,
+    default=SupportedOptimizer.ADAMW,
     type=str,
-    choices=list(OptimizerType),
+    choices=list(SupportedOptimizer),
 )
 
 user_group.add_argument(
@@ -284,17 +312,10 @@ user_group.add_argument(
     help="Number of TQDM updates in one epoch.",
 )
 
-user_group.add_argument(
-    "--fc",
-    default=config_defaults.DEFAULT_FC,
-    nargs="+",
-    type=utils_functions.is_positive_int,
-    help="List of dimensions for the fully connected layers of the classifier head.",
-)
 
 user_group.add_argument(
-    "--pretrained-weights",
-    default=config_defaults.DEFAULT_PRETRAINED_WEIGHTS,
+    "--pretrained-tag",
+    default=config_defaults.DEFAULT_PRETRAINED_TAG,
     type=str,
     help="The string that denotes the pretrained weights used.",
 )
@@ -314,8 +335,9 @@ user_group.add_argument(
 )
 
 user_group.add_argument(
-    "--dim",
-    default=config_defaults.DEFAULT_DIM,
+    "--image-dim",
+    metavar="height width",
+    default=config_defaults.DEFAULT_IMAGE_DIM,
     type=tuple[int, int],
     help="The dimension to resize the image to.",
 )
@@ -327,9 +349,90 @@ user_group.add_argument(
     default=config_defaults.DEFAULT_LOG_PER_INSTRUMENT_METRICS,
 )
 
+user_group.add_argument(
+    "--finetune-head",
+    help="Performs head only finetuning for --finetune-head-epochs epochs with starting lr of --lr-warmup which eventually becomes --lr.",
+    action="store_true",
+    default=config_defaults.DEFAULT_FINETUNE_HEAD,
+)
+
+user_group.add_argument(
+    "--loss-function",
+    type=SupportedLossFunctions,
+    choices=list(SupportedLossFunctions),
+    help="Loss function",
+    default=SupportedLossFunctions.CROSS_ENTROPY,
+)
+
+user_group.add_argument(
+    "--loss-function-kwargs",
+    type=dict,
+    help="Loss function kwargs",
+    default={},
+)
+
+user_group.add_argument(
+    "--head",
+    type=SupportedHeads,
+    help="classifier head",
+    choices=list(SupportedHeads),
+    default=config_defaults.DEAFULT_HEAD,
+)
+
+user_group.add_argument(
+    "--use-fluffy",
+    help="Use multiple optimizers for Fluffy.",
+    action="store_true",
+    default=config_defaults.DEFAULT_FLUFFY,
+)
+
+user_group.add_argument(
+    "--use-multiple-optimizers",
+    help="Use multiple optimizers for Fluffy. Each head will have it's own optimizer.",
+    action="store_true",
+    default=config_defaults.DEFAULT_USE_MULTIPLE_OPTIMIZERS,
+)
+
+user_group.add_argument(
+    "--n-fft",
+    metavar="int",
+    type=int,
+    default=config_defaults.DEFAULT_N_FFT,
+)
+
+user_group.add_argument(
+    "--n-mels",
+    metavar="int",
+    type=int,
+    default=config_defaults.DEFAULT_N_MELS,
+)
+
+user_group.add_argument(
+    "--n-mfcc",
+    metavar="int",
+    type=int,
+    default=config_defaults.DEFAULT_N_MFCC,
+)
+
+user_group.add_argument(
+    "--hop-length",
+    metavar="int",
+    type=int,
+    default=config_defaults.DEFAULT_HOP_LENGTH,
+)
+
+user_group.add_argument(
+    "--max-audio-seconds",
+    metavar="float",
+    type=float,
+    default=config_defaults.DEFAULT_MAX_AUDIO_SECONDS,
+    help="Maximum number of seconds of audio which will be processed at one time.",
+)
+
+
 args = parser.parse_args()
 
-"""Separate Namespace into two Namespaces"""
+# Separate Namespace into two Namespaces
 args_dict: dict[str, argparse.Namespace] = {}
 for group in parser._action_groups:
     group_dict = {a.dest: getattr(args, a.dest, None) for a in group._group_actions}
@@ -338,7 +441,7 @@ for group in parser._action_groups:
 
 args, pl_args = args_dict[ARGS_GROUP_NAME], args_dict["pl.Trainer"]
 
-"""User arguments which override PyTorch Lightning arguments"""
+# User arguments which override PyTorch Lightning arguments
 if args.quick:
     pl_args.limit_train_batches = 2
     pl_args.limit_val_batches = 2
@@ -350,23 +453,46 @@ if args.quick:
 if args.epochs:
     pl_args.max_epochs = args.epochs
 
-"""Additional argument checking"""
+# Additional argument checking
 if args.metric and not args.metric_mode:
     raise InvalidArgument("can't pass --metric without passing --metric-mode")
 
-if bool(args.lr_warmup) != bool(args.unfreeze_at_epoch):
-    raise InvalidArgument(
-        "--lr-warmup and --unfreeze-at-epoch have to be passed together",
-    )
 
 if args.aug_kwargs is None:
-    args.aug_kwargs = {}
+    args.aug_kwargs = config_defaults.DEFAULT_AUGMENTATION_KWARSG
 else:
     args.aug_kwargs = utils_functions.parse_kwargs(args.aug_kwargs)
 
-if args.scheduler == SchedulerType.ONECYCLE and args.lr_onecycle_max is None:
+if args.scheduler == SupportedScheduler.ONECYCLE and args.lr_onecycle_max is None:
     raise InvalidArgument(
         f"You have to pass the --lr-onecycle-max if you use the {args.scheduler}",
     )
+
+if args.model != SupportedModels.WAV2VECCNN and args.use_multiple_optimizers:
+    raise InvalidArgument(
+        "You can't use mutliple optimizers if you are not using Fluffy!",
+    )
+
+if args.pretrained and args.pretrained_tag == config_defaults.DEFAULT_PRETRAINED_TAG:
+    if args.model == SupportedModels.AST:
+        args.pretrained_tag = config_defaults.DEFAULT_AST_PRETRAINED_TAG
+    elif args.model in [SupportedModels.WAV2VECCNN, SupportedModels.WAV2VEC]:
+        args.pretrained_tag = config_defaults.DEFAULT_WAV2VEC_PRETRAINED_TAG
+    elif args.model in [
+        SupportedModels.EFFICIENT_NET_V2_S,
+        SupportedModels.EFFICIENT_NET_V2_M,
+        SupportedModels.EFFICIENT_NET_V2_L,
+        SupportedModels.RESNEXT50_32X4D,
+        SupportedModels.RESNEXT101_32X8D,
+        SupportedModels.RESNEXT101_64X4D,
+    ]:
+        args.pretrained_tag = config_defaults.DEFAULT_TORCH_CNN_PRETRAINED_TAG
+    else:
+        raise Exception("Shouldn't happen")
+
+if args.model == SupportedModels.AST:
+    args.n_fft = config_defaults.DEFAULT_AST_N_FFT
+    args.hop_length = config_defaults.DEFAULT_HOP_LENGTH
+    args.n_mels = config_defaults.DEFAULT_AST_N_MELS
 
 config = args

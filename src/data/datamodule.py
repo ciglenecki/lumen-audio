@@ -13,9 +13,10 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, SubsetRandomSampler, WeightedRandomSampler
 from tqdm import tqdm
 
+import src.config.config_defaults as config_defaults
 from src.config.config import config
-from src.data.dataset import SupportedDatasets
 from src.data.dataset_irmas import IRMASDatasetTest, IRMASDatasetTrain
+from src.enums.enums import SupportedDatasets
 from src.features.audio_transform_base import AudioTransformBase
 from src.features.augmentations import SupportedAugmentations
 from src.utils.utils_functions import split_by_ratio
@@ -25,8 +26,9 @@ class IRMASDataModule(pl.LightningDataModule):
     train_size: int
     val_size: int
     test_size: int
-    train_dataset: IRMASDatasetTrain
-    test_dataset: IRMASDatasetTest
+    train_dataset: torch.utils.data.ConcatDataset
+    val_dataset: torch.utils.data.ConcatDataset
+    test_dataset: torch.utils.data.ConcatDataset
     train_sampler: SubsetRandomSampler
     val_sampler: SubsetRandomSampler
     test_sampler: SubsetRandomSampler
@@ -54,8 +56,8 @@ class IRMASDataModule(pl.LightningDataModule):
         train_only_dataset: bool = config.train_only_dataset,
         normalize_audio: bool = config.normalize_audio,
         concat_two_samples: bool = SupportedAugmentations.CONCAT_TWO
-        in config_defaults.DEFAULT_AUGMENTATIONS,
-        use_weighted_train_sampler=config_defaults.DEFAULT_USE_WEIGHTED_TRAIN_SAMPLER,
+        in config.augmentations,
+        use_weighted_train_sampler=config.use_weighted_train_sampler,
     ):
         super().__init__()
         self.batch_size = batch_size
@@ -73,6 +75,15 @@ class IRMASDataModule(pl.LightningDataModule):
         self.concat_two_samples = concat_two_samples
         self.use_weighted_train_sampler = use_weighted_train_sampler
         self.collate_fn = collate_fn
+
+        # Read: if there is only one dataset and that dataset is IRMAS:
+        if (
+            len(self.train_dirs) == 1
+            and self.train_dirs[0][0] == SupportedDatasets.IRMAS
+        ):
+            self.class_count_dict = config_defaults.IRMAS_TRAIN_CLASS_COUNT
+        else:
+            self.class_count_dict = {}
         self.setup()
 
     def prepare_data(self) -> None:
@@ -81,7 +92,7 @@ class IRMASDataModule(pl.LightningDataModule):
     def get_sample_class_weights(self, dataset: torch.utils.data.Dataset):
         """The function returns n weights for n samples in the dataset.
 
-        Weights are caculated as (1 / class_count) of a particular example.
+        Weights are caculated as (1 / class_count_dict) of a particular example.
 
         [0,  1] <- 1.2
         [0,  1] <- 1.2
@@ -98,21 +109,41 @@ class IRMASDataModule(pl.LightningDataModule):
         for _, one_hot, _ in tqdm(dataset):
             one_hots.append(one_hot)
         one_hots = torch.stack(one_hots)
-        class_counts = torch.sum(one_hots, dim=0)
-        weight_per_class = 1 / class_counts
+        class_count_dicts = torch.sum(one_hots, dim=0)
+        weight_per_class = 1 / class_count_dicts
         examples_weights = one_hots * weight_per_class
         _, example_max_weight = examples_weights.max(dim=-1, keepdim=False)
         return example_max_weight
 
+    def _get_train_dataset_concated(self):
+        datasets = []
+        for dataset_enum, dataset_path in self.train_dirs:
+            if dataset_enum == SupportedDatasets.IRMAS:
+                dataset = IRMASDatasetTrain(
+                    dataset_dir=dataset_path,
+                    audio_transform=self.train_audio_transform,
+                    normalize_audio=self.normalize_audio,
+                    concat_two_samples=self.concat_two_samples,
+                )
+            datasets.append(dataset)
+        return torch.utils.data.ConcatDataset(datasets)
+
+    def _get_val_dataset_concated(self):
+        datasets = []
+        for dataset_enum, dataset_path in self.val_dirs:
+            if dataset_enum == SupportedDatasets.IRMAS:
+                dataset = IRMASDatasetTest(
+                    dataset_dir=dataset_path,
+                    audio_transform=self.val_audio_transform,
+                    normalize_audio=self.normalize_audio,
+                )
+            datasets.append(dataset)
+        return torch.utils.data.ConcatDataset(datasets)
+
     def setup(self, stage=None):
         super().setup(stage)
 
-        self.train_dataset = IRMASDatasetTrain(
-            dataset_dirs=self.train_dirs,
-            audio_transform=self.train_audio_transform,
-            normalize_audio=self.normalize_audio,
-            concat_two_samples=self.concat_two_samples,
-        )
+        self.train_dataset = self._get_train_dataset_concated()
 
         if self.train_only_dataset:
             self.test_dataset = self.train_dataset
@@ -122,11 +153,7 @@ class IRMASDataModule(pl.LightningDataModule):
             # test_indices = val_indices
             self._sanity_check_difference(train_indices, val_indices)
         else:
-            self.test_dataset = IRMASDatasetTest(
-                dataset_dirs=self.test_dirs,
-                audio_transform=self.val_audio_transform,
-                normalize_audio=self.normalize_audio,
-            )
+            self.test_dataset = self._get_val_dataset_concated()
             train_indices = np.arange(len(self.train_dataset))
             val_test_indices = np.arange(len(self.test_dataset))
             val_indices, test_indices = split_by_ratio(val_test_indices, 0.8, 0.2)
@@ -203,6 +230,21 @@ class IRMASDataModule(pl.LightningDataModule):
         assert len(set_ind) == (
             len(indices_a) + len(indices_b)
         ), "Some indices might contain non-unqiue values"
+
+    def count_classes(self) -> dict[str, int]:
+        if self.class_count_dict:
+            return self.class_count_dict
+
+        output = {}
+        for dataset in self.train_dataset.datasets:
+            for _, label in tqdm(dataset, desc="Counting classes"):
+                idx = int(np.where(label == 1)[0])
+                instrument = config_defaults.IDX_TO_INSTRUMENT[idx]
+                if instrument not in output:
+                    output[instrument] = 0
+                output[instrument] += 1
+        self.class_count_dict = output
+        return output
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(

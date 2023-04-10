@@ -2,14 +2,14 @@ import numpy as np
 import torch
 from transformers import Wav2Vec2FeatureExtractor
 
-import src.config.config_defaults as config_defaults
+from src.config.config import config
 from src.features.audio_transform_base import AudioTransformBase
 
 
 class AudioToWav2Vec2(AudioTransformBase):
     def __init__(
         self,
-        pretrained_tag=config_defaults.DEFAULT_WAV2VEC_PRETRAINED_TAG,
+        pretrained_tag=config.pretrained_tag,
         *args,
         **kwargs,
     ):

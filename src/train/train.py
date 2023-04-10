@@ -1,4 +1,6 @@
+"""Some configurations."""
 import os
+from functools import partial
 from pathlib import Path
 
 import pytorch_lightning as pl
@@ -12,10 +14,12 @@ from pytorch_lightning.callbacks import (
 
 from src.config.config import config, pl_args
 from src.data.datamodule import IRMASDataModule
+from src.enums.enums import MetricMode, ModelInputDataType, OptimizeMetric
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
 from src.features.augmentations import SupportedAugmentations, get_augmentations
-from src.model.model import ModelInputDataType, get_data_input_type, get_model
-from src.model.optimizers import SchedulerType
+from src.model.loss_function import get_loss_fn
+from src.model.model import get_data_input_type, get_model
+from src.model.optimizers import SupportedScheduler
 from src.train.callbacks import (
     FinetuningCallback,
     GeneralMetricsEpochLogger,
@@ -30,19 +34,18 @@ from src.utils.utils_functions import (
     stdout_to_file,
     to_yaml,
 )
-from src.utils.utils_train import MetricMode, OptimizeMetric, print_modules
+from src.utils.utils_train import print_modules
 
 if __name__ == "__main__":
     output_dir = config.output_dir
     num_labels = config.num_labels
     batch_size = config.batch_size
     sampling_rate = config.sampling_rate
-    unfreeze_at_epoch: int = config.unfreeze_at_epoch
     metric_mode_str = MetricMode(config.metric_mode).value
     optimizer_metric_str = OptimizeMetric(config.metric).value
     normalize_audio = config.normalize_audio
     aug_kwargs = config.aug_kwargs
-    dim = config.dim
+    image_dim = config.image_dim
     use_weighted_train_sampler = config.use_weighted_train_sampler
 
     timestamp = get_timestamp()
@@ -54,14 +57,17 @@ if __name__ == "__main__":
 
     stdout_to_file(filename_report)
     print(str(filename_report))
-    print("Config:", to_yaml(vars(args)), sep="\n")
+    print("Config:", to_yaml(vars(config)), sep="\n")
     print("Config PyTorch Lightning:", to_yaml(vars(pl_args)), sep="\n")
 
     data_input_type = get_data_input_type(model_enum=config.model)
     if data_input_type == ModelInputDataType.IMAGE:
         collate_fn = collate_fn_spectrogram
     elif data_input_type == ModelInputDataType.WAVEFORM:
-        collate_fn = chunk_collate_audio
+        collate_fn = partial(
+            chunk_collate_audio,
+            max_audio_width=config.max_audio_seconds * config.sampling_rate,
+        )
     else:
         raise Exception(f"Unsupported data input type {data_input_type}")
 
@@ -70,21 +76,21 @@ if __name__ == "__main__":
         train_waveform_augmentation,
         val_spectrogram_augmentation,
         val_waveform_augmentation,
-    ) = get_augmentations(args)
+    ) = get_augmentations(config)
 
     train_audio_transform: AudioTransformBase = get_audio_transform(
         audio_transform_enum=config.audio_transform,
         sampling_rate=sampling_rate,
         spectrogram_augmentation=train_spectrogram_augmentation,
         waveform_augmentation=train_waveform_augmentation,
-        dim=dim,
+        image_dim=config.image_dim,
     )
     val_audio_transform: AudioTransformBase = get_audio_transform(
         audio_transform_enum=config.audio_transform,
         sampling_rate=sampling_rate,
         spectrogram_augmentation=val_spectrogram_augmentation,
         waveform_augmentation=val_waveform_augmentation,
-        dim=dim,
+        image_dim=config.image_dim,
     )
 
     datamodule = IRMASDataModule(
@@ -101,13 +107,18 @@ if __name__ == "__main__":
         use_weighted_train_sampler=use_weighted_train_sampler,
     )
 
-    model = get_model(args, pl_args)
+    loss_function = get_loss_fn(
+        config.loss_function,
+        datamodule=datamodule,
+        **config.loss_function_kwargs,
+    )
+    model = get_model(config, pl_args, loss_function=loss_function)
     print_modules(model)
 
     train_dataloader_size = len(datamodule.train_dataloader())
 
     log_dictionary = {
-        **add_prefix_to_keys(vars(args), "user_args/"),
+        **add_prefix_to_keys(vars(config), "user_args/"),
         **add_prefix_to_keys(vars(pl_args), "lightning_args/"),
         "train_size": len(datamodule.train_dataloader().dataset),
         "val_size": len(datamodule.val_dataloader().dataset),
@@ -117,7 +128,7 @@ if __name__ == "__main__":
     callback_early_stopping = EarlyStopping(
         monitor=optimizer_metric_str,
         mode=metric_mode_str,
-        patience=config.patience,
+        patience=config.plateau_epoch_patience,
         check_on_train_epoch_end=config.check_on_train_epoch_end,
         verbose=True,
     )
@@ -156,14 +167,14 @@ if __name__ == "__main__":
         GeneralMetricsEpochLogger(),
     ]
 
-    if unfreeze_at_epoch is not None:
+    if config.finetune_head:
         callbacks.append(
-            FinetuningCallback(unfreeze_backbone_at_epoch=config.unfreeze_at_epoch)
+            FinetuningCallback(finetune_head_epochs=config.finetune_head_epochs)
         )
 
     callbacks.append(ModelSummary(max_depth=4))
 
-    auto_lr_find = config.scheduler == SchedulerType.AUTO_LR
+    auto_lr_find = config.scheduler == SupportedScheduler.AUTO_LR
     trainer: pl.Trainer = pl.Trainer.from_argparse_args(
         pl_args,
         logger=[tensorboard_logger],
@@ -171,7 +182,7 @@ if __name__ == "__main__":
         callbacks=callbacks,
     )
 
-    if config.scheduler == SchedulerType.AUTO_LR.value:
+    if config.scheduler == SupportedScheduler.AUTO_LR.value:
         lr_finder = trainer.tuner.lr_find(
             model, datamodule=datamodule, num_training=100
         )

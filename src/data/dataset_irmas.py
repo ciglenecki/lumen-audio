@@ -12,6 +12,7 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 
 import src.config.config_defaults as config_defaults
+from src.config.config import config
 from src.features.audio_to_ast import AudioTransformAST
 from src.features.audio_transform_base import AudioTransformBase
 from src.features.augmentations import SupportedAugmentations
@@ -29,19 +30,17 @@ class IRMASDatasetTrain(Dataset):
 
     def __init__(
         self,
-        dataset_dirs: list[Path] = [config_defaults.PATH_IRMAS_TRAIN],
+        dataset_dir: Path = config_defaults.PATH_IRMAS_TRAIN,
         audio_transform: AudioTransformBase | None = None,
         num_classes=config_defaults.DEFAULT_NUM_LABELS,
-        sanity_checks=config_defaults.DEFAULT_SANITY_CHECKS,
-        sampling_rate=config_defaults.DEFAULT_SAMPLING_RATE,
-        normalize_audio=config_defaults.DEFAULT_NORMALIZE_AUDIO,
-        concat_two_samples=SupportedAugmentations.CONCAT_TWO
-        in config_defaults.DEFAULT_AUGMENTATIONS,
+        sampling_rate=config.sampling_rate,
+        normalize_audio=config.normalize_audio,
+        concat_two_samples=SupportedAugmentations.CONCAT_TWO in config.augmentations,
     ):
         """_summary_
 
         Args:
-            dataset_dirs: directories which have the following structure:
+            dataset_dir: directory with the following structure:
 
                 ├── cel
                 │   ├── 008__[cel][nod][cla]0058__1.wav
@@ -55,85 +54,64 @@ class IRMASDatasetTrain(Dataset):
         """
 
         self.dataset: list[tuple[Path, np.ndarray]] = []
-        self.dataset_dirs = dataset_dirs
+        self.dataset_dir = dataset_dir
         self.audio_transform = audio_transform
         self.num_classes = num_classes
         self.sampling_rate = sampling_rate
         self.normalize_audio = normalize_audio
         self.concat_two_samples = concat_two_samples
+        self.instrument_idx_list: dict[str, list[int]] = {}
         self._populate_dataset()
 
-        if sanity_checks:
-            assert (
-                len(self.dataset) == config_defaults.DEFAULT_IRMAS_TRAIN_SIZE
-            ), f"IRMAS train set should contain {config_defaults.DEFAULT_IRMAS_TRAIN_SIZE} samples"
+        assert (
+            len(self.dataset) == config_defaults.DEFAULT_IRMAS_TRAIN_SIZE
+        ), f"IRMAS train set should contain {config_defaults.DEFAULT_IRMAS_TRAIN_SIZE} samples"
 
     def _populate_dataset(self):
-        """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)"""
+        """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)
+        self.instrument_idx_list = {
+            "guitar": [0, 3, 5, 9, 13, 15]
+            "flute": [2,4,6,7,8]
+        }
+        """
 
         self.instrument_idx_list = {
             k.value: [] for k in config_defaults.InstrumentEnums
         }
-        for item_idx, dataset_dir in enumerate(self.dataset_dirs):
-            for audio_path in tqdm(dataset_dir.rglob(glob_expression)):
-                filename = str(audio_path.stem)
-                characteristics = re.findall(
-                    r"\[(.*?)\]", filename
-                )  # 110__[org][dru][jaz_blu]1117__2 => ["org", "dru", "jaz_blue"]
+        for item_idx, audio_path in tqdm(
+            enumerate(self.dataset_dir.rglob(glob_expression))
+        ):
+            filename = str(audio_path.stem)
+            characteristics = re.findall(
+                r"\[(.*?)\]", filename
+            )  # 110__[org][dru][jaz_blu]1117__2 => ["org", "dru", "jaz_blue"]
 
-                drums, genre = None, None
-                if len(characteristics) == 2:
-                    instrument, genre = characteristics
-                elif len(characteristics) == 3:
-                    instrument, drums, genre = characteristics
-                else:
-                    raise InvalidDataException(filename)
+            drums, genre = None, None
+            if len(characteristics) == 2:
+                instrument, genre = characteristics
+            elif len(characteristics) == 3:
+                instrument, drums, genre = characteristics
+            else:
+                raise InvalidDataException(filename)
 
-                drums_vector = encode_drums(drums)
-                genre_vector = encode_genre(genre)
+            drums_vector = encode_drums(drums)
+            genre_vector = encode_genre(genre)
 
-                instrument_idx = config_defaults.INSTRUMENT_TO_IDX[instrument]  # 2
-                instrument_indices = []
-                instrument_indices.append(instrument_idx)  # [2]
+            instrument_idx = config_defaults.INSTRUMENT_TO_IDX[instrument]  # 2
+            instrument_indices = []
+            instrument_indices.append(instrument_idx)  # [2]
 
-                labels = multi_hot_indices(
-                    instrument_indices,
-                    config_defaults.DEFAULT_NUM_LABELS,
-                )
-                labels = torch.tensor(labels).float()  # [0, 0, 1, 0...]
+            labels = multi_hot_indices(
+                instrument_indices,
+                config_defaults.DEFAULT_NUM_LABELS,
+            )
+            labels = torch.tensor(labels).float()  # [0, 0, 1, 0...]
 
-                self.dataset.append((str(audio_path), labels, instrument))
-                self.instrument_idx_list[instrument].append(item_idx)
+            self.dataset.append((str(audio_path), labels, instrument))
+            self.instrument_idx_list[instrument].append(item_idx)
 
     def __len__(self) -> int:
         return len(self.dataset)
-
-    def calc_instrument_weight(self, as_tensor=True):
-        """Caculates weight for each class in the following way: count all negative samples and
-        divide them with positive samples. Positive is the same label, negative is a different one.
-
-        Example:
-            guitar: 50       70/50
-            flute: 30        90/30
-            piano: 40        80/40
-        """
-
-        instruments = [k.value for k in config_defaults.InstrumentEnums]
-        weight_dict = {}
-        total = len(self)
-        for instrument in instruments:
-            positive = len(self.instrument_idx_list[instrument])
-            negative = total - positive
-            weight_dict[instrument] = negative / positive
-
-        if as_tensor:
-            weights = torch.zeros(config_defaults.DEFAULT_NUM_LABELS)
-            for instrument in weight_dict.keys():
-                instrument_idx = config_defaults.INSTRUMENT_TO_IDX[instrument]
-                weights[instrument_idx] = weight_dict[instrument]
-            return weights
-        else:
-            return weight_dict
 
     def _get_another_random_sample_idx(self, not_instrument_idx: int) -> int:
         """Returns a random sample whose label is NOT not_instrument_idx.
@@ -213,53 +191,50 @@ class IRMASDatasetTrain(Dataset):
 class IRMASDatasetTest(Dataset):
     def __init__(
         self,
-        dataset_dirs: list[Path] = [config_defaults.PATH_IRMAS_TEST],
-        num_classes=config_defaults.DEFAULT_NUM_LABELS,
-        sanity_checks=config_defaults.DEFAULT_SANITY_CHECKS,
+        dataset_dir: Path,
         audio_transform: AudioTransformBase | None = None,
-        sampling_rate=config_defaults.DEFAULT_SAMPLING_RATE,
-        normalize_audio=config_defaults.DEFAULT_NORMALIZE_AUDIO,
+        num_classes=config_defaults.DEFAULT_NUM_LABELS,
+        sampling_rate=config.sampling_rate,
+        normalize_audio=config.normalize_audio,
     ):
         self.num_classes = num_classes
         self.audio_transform = audio_transform
         self.dataset: list[tuple[Path, np.ndarray]] = []
-        self.dataset_dirs = dataset_dirs
+        self.dataset_dir = dataset_dir
         self.sampling_rate = sampling_rate
         self.normalize_audio = normalize_audio
         self._populate_dataset()
 
-        if sanity_checks:
-            assert (
-                len(self.dataset) == config_defaults.DEFAULT_IRMAS_TEST_SIZE
-            ), f"IRMAS test set should contain {config_defaults.DEFAULT_IRMAS_TEST_SIZE} samples"
+        assert (
+            len(self.dataset) == config_defaults.DEFAULT_IRMAS_TEST_SIZE
+        ), f"IRMAS test set should contain {config_defaults.DEFAULT_IRMAS_TEST_SIZE} samples"
 
     def _populate_dataset(self):
         """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)"""
-        for dataset_dir in self.dataset_dirs:
-            for audio_file in tqdm(dataset_dir.rglob(glob_expression)):
-                path_without_ext = os.path.splitext(audio_file)[0]
-                txt_path = Path(path_without_ext + ".txt")
+        for audio_file in tqdm(self.dataset_dir.rglob(glob_expression)):
+            path_without_ext = os.path.splitext(audio_file)[0]
+            txt_path = Path(path_without_ext + ".txt")
 
-                if not txt_path.is_file():
-                    raise FileNotFoundError(
-                        f"File {audio_file} doesn't have label file {txt_path}."
+            if not txt_path.is_file():
+                raise FileNotFoundError(
+                    f"File {audio_file} doesn't have label file {txt_path}."
+                )
+
+            instrument_indices = []
+            with open(txt_path) as f:
+                for line in f:
+                    instrument = line.rstrip("\n").replace("\t", "")
+                    instrument_indices.append(
+                        config_defaults.INSTRUMENT_TO_IDX[instrument]
                     )
 
-                instrument_indices = []
-                with open(txt_path) as f:
-                    for line in f:
-                        instrument = line.rstrip("\n").replace("\t", "")
-                        instrument_indices.append(
-                            config_defaults.INSTRUMENT_TO_IDX[instrument]
-                        )
+            labels = multi_hot_indices(
+                instrument_indices,
+                config_defaults.DEFAULT_NUM_LABELS,
+            )
+            labels = torch.tensor(labels).float()
 
-                labels = multi_hot_indices(
-                    instrument_indices,
-                    config_defaults.DEFAULT_NUM_LABELS,
-                )
-                labels = torch.tensor(labels).float()
-
-                self.dataset.append((str(audio_file), labels, instrument))
+            self.dataset.append((str(audio_file), labels, instrument))
 
     def __len__(self) -> int:
         return len(self.dataset)

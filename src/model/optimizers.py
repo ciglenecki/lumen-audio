@@ -4,31 +4,23 @@ import torch
 from torch.nn.parameter import Parameter
 
 import src.config.config_defaults as config_defaults
+from src.enums.enums import (
+    MetricMode,
+    OptimizeMetric,
+    SupportedOptimizer,
+    SupportedScheduler,
+)
 from src.utils.utils_exceptions import UnsupportedOptimizer, UnsupportedScheduler
-from src.utils.utils_functions import EnumStr
-from src.utils.utils_train import MetricMode, OptimizeMetric
-
-
-class SchedulerType(EnumStr):
-    ONECYCLE = "onecycle"
-    PLATEAU = "plateau"
-    AUTO_LR = "auto_lr"
-    COSINEANNEALING = "cosine_annealing"
-
-
-class OptimizerType(EnumStr):
-    ADAM = "adam"
-    ADAMW = "adamw"
 
 
 def our_configure_optimizers(
     list_of_module_params: list[Iterator[Parameter]],
-    scheduler_type: SchedulerType,
+    scheduler_type: SupportedScheduler,
     metric_mode: MetricMode,
     plateau_epoch_patience: int,
     lr_backbone: float,
     weight_decay: float,
-    optimizer_type: OptimizerType,
+    optimizer_type: SupportedOptimizer,
     optimization_metric: OptimizeMetric,
     total_lr_sch_steps: int,
     num_of_steps_in_epoch: int,
@@ -50,18 +42,18 @@ def our_configure_optimizers(
     optimizers = []
     schedulers = []
 
-    if len(list_of_module_params) > 1:
-        print(
-            "WARNING: you are creating multiple optimizers instead of using just one."
-        )
+    input(
+        f"WARNING: you are using n={len(list_of_module_params)} optimziers.\nPress enter to continue:"
+    )
+
     for parameters in list_of_module_params:
-        if optimizer_type is OptimizerType.ADAMW:
+        if optimizer_type is SupportedOptimizer.ADAMW:
             optimizer = torch.optim.AdamW(
                 parameters,
                 lr=lr_backbone,
                 weight_decay=weight_decay,
             )
-        elif optimizer_type is OptimizerType.ADAM:
+        elif optimizer_type is SupportedOptimizer.ADAM:
             optimizer = torch.optim.Adam(
                 parameters,
                 lr=lr_backbone,
@@ -73,8 +65,8 @@ def our_configure_optimizers(
                 optimizer_type,
             )
 
-        if scheduler_type is SchedulerType.AUTO_LR:
-            """SchedulerType.AUTO_LR sets it's own scheduler.
+        if scheduler_type is SupportedScheduler.AUTO_LR:
+            """SupportedScheduler.AUTO_LR sets it's own scheduler.
 
             Only the optimizer has to be returned
             """
@@ -89,7 +81,7 @@ def our_configure_optimizers(
             "name": scheduler_type.value,
         }
 
-        if scheduler_type == SchedulerType.ONECYCLE:
+        if scheduler_type == SupportedScheduler.ONECYCLE:
             # min_lr = initial_lr/final_div_factor
             # initial_lr = max_lr/div_factor
 
@@ -107,7 +99,7 @@ def our_configure_optimizers(
             )
             interval = "step"
 
-        elif scheduler_type == SchedulerType.PLATEAU:
+        elif scheduler_type == SupportedScheduler.PLATEAU:
             scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer,
                 mode=metric_mode.value,
@@ -116,7 +108,7 @@ def our_configure_optimizers(
                 verbose=True,
             )
             interval = "epoch"
-        elif scheduler_type == SchedulerType.COSINEANNEALING:
+        elif scheduler_type == SupportedScheduler.COSINEANNEALING:
             scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
                 optimizer,
                 T_0=num_of_steps_in_epoch * scheduler_epochs,

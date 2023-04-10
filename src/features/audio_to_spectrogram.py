@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import torchvision.transforms.functional as F
 
-import src.config.config_defaults as config_defaults
+from src.config.config import config
 from src.features.audio_transform_base import AudioTransformBase
 
 
@@ -12,9 +12,9 @@ class MelSpectrogramOurs(AudioTransformBase):
 
     def __init__(
         self,
-        n_fft: int = config_defaults.DEFAULT_N_FFT,
-        hop_length: int = config_defaults.DEFAULT_HOP_LENGTH,
-        n_mels: int = config_defaults.DEFAULT_N_MELS,
+        n_fft: int = config.n_fft,
+        hop_length: int = config.hop_length,
+        n_mels: int = config.n_mels,
         *args,
         **kwargs,
     ):
@@ -43,9 +43,9 @@ class MelSpectrogramOurs(AudioTransformBase):
 class MelSpectrogramResize(MelSpectrogramOurs):
     """Resamples audio, extracts melspectrogram from audio, resizes it to the given dimensions."""
 
-    def __init__(self, dim: tuple[int, int], *args, **kwargs):
+    def __init__(self, image_dim: tuple[int, int], *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.dim = dim
+        self.image_dim = image_dim
 
     def process(
         self,
@@ -54,22 +54,26 @@ class MelSpectrogramResize(MelSpectrogramOurs):
         spectrogram = super().process(audio)
 
         spectrogram = spectrogram.reshape(1, 1, *spectrogram.shape)
-        spectrogram = F.resize(torch.tensor(spectrogram), size=self.dim, antialias=True)
-        spectrogram = spectrogram.reshape(1, *self.dim)
+        spectrogram = F.resize(
+            torch.tensor(spectrogram), size=self.image_dim, antialias=True
+        )
+        spectrogram = spectrogram.reshape(1, *self.image_dim)
         return spectrogram
 
 
 class MelSpectrogramFixed(MelSpectrogramOurs):
     """Resamples audio, extracts melspectrogram from audio and pads the original spectrogram to
-    dimension of spectrogram for max_len sequence."""
+    dimension of spectrogram for max_audio_seconds sequence."""
 
-    def __init__(self, max_len: int, dim: tuple[int, int], *args, **kwargs):
+    def __init__(
+        self, max_audio_seconds: int, image_dim: tuple[int, int], *args, **kwargs
+    ):
         super().__init__(*args, **kwargs)
-        self.max_len = max_len
-        self.dim = dim
+        self.max_audio_seconds = max_audio_seconds
+        self.image_dim = image_dim
 
         FAKE_SAMPLE_RATE = 44_100
-        dummy_audio = np.random.random(size=(max_len * FAKE_SAMPLE_RATE,))
+        dummy_audio = np.random.random(size=(max_audio_seconds * FAKE_SAMPLE_RATE,))
         audio_resampled = librosa.resample(
             dummy_audio,
             orig_sr=FAKE_SAMPLE_RATE,
@@ -104,7 +108,7 @@ class MelSpectrogramFixed(MelSpectrogramOurs):
 
         for i, _ in enumerate(chunks):
             chunks[i] = chunks[i].reshape(1, 1, *self.spectrogram_dim)
-            chunks[i] = F.resize(chunks[i], size=self.dim, antialias=True)[0][0]
+            chunks[i] = F.resize(chunks[i], size=self.image_dim, antialias=True)[0][0]
             chunks[i] = chunks[i].float()
 
         return chunks

@@ -5,9 +5,14 @@ from pathlib import Path
 
 import pyrootutils
 
-from src.features.augmentations import SupportedAugmentations
-from src.model.optimizers import OptimizerType, SchedulerType
-from src.utils.utils_train import MetricMode, OptimizeMetric
+from src.enums.enums import (
+    MetricMode,
+    OptimizeMetric,
+    SupportedAugmentations,
+    SupportedHeads,
+    SupportedOptimizer,
+    SupportedScheduler,
+)
 
 # ===============
 # PATHS START
@@ -28,69 +33,107 @@ PATH_MODELS = Path(PATH_WORK_DIR, "models")
 # PATHS END
 # ===============
 
-DEFAULT_IRMAS_TRAIN_SIZE = 6705
-DEFAULT_IRMAS_TEST_SIZE = 2874
+
+# Digital signal processing
+DEFAULT_SAMPLING_RATE = 16_000
+DEFAULT_N_FFT = 400
+DEFAULT_N_MELS = 128
+DEFAULT_N_MFCC = 20
+DEFAULT_IMAGE_DIM = (384, 384)
+DEFAULT_NORMALIZE_AUDIO = True
+DEFAULT_AUDIO_CHUNK_SIZE = 16_000 * 3
+DEFAULT_SPECTROGRAM_CHUNK_SIZE = 130
+DEFAULT_MAX_AUDIO_SECONDS = 3
+DEFAULT_HOP_LENGTH = DEFAULT_N_FFT // 2
+DEFAULT_AST_N_FFT = 400
+DEFAULT_AST_HOP_LENGTH = 160
+DEFAULT_AST_N_MELS = 128
+
+_augs = list(SupportedAugmentations)
+_augs.remove(SupportedAugmentations.RANDOM_ERASE)
+_augs.remove(SupportedAugmentations.CONCAT_TWO)
+DEFAULT_AUGMENTATIONS = _augs  # all excepted removed ones
+
+DEFAULT_AUGMENTATION_KWARSG = dict(
+    stretch_factors=[0.8, 1.2],
+    time_inversion_p=0.5,
+    freq_mask_param=30,
+    time_mask_param=30,
+    hide_random_pixels_p=0.25,
+    std_noise=0.01,
+)
+
+# DATASET
+DEFAULT_TRAIN_DIRS = [f"irmas:{str(PATH_IRMAS_TRAIN)}"]
+DEFAULT_VAL_DIRS = [f"irmas:{str(PATH_IRMAS_TEST)}"]
+DEFAULT_AUDIO_EXTENSIONS = ["wav"]
+DEFAULT_ONLY_TRAIN_DATASET = False
+
+# TRAIN
+DEFAULT_EPOCHS = 40
+DEFAULT_FINETUNE_HEAD = True
+DEFAULT_FINETUNE_HEAD_EPOCHS = 5
+DEFAULT_PLATEAU_EPOCH_PATIENCE = 6
 DEFAULT_BATCH_SIZE = 2
 DEFAULT_NUM_WORKERS = 4
 DEFAULT_LOG_EVERY_N_STEPS = 20
 DEFAULT_DATASET_FRACTION = 1.0
-DEFAULT_LR = 1e-5
+DEFAULT_USE_WEIGHTED_TRAIN_SAMPLER = False
+DEFAULT_FLUFFY = True
 
+# OPTIM
+DEFAULT_METRIC_MODE = MetricMode.MAX
+DEFAULT_OPTIMIZER = SupportedOptimizer.ADAM
+DEFAULT_OPTIMIZE_METRIC = OptimizeMetric.VAL_F1
+DEFAULT_LR = 1e-5
 DEFAULT_LR_WARMUP = 1e-4
 DEFAULT_LR_ONECYCLE_MAX = 3e-4
-DEFAULT_PRETRAINED = True
-DEFAULT_EPOCHS = 60
+DEFAULT_WEIGHT_DECAY = 1e-5
+DEFAULT_LR_SCHEDULER = SupportedScheduler.ONECYCLE
+DEFAULT_FREEZE_TRAIN_BN = True
+DEFAULT_USE_MULTIPLE_OPTIMIZERS = False
 
-DEFAULT_UNFREEZE_AT_EPOOCH = 5
-DEFAULT_PLATEAU_EPOCH_PATIENCE = 6
-DEFAULT_CHECK_ON_TRAIN_EPOCH_END = False
-DEFAULT_SAVE_ON_TRAIN_EPOCH_END = False
-DEFAULT_SAMPLING_RATE = 16_000
+# MODEL
+DEFAULT_PRETRAINED = True
 DEFAULT_AST_PRETRAINED_TAG = "MIT/ast-finetuned-audioset-10-10-0.4593"
 DEFAULT_WAV2VEC_PRETRAINED_TAG = "m3hrdadfi/wav2vec2-base-100k-gtzan-music-genres"
-DEFAULT_LR_SCHEDULER = SchedulerType.ONECYCLE
-DEFAULT_OPTIMIZER = OptimizerType.ADAM
-DEFAULT_OPTIMIZE_METRIC = OptimizeMetric.VAL_F1
-DEFAULT_METRIC_MODE = MetricMode.MAX
-DEFAULT_WEIGHT_DECAY = 1e-5
-DEFAULT_LR_PLATEAU_FACTOR = 0.5
-DEFAULT_SANITY_CHECKS = False
+DEFAULT_TORCH_CNN_PRETRAINED_TAG = "IMAGENET1K_V2"
+DEFAULT_PRETRAINED_TAG = "DEFAULT"
+DEAFULT_HEAD = SupportedHeads.DEEP_HEAD
+
+# LOGS
 DEFUALT_TQDM_REFRESH = 20
-DEFAULT_AUDIO_EXTENSIONS = ["wav"]
-DEFAULT_N_FFT = 400
-DEFAULT_N_MELS = 128
-DEFAULT_DIM = (384, 384)
-DEFAULT_NORMALIZE_AUDIO = True
-DEFAULT_HOP_LENGTH = DEFAULT_N_FFT // 2
-DEFAULT_FC = []
-DEFAULT_PRETRAINED_WEIGHTS = "DEFAULT"
+DEFAULT_CHECK_ON_TRAIN_EPOCH_END = False
+DEFAULT_SAVE_ON_TRAIN_EPOCH_END = False
 DEFAULT_LOG_PER_INSTRUMENT_METRICS = False
-DEFAULT_N_MFCC = 20
-DEFAULT_DCT_TYPE = 2
-DEFAULT_MAX_LEN = 3
-DEFAULT_REPEAT = 3
-DEFAULT_MAX_SEQ_LENGTH = 3
-DEFAULT_FREEZE_TRAIN_BN = True
-DEFAULT_USE_WEIGHTED_TRAIN_SAMPLER = False
-DEFAULT_ONLY_TRAIN_DATASET = False
-DEFAULT_AUDIO_CHUNK_SIZE = 16_000 * 3
-DEFAULT_SPECTROGRAM_CHUNK_SIZE = 130
-
-DEFAULT_AUGMENTATIONS = [
-    SupportedAugmentations.TIME_STRETCH,
-    SupportedAugmentations.PITCH,
-    SupportedAugmentations.BANDPASS_FILTER,
-    SupportedAugmentations.COLOR_NOISE,
-    SupportedAugmentations.TIMEINV,
-    SupportedAugmentations.FREQ_MASK,
-    SupportedAugmentations.TIME_MASK,
-    # SupportedAugmentations.RANDOM_ERASE,
-    SupportedAugmentations.RANDOM_PIXELS,
-]
 
 
-DEFAULT_TRAIN_DIRS = [f"irmas:{str(PATH_IRMAS_TRAIN)}"]
-DEFAULT_VAL_DIRS = [f"irmas:{str(PATH_IRMAS_TEST)}"]
+# ===============
+# VALUES THAT DON'T CHANGE START
+# ===============
+
+DEFAULT_IRMAS_TRAIN_SIZE = 6705
+DEFAULT_IRMAS_TEST_SIZE = 2874
+DEFAULT_RGB_CHANNELS = 3
+DEFAULT_LR_PLATEAU_FACTOR = 0.5
+
+IRMAS_TRAIN_CLASS_COUNT = {
+    "voi": 778,
+    "gel": 760,
+    "pia": 721,
+    "org": 682,
+    "gac": 637,
+    "sax": 626,
+    "vio": 580,
+    "tru": 577,
+    "cla": 505,
+    "flu": 451,
+    "cel": 388,
+}
+
+# ===============
+# VALUES THAT DON'T CHANGE END
+# ===============
 
 # ===============
 # KEYS START
