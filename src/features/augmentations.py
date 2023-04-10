@@ -138,13 +138,13 @@ class SpectrogramAugmentation:
 
 def get_augmentations(args):
     train_kwargs = dict(
-        augmentation_enums=args.augmentations,
-        sampling_rate=args.sampling_rate,
-        **args.aug_kwargs,
+        augmentation_enums=config.augmentations,
+        sampling_rate=config.sampling_rate,
+        **config.aug_kwargs,
     )
     val_kwargs = dict(
         augmentation_enums=[],
-        sampling_rate=args.sampling_rate,
+        sampling_rate=config.sampling_rate,
     )
     train_spectrogram_augmentation = SpectrogramAugmentation(**train_kwargs)
     train_waveform_augmentation = WaveformAugmentation(**train_kwargs)

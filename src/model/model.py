@@ -28,26 +28,26 @@ def get_data_input_type(model_enum: SupportedModels) -> ModelInputDataType:
 def get_model(args, pl_args) -> tuple[pl.LightningModule, ModelInputDataType]:
     from src.model.model_torch import TORCHVISION_CONSTRUCTOR_DICT, TorchvisionModel
 
-    model_enum = args.model
+    model_enum = config.model
     model_base_kwargs = dict(
-        pretrained=args.pretrained,
-        lr=args.lr,
-        batch_size=args.batch_size,
-        scheduler_type=args.scheduler,
-        epochs=args.epochs,
-        lr_warmup=args.lr_warmup,
-        optimizer_type=args.optimizer,
-        num_labels=args.num_labels,
-        optimization_metric=args.metric,
+        pretrained=config.pretrained,
+        lr=config.lr,
+        batch_size=config.batch_size,
+        scheduler_type=config.scheduler,
+        epochs=config.epochs,
+        lr_warmup=config.lr_warmup,
+        optimizer_type=config.optimizer,
+        num_labels=config.num_labels,
+        optimization_metric=config.metric,
         weight_decay=config_defaults.DEFAULT_WEIGHT_DECAY,
-        metric_mode=args.metric_mode,
-        plateau_epoch_patience=args.patience,
-        unfreeze_at_epoch=args.unfreeze_at_epoch,
-        backbone_after=args.backbone_after,
-        head_after=args.head_after,
-        lr_onecycle_max=args.lr_onecycle_max,
-        log_per_instrument_metrics=args.log_per_instrument_metrics,
-        freeze_train_bn=args.freeze_train_bn,
+        metric_mode=config.metric_mode,
+        plateau_epoch_patience=config.patience,
+        unfreeze_at_epoch=config.unfreeze_at_epoch,
+        backbone_after=config.backbone_after,
+        head_after=config.head_after,
+        lr_onecycle_max=config.lr_onecycle_max,
+        log_per_instrument_metrics=config.log_per_instrument_metrics,
+        freeze_train_bn=config.freeze_train_bn,
     )
 
     if model_enum == SupportedModels.AST:
@@ -59,8 +59,8 @@ def get_model(args, pl_args) -> tuple[pl.LightningModule, ModelInputDataType]:
     elif model_enum in TORCHVISION_CONSTRUCTOR_DICT:
         model = TorchvisionModel(
             model_enum=model_enum,
-            fc=args.fc,
-            pretrained_weights=args.pretrained_weights,
+            fc=config.fc,
+            pretrained_weights=config.pretrained_weights,
             **model_base_kwargs,
         )
         return model

@@ -10,6 +10,7 @@ from pytorch_lightning.callbacks import (
     TQDMProgressBar,
 )
 
+from src.config.config import config, pl_args
 from src.data.datamodule import IRMASDataModule
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
 from src.features.augmentations import SupportedAugmentations, get_augmentations
@@ -21,7 +22,6 @@ from src.train.callbacks import (
     OverrideEpochMetricCallback,
     TensorBoardHparamFixer,
 )
-from src.train.train_args import parse_args_train
 from src.utils.utils_dataset import chunk_collate_audio, collate_fn_spectrogram
 from src.utils.utils_functions import (
     add_prefix_to_keys,
@@ -33,22 +33,21 @@ from src.utils.utils_functions import (
 from src.utils.utils_train import MetricMode, OptimizeMetric, print_modules
 
 if __name__ == "__main__":
-    args, pl_args = parse_args_train()
-    output_dir = args.output_dir
-    num_labels = args.num_labels
-    batch_size = args.batch_size
-    sampling_rate = args.sampling_rate
-    unfreeze_at_epoch: int = args.unfreeze_at_epoch
-    metric_mode_str = MetricMode(args.metric_mode).value
-    optimizer_metric_str = OptimizeMetric(args.metric).value
-    normalize_audio = args.normalize_audio
-    aug_kwargs = args.aug_kwargs
-    dim = args.dim
-    use_weighted_train_sampler = args.use_weighted_train_sampler
+    output_dir = config.output_dir
+    num_labels = config.num_labels
+    batch_size = config.batch_size
+    sampling_rate = config.sampling_rate
+    unfreeze_at_epoch: int = config.unfreeze_at_epoch
+    metric_mode_str = MetricMode(config.metric_mode).value
+    optimizer_metric_str = OptimizeMetric(config.metric).value
+    normalize_audio = config.normalize_audio
+    aug_kwargs = config.aug_kwargs
+    dim = config.dim
+    use_weighted_train_sampler = config.use_weighted_train_sampler
 
     timestamp = get_timestamp()
     experiment_codeword = random_codeword()
-    experiment_name = f"{timestamp}_{experiment_codeword}_{args.model.value}"
+    experiment_name = f"{timestamp}_{experiment_codeword}_{config.model.value}"
 
     os.makedirs(output_dir, exist_ok=True)
     filename_report = Path(output_dir, experiment_name + ".txt")
@@ -58,7 +57,7 @@ if __name__ == "__main__":
     print("Config:", to_yaml(vars(args)), sep="\n")
     print("Config PyTorch Lightning:", to_yaml(vars(pl_args)), sep="\n")
 
-    data_input_type = get_data_input_type(model_enum=args.model)
+    data_input_type = get_data_input_type(model_enum=config.model)
     if data_input_type == ModelInputDataType.IMAGE:
         collate_fn = collate_fn_spectrogram
     elif data_input_type == ModelInputDataType.WAVEFORM:
@@ -74,14 +73,14 @@ if __name__ == "__main__":
     ) = get_augmentations(args)
 
     train_audio_transform: AudioTransformBase = get_audio_transform(
-        audio_transform_enum=args.audio_transform,
+        audio_transform_enum=config.audio_transform,
         sampling_rate=sampling_rate,
         spectrogram_augmentation=train_spectrogram_augmentation,
         waveform_augmentation=train_waveform_augmentation,
         dim=dim,
     )
     val_audio_transform: AudioTransformBase = get_audio_transform(
-        audio_transform_enum=args.audio_transform,
+        audio_transform_enum=config.audio_transform,
         sampling_rate=sampling_rate,
         spectrogram_augmentation=val_spectrogram_augmentation,
         waveform_augmentation=val_waveform_augmentation,
@@ -90,15 +89,15 @@ if __name__ == "__main__":
 
     datamodule = IRMASDataModule(
         batch_size=batch_size,
-        num_workers=args.num_workers,
-        dataset_fraction=args.dataset_fraction,
-        drop_last_sample=args.drop_last,
+        num_workers=config.num_workers,
+        dataset_fraction=config.dataset_fraction,
+        drop_last_sample=config.drop_last,
         train_audio_transform=train_audio_transform,
         val_audio_transform=val_audio_transform,
         collate_fn=collate_fn,
         normalize_audio=normalize_audio,
-        train_only_dataset=args.train_only_dataset,
-        concat_two_samples=SupportedAugmentations.CONCAT_TWO in args.augmentations,
+        train_only_dataset=config.train_only_dataset,
+        concat_two_samples=SupportedAugmentations.CONCAT_TWO in config.augmentations,
         use_weighted_train_sampler=use_weighted_train_sampler,
     )
 
@@ -118,8 +117,8 @@ if __name__ == "__main__":
     callback_early_stopping = EarlyStopping(
         monitor=optimizer_metric_str,
         mode=metric_mode_str,
-        patience=args.patience,
-        check_on_train_epoch_end=args.check_on_train_epoch_end,
+        patience=config.patience,
+        check_on_train_epoch_end=config.check_on_train_epoch_end,
         verbose=True,
     )
 
@@ -134,11 +133,11 @@ if __name__ == "__main__":
             ]
         ),
         auto_insert_metric_name=False,
-        save_on_train_epoch_end=args.save_on_train_epoch_end,
+        save_on_train_epoch_end=config.save_on_train_epoch_end,
         verbose=True,
     )
 
-    bar_refresh_rate = int(train_dataloader_size / args.bar_update)
+    bar_refresh_rate = int(train_dataloader_size / config.bar_update)
 
     tensorboard_logger = pl_loggers.TensorBoardLogger(
         save_dir=str(output_dir),
@@ -159,12 +158,12 @@ if __name__ == "__main__":
 
     if unfreeze_at_epoch is not None:
         callbacks.append(
-            FinetuningCallback(unfreeze_backbone_at_epoch=args.unfreeze_at_epoch)
+            FinetuningCallback(unfreeze_backbone_at_epoch=config.unfreeze_at_epoch)
         )
 
     callbacks.append(ModelSummary(max_depth=4))
 
-    auto_lr_find = args.scheduler == SchedulerType.AUTO_LR
+    auto_lr_find = config.scheduler == SchedulerType.AUTO_LR
     trainer: pl.Trainer = pl.Trainer.from_argparse_args(
         pl_args,
         logger=[tensorboard_logger],
@@ -172,7 +171,7 @@ if __name__ == "__main__":
         callbacks=callbacks,
     )
 
-    if args.scheduler == SchedulerType.AUTO_LR.value:
+    if config.scheduler == SchedulerType.AUTO_LR.value:
         lr_finder = trainer.tuner.lr_find(
             model, datamodule=datamodule, num_training=100
         )
@@ -191,5 +190,5 @@ if __name__ == "__main__":
         print(new_lr)
         exit(1)
 
-    trainer.fit(model, datamodule=datamodule, ckpt_path=args.ckpt)
+    trainer.fit(model, datamodule=datamodule, ckpt_path=config.ckpt)
     trainer.test(model, datamodule)

@@ -13,7 +13,8 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, SubsetRandomSampler, WeightedRandomSampler
 from tqdm import tqdm
 
-import src.config.config_defaults as config_defaults
+from src.config.config import config
+from src.data.dataset import SupportedDatasets
 from src.data.dataset_irmas import IRMASDatasetTest, IRMASDatasetTrain
 from src.features.audio_transform_base import AudioTransformBase
 from src.features.augmentations import SupportedAugmentations
@@ -47,11 +48,11 @@ class IRMASDataModule(pl.LightningDataModule):
         train_audio_transform: AudioTransformBase,
         val_audio_transform: AudioTransformBase,
         collate_fn: Callable | None = None,
-        train_dirs: list[Path] = [config_defaults.PATH_IRMAS_TRAIN],
-        val_dirs: list[Path] = [config_defaults.PATH_IRMAS_VAL],
-        test_dirs: list[Path] = [config_defaults.PATH_IRMAS_TEST],
-        train_only_dataset: bool = config_defaults.DEFAULT_ONLY_TRAIN_DATASET,
-        normalize_audio: bool = config_defaults.DEFAULT_NORMALIZE_AUDIO,
+        train_dirs: list[tuple[SupportedDatasets, Path]] = config.train_dirs,
+        val_dirs: list[tuple[SupportedDatasets, Path]] = config.val_dirs,
+        test_dirs: list[tuple[SupportedDatasets, Path]] = config.val_dirs,
+        train_only_dataset: bool = config.train_only_dataset,
+        normalize_audio: bool = config.normalize_audio,
         concat_two_samples: bool = SupportedAugmentations.CONCAT_TWO
         in config_defaults.DEFAULT_AUGMENTATIONS,
         use_weighted_train_sampler=config_defaults.DEFAULT_USE_WEIGHTED_TRAIN_SAMPLER,

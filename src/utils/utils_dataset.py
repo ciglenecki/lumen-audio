@@ -4,7 +4,8 @@ import numpy as np
 import torch
 
 from src.config import config_defaults
-from src.utils.utils_exceptions import InvalidDataException
+from src.data.dataset import SupportedDatasets
+from src.utils.utils_exceptions import InvalidArgument, InvalidDataException
 
 
 def encode_drums(drum: str | None) -> np.ndarray:
@@ -210,6 +211,22 @@ def chunk_collate_audio(batch: list[torch.Tensor, torch.Tensor]):
     file_indices = torch.vstack(file_indices)  # Shape [audio_chunks, 1]
 
     return audio_chunks, labels, file_indices
+
+
+def parse_dataset_enum_dirs(
+    string: str,
+) -> list[tuple[SupportedDatasets, Path]]:
+    pair = string.split(":")
+    if len(pair) != 2:
+        raise InvalidArgument(
+            f"Pair {pair} needs to have two elements. First arg is {list(SupportedDatasets)} and the second is the path "
+        )
+    dataset_name, dataset_path = pair
+    dataset = SupportedDatasets(dataset_name)
+    dataset_path = Path(dataset_path)
+    if not dataset_path.exists():
+        raise InvalidArgument(f"Dataset path {dataset_path} doesn't exist.")
+    return dataset, dataset_path
 
 
 if __name__ == "__main__":

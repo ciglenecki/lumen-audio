@@ -9,6 +9,25 @@ from src.features.augmentations import SupportedAugmentations
 from src.model.optimizers import OptimizerType, SchedulerType
 from src.utils.utils_train import MetricMode, OptimizeMetric
 
+# ===============
+# PATHS START
+# ===============
+
+PATH_WORK_DIR = pyrootutils.find_root(search_from=__file__, indicator=".project-root")
+PATH_DATA = Path(PATH_WORK_DIR, "data")
+PATH_IRMAS = Path(PATH_DATA, "irmas")
+PATH_IRMAS_TRAIN = Path(PATH_IRMAS, "train")
+PATH_IRMAS_VAL = Path(PATH_IRMAS, "val")
+PATH_IRMAS_TEST = Path(PATH_IRMAS, "test")
+PATH_IRMAS_TRAIN_FEATURES = Path(PATH_IRMAS, "train_features")
+
+PATH_OPENMIC = Path(PATH_DATA, "openmic")
+PATH_MODELS = Path(PATH_WORK_DIR, "models")
+
+# ===============
+# PATHS END
+# ===============
+
 DEFAULT_IRMAS_TRAIN_SIZE = 6705
 DEFAULT_IRMAS_TEST_SIZE = 2874
 DEFAULT_BATCH_SIZE = 2
@@ -68,25 +87,10 @@ DEFAULT_AUGMENTATIONS = [
     # SupportedAugmentations.RANDOM_ERASE,
     SupportedAugmentations.RANDOM_PIXELS,
 ]
-# ===============
-# PATHS START
-# ===============
 
-PATH_WORK_DIR = pyrootutils.find_root(search_from=__file__, indicator=".project-root")
-PATH_DATA = Path(PATH_WORK_DIR, "data")
-PATH_IRMAS = Path(PATH_DATA, "irmas")
-PATH_IRMAS_TRAIN = Path(PATH_IRMAS, "train")
-PATH_IRMAS_VAL = Path(PATH_IRMAS, "val")
-PATH_IRMAS_TEST = Path(PATH_IRMAS, "test")
-PATH_IRMAS_TRAIN_FEATURES = Path(PATH_IRMAS, "train_features")
 
-PATH_OPENMIC = Path(PATH_DATA, "openmic")
-PATH_MODELS = Path(PATH_WORK_DIR, "models")
-
-# ===============
-# PATHS END
-# ===============
-
+DEFAULT_TRAIN_DIRS = [f"irmas:{str(PATH_IRMAS_TRAIN)}"]
+DEFAULT_VAL_DIRS = [f"irmas:{str(PATH_IRMAS_TEST)}"]
 
 # ===============
 # KEYS START
