@@ -130,6 +130,7 @@ class ModelBase(pl.LightningModule, ABC):
             self.lr = lr
         # save in case indices change with config changes
         self.backup_instruments = config_defaults.INSTRUMENT_TO_IDX
+        self.save_hyperparameters()
 
     def setup(self, stage: str) -> None:
         """Freezes (turn off require_grads) every submodule except trainable backbone and head."""

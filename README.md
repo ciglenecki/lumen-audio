@@ -13,31 +13,21 @@ Check the code architecture drawing: https://docs.google.com/drawings/d/1DDG480M
 
 ## Notes
 
-
 Tasks:
-
-- [x] check the assumption that label instrument is present thought the whole audio (check n=200 samples and check how many occourances)
-  - holds up for most cases?
 - [ ] create eval script which will caculate ALL metrics for the whole dataset
-- [ ] add tripplet loss or (classification + perceptual distance)
-- [ ] design an augmentation that we can use for progressive training
-- [ ] use validation examples in train (without data leakage)
-- [ ] try out focal loss, label smoothing
-- [ ] implement saving the embeddings of each model for visualizations using dimensionality reduction
+- [ ] use validation examples in train (without data leakage), check what's the total time of audio in train and val
 
 Low priority tasks:
+- [ ] add fluffy support for all models
+- [ ] design an augmentation that we can use for progressive training
+- [ ] try out focal loss and label smoothing: https://pytorch.org/vision/main/_modules/torchvision/ops/focal_loss.html
 - [ ] convert all augmentations so they happen on the GPU
-- [ ] make sure augmetantions happen in batch
-- [ ] attempt error analysis by looking where the gradients are large
 - [ ] compare Mirko's wavelet transform with scipy's native transformation
   - run experiments in both cases
-- [ ] reserach the BEATs model and incorporate it to the existing training structure as fast as possible so we get concrete results. BEATs links are down below.
-- [ ] think about and reserach what happens with variable sampling rate and how can we avoid issues with time length change
-- [ ] Label smoothing. We used label smoothing to account for noisy annotations and absence of birds in “unlucky” 30sec crops.
-- [ ] add fluffy support for all models
+- [ ] make sure augmetantions happen in batch
+
 
 Matej:
-
 - [ ] download ESC50 non instrument audio files and write data loader which are NOT instruments (@matej)
 - [ ] check for all models edge cases (0.1 sec, 2h)
 - [ ] include Ivan's relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
@@ -51,6 +41,10 @@ Matej:
   - [ ] best accuracy = all zeros
   - [ ] best f1 = randomly mark 2-4 instruments as True
   - [ ] best recall = all ones
+- [ ] read why this loss might be a problem at the article ((classification + perceptual distance (centroid of the class in AST latent space, https://hav4ik.github.io/articles/deep-metric-learning-survey)
+- [ ] check the assumption that label instrument is present thought the whole audio (check n=200 samples and check how many occourances) VALIDATION
+  - holds up for most cases?
+- High priority: Steal Vinko's menza reciept so he pays 10€ and get beaten by the Teta Mafia
 
 Mirko:
 - [x] implement Fluffy nn.Module
@@ -98,8 +92,16 @@ Ivan:
 - [ ] implement spectrogram normalization and std (norm,std) and use those paramters to preprocess the image before training.
 
 Vinko:
-- [ ] research audio augmentations
-- [ ] research classical audio features
+- [ ] Perform exploratory data analysis on large scale
+  - [ ] how do spectrogram look before and after augmetations
+  - [ ] musical key finder https://github.com/jackmcarthur/musical-key-finder, which tonalities happen a lot?
+  - [ ] explore what's the corelation between genre and instruments
+  - [ ] explore what's the corelation between drums and instruments
+  - [ ] mfcc svm
+  - [ ] why is irmas bad???
+  - [ ] search kaggle and medium for exploratory data anal audio
+  - [ ] https://librosa.org/doc/main/feature.html
+  - [ ] https://rramnauth2220.github.io/blog/posts/code/200525-feature-extraction.html
 
 Else
 - audio features in the context of traditional approach => baseline
@@ -467,6 +469,9 @@ Tasks:
 - [x] add more augmentations
 - [x] check if wavelet works
 - [x] implement chunking of the audio in inference and perform multiple forward pass
+- [x] implement saving the embeddings of each model for visualizations using dimensionality reduction
+- [x] think about and reserach what happens with variable sampling rate and how can we avoid issues with time length change, solution: chunking
+
 ______________________________________________________________________
 
 ## 🏆 Team members
