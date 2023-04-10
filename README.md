@@ -42,6 +42,7 @@ Low priority tasks:
 
 Matej:
 
+- [ ] add fluffy support for all models
 - [ ] download non instrument audio files and write data loader which are NOT instruments (@matej)
 - [ ] check for all models edge cases (0.1 sec, 30 sec)
 - [ ] include relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
@@ -416,6 +417,11 @@ Librosa
 hop_length
                #ms    #len
 1/(1 / 44100 * 1000) * 20
+
+with a 25ms Hamming window every 10ms (hop)
+
+nfft = 1/(1 / 44100 * 1000) * 25
+hop = 1/(1 / 44100 * 1000) * 10
 
 ### Web
 

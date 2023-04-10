@@ -1,22 +1,35 @@
+import pytorch_lightning as pl
+import torch
+
 import src.config.config_defaults as config_defaults
+from src.model.fluffy import FluffyConfig
+from src.model.heads import get_head_constructor
 from src.model.model_ast import ASTModelWrapper
+from src.model.model_base import ModelInputDataType, SupportedModels
 from src.model.model_wav2vec import Wav2VecWrapper
+from src.model.model_wav2vec_cnn_only import Wav2VecCNNWrapper
 from src.utils.utils_exceptions import UnsupportedModel
-from src.utils.utils_functions import EnumStr
 
 
-class SupportedModels(EnumStr):
-    AST = "ast"
-    EFFICIENT_NET_V2_S = "efficient_net_v2_s"
-    EFFICIENT_NET_V2_M = "efficient_net_v2_m"
-    EFFICIENT_NET_V2_L = "efficient_net_v2_l"
-    RESNEXT50_32X4D = "resnext50_32x4d"
-    RESNEXT101_32X8D = "resnext101_32x8d"
-    RESNEXT101_64X4D = "resnext101_64x4d"
-    WAV2VEC = "wav2vec"
+def get_data_input_type(model_enum: SupportedModels) -> ModelInputDataType:
+    from src.model.model_torch import TORCHVISION_CONSTRUCTOR_DICT
+
+    if model_enum == SupportedModels.AST:
+        return ModelInputDataType.IMAGE
+    elif model_enum in TORCHVISION_CONSTRUCTOR_DICT:
+        return ModelInputDataType.IMAGE
+    elif model_enum == SupportedModels.WAV2VEC:
+        return ModelInputDataType.IMAGE
+    elif model_enum == SupportedModels.WAV2VECCNN:
+        return ModelInputDataType.WAVEFORM
+    raise UnsupportedModel(
+        f"Each model should have it's own ModelInputDataType. Create a new `elif` for the model {model_enum}."
+    )
 
 
-def get_model(args, pl_args):
+def get_model(
+    args, pl_args, loss_function=torch.nn.modules.loss
+) -> tuple[pl.LightningModule, ModelInputDataType]:
     from src.model.model_torch import TORCHVISION_CONSTRUCTOR_DICT, TorchvisionModel
 
     model_enum = args.model
@@ -58,6 +71,21 @@ def get_model(args, pl_args):
     elif model_enum == SupportedModels.WAV2VEC:
         model = Wav2VecWrapper(
             model_name=config_defaults.DEFAULT_WAV2VEC_PRETRAINED_TAG,
+            **model_base_kwargs,
+        )
+        return model
+    elif model_enum == SupportedModels.WAV2VECCNN:
+        head_constructor = get_head_constructor(head_enum=args.head)
+
+        fluffy_config = FluffyConfig(
+            use_multiple_optimizers=args.use_multiple_optimizers,
+            classifer_constructor=head_constructor,
+        )
+
+        model = Wav2VecCNNWrapper(
+            model_name=config_defaults.DEFAULT_WAV2VEC_PRETRAINED_TAG,
+            loss_function=loss_function,
+            fluffy_config=fluffy_config,
             **model_base_kwargs,
         )
         return model

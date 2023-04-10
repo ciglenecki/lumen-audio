@@ -12,8 +12,9 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 
 import src.config.config_defaults as config_defaults
-from src.features.audio_transform import AudioTransformAST, AudioTransformBase
-from src.features.supported_augmentations import SupportedAugmentations
+from src.features.audio_to_ast import AudioTransformAST
+from src.features.audio_transform_base import AudioTransformBase
+from src.features.augmentations import SupportedAugmentations
 from src.utils.utils_audio import load_audio_from_file
 from src.utils.utils_dataset import encode_drums, encode_genre, multi_hot_indices
 from src.utils.utils_exceptions import InvalidDataException
@@ -60,6 +61,7 @@ class IRMASDatasetTrain(Dataset):
         self.sampling_rate = sampling_rate
         self.normalize_audio = normalize_audio
         self.concat_two_samples = concat_two_samples
+        self.instrument_idx_list: dict[str, list[int]] = {}
         self._populate_dataset()
 
         if sanity_checks:
@@ -68,7 +70,12 @@ class IRMASDatasetTrain(Dataset):
             ), f"IRMAS train set should contain {config_defaults.DEFAULT_IRMAS_TRAIN_SIZE} samples"
 
     def _populate_dataset(self):
-        """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)"""
+        """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)
+        self.instrument_idx_list = {
+            "guitar": [0, 3, 5, 9, 13, 15]
+            "flute": [2,4,6,7,8]
+        }
+        """
 
         self.instrument_idx_list = {
             k.value: [] for k in config_defaults.InstrumentEnums

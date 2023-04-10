@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from itertools import combinations
 from pathlib import Path
+from typing import Callable
 
 import numpy as np
 import pytorch_lightning as pl
@@ -14,8 +15,8 @@ from tqdm import tqdm
 
 import src.config.config_defaults as config_defaults
 from src.data.dataset_irmas import IRMASDatasetTest, IRMASDatasetTrain
-from src.features.audio_transform import AudioTransformBase
-from src.features.supported_augmentations import SupportedAugmentations
+from src.features.audio_transform_base import AudioTransformBase
+from src.features.augmentations import SupportedAugmentations
 from src.utils.utils_functions import split_by_ratio
 
 
@@ -45,6 +46,7 @@ class IRMASDataModule(pl.LightningDataModule):
         drop_last_sample: bool,
         train_audio_transform: AudioTransformBase,
         val_audio_transform: AudioTransformBase,
+        collate_fn: Callable | None = None,
         train_dirs: list[Path] = [config_defaults.PATH_IRMAS_TRAIN],
         val_dirs: list[Path] = [config_defaults.PATH_IRMAS_VAL],
         test_dirs: list[Path] = [config_defaults.PATH_IRMAS_TEST],
@@ -69,6 +71,7 @@ class IRMASDataModule(pl.LightningDataModule):
         self.normalize_audio = normalize_audio
         self.concat_two_samples = concat_two_samples
         self.use_weighted_train_sampler = use_weighted_train_sampler
+        self.collate_fn = collate_fn
         self.setup()
 
     def prepare_data(self) -> None:
@@ -78,6 +81,15 @@ class IRMASDataModule(pl.LightningDataModule):
         """The function returns n weights for n samples in the dataset.
 
         Weights are caculated as (1 / class_count) of a particular example.
+
+        [0,  1] <- 1.2
+        [0,  1] <- 1.2
+        [0,  1]
+        [0,  1] <- 1.2
+        [0,  1]
+        [1,  0] <- 3.5
+        [1,  1] <- 3.5
+        3.5 1.2
         """
 
         print("Caculating sample classes...")
@@ -191,6 +203,10 @@ class IRMASDataModule(pl.LightningDataModule):
             len(indices_a) + len(indices_b)
         ), "Some indices might contain non-unqiue values"
 
+    def count_classes(self) -> dict[str, int]:
+        # WARNING: irmas only function
+        return {k: len(v) for k, v in self.train_dataset.instrument_idx_list.items()}
+
     def train_dataloader(self) -> DataLoader:
         return DataLoader(
             self.train_dataset,
@@ -198,7 +214,8 @@ class IRMASDataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             sampler=self.train_sampler,
             drop_last=self.drop_last_sample,
-            collate_fn=collate_fn,
+            collate_fn=self.collate_fn,
+            pin_memory=True,
         )
 
     def val_dataloader(self) -> DataLoader:
@@ -210,7 +227,8 @@ class IRMASDataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             sampler=self.val_sampler,
             drop_last=self.drop_last_sample,
-            collate_fn=collate_fn,
+            collate_fn=self.collate_fn,
+            pin_memory=True,
         )
 
     def test_dataloader(self) -> DataLoader:
@@ -220,33 +238,6 @@ class IRMASDataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             sampler=self.test_sampler,
             drop_last=self.drop_last_sample,
-            collate_fn=collate_fn,
+            collate_fn=self.collate_fn,
+            pin_memory=True,
         )
-
-
-def collate_fn(
-    examples: list[tuple[torch.Tensor], torch.Tensor]
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    # TODO: remove this comment once you verify that collate_fn works
-    """
-    examples: list[tuple[chunk tensor], label tensor]
-    all_audio_chunks:
-    Args:
-        examples: _description_
-
-    Returns:
-        tuple[torch.Tensor, torch.Tensor, torch.Tensor]: _description_
-    """
-
-    all_audio_chunks, all_labels, file_ids = [], [], []
-    for i, (audio_chunks, label) in enumerate(examples):
-        for audio_chunk in audio_chunks:
-            all_audio_chunks.append(audio_chunk.unsqueeze(0))
-            all_labels.append(label.unsqueeze(0))
-            file_ids.append(i)
-
-    return (
-        torch.cat(tuple(all_audio_chunks), dim=0),
-        torch.cat(tuple(all_labels), dim=0),
-        torch.tensor(file_ids),
-    )

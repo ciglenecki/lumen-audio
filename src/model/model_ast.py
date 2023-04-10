@@ -9,7 +9,7 @@ from transformers import ASTConfig, ASTFeatureExtractor, ASTForAudioClassificati
 from transformers.modeling_outputs import SequenceClassifierOutput
 
 import src.config.config_defaults as config_defaults
-from src.model.deep_head import DeepHead
+from src.model.heads import DeepHead
 from src.model.model_base import ModelBase
 from src.utils.utils_audio import load_audio_from_file, play_audio
 
@@ -62,7 +62,7 @@ class ASTModelWrapper(ModelBase):
         return out.loss, out.logits
 
     def _step(self, batch, batch_idx, type: str):
-        spectrogram, y, files_id = batch
+        spectrogram, y, file_indices = batch
 
         loss, logits_pred = self.forward(spectrogram, labels=y)
         y_pred_prob = torch.sigmoid(logits_pred)
@@ -87,7 +87,7 @@ class ASTModelWrapper(ModelBase):
                     [4, 4, 4]]))
             """
 
-            y_final_out, _ = scatter_max(y_pred, files_id, dim=0)
+            y_final_out, _ = scatter_max(y_pred, file_indices, dim=0)
             print(y_final_out)
 
         return self.log_and_return_loss_step(

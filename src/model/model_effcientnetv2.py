@@ -54,7 +54,7 @@ class EfficientNetV2SmallModel(ModelBase):
         return out
 
     def _step(self, batch, batch_idx, type: str):
-        audio, y, _ = batch
+        audio, y, file_indices = batch
 
         logits_pred = self.forward(audio)
         loss = self.loss_function(logits_pred, y)

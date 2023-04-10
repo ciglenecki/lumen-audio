@@ -11,8 +11,25 @@ from pytorch_lightning.loggers import TensorBoardLogger
 import src.config.config_defaults as config_defaults
 from src.model.optimizers import OptimizerType, SchedulerType, our_configure_optimizers
 from src.train.metrics import get_metrics
-from src.utils.utils_functions import add_prefix_to_keys
+from src.utils.utils_functions import EnumStr, add_prefix_to_keys
 from src.utils.utils_train import MetricMode, OptimizeMetric, get_all_modules_after
+
+
+class SupportedModels(EnumStr):
+    AST = "ast"
+    EFFICIENT_NET_V2_S = "efficient_net_v2_s"
+    EFFICIENT_NET_V2_M = "efficient_net_v2_m"
+    EFFICIENT_NET_V2_L = "efficient_net_v2_l"
+    RESNEXT50_32X4D = "resnext50_32x4d"
+    RESNEXT101_32X8D = "resnext101_32x8d"
+    RESNEXT101_64X4D = "resnext101_64x4d"
+    WAV2VEC = "wav2vec"
+    WAV2VECCNN = "wav2vec_cnn"
+
+
+class ModelInputDataType:
+    WAVEFORM = "waveform"
+    IMAGE = "image"
 
 
 class ModelBase(pl.LightningModule, ABC):
@@ -278,14 +295,14 @@ class ModelBase(pl.LightningModule, ABC):
         self._set_lr(new_lr)
         return
 
-    def lr_scheduler_step(self, scheduler, metric=None):
+    def lr_scheduler_step(self, scheduler, optimizer_idx, metric):
         """We ignore the lr scheduler in the fine tuning phase and update lr maunally.
 
         Once the finetuning phase is over we start using the lr scheduler
         """
 
         if self.is_finetuning_phase():
-            self._lr_finetuning_step(optimizer_idx=0)
+            self._lr_finetuning_step(optimizer_idx=optimizer_idx)
             return
 
         if metric is None:
@@ -308,7 +325,7 @@ class ModelBase(pl.LightningModule, ABC):
             total_lr_sch_steps = self.num_of_steps_in_epoch * self.epochs
 
         out = our_configure_optimizers(
-            parameters=self.parameters(),
+            list_of_module_params=[self.parameters()],
             scheduler_type=self.scheduler_type,
             metric_mode=self.metric_mode,
             plateau_epoch_patience=(self.plateau_epoch_patience // 2) + 1,

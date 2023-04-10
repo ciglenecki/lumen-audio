@@ -1,4 +1,7 @@
+from pathlib import Path
+
 import numpy as np
+import torch
 
 from src.config import config_defaults
 from src.utils.utils_exceptions import InvalidDataException
@@ -111,6 +114,133 @@ def multi_hot_indices(indices: np.ndarray | list, size: int) -> np.ndarray:
     array = np.zeros(size, dtype=np.int8)
     array[indices] = 1
     return array
+
+
+def collate_fn_spectrogram(
+    examples: list[tuple[torch.Tensor], torch.Tensor]
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """
+    Example:
+    batch size = 3
+    max_size = 2
+
+    Batch is tuple (spectrogram image, label)
+    batch = [
+        [[3,4], [5,6]], [1,0,0]
+        [[2,3], [1,7]], [0,0,1]
+        [[9,3], [2,1]], [0,1,0]
+    ]
+    """
+
+    all_audio_chunks, all_labels, file_indices = [], [], []
+    for i, (audio_chunks, label) in enumerate(examples):
+        for audio_chunk in audio_chunks:
+            all_audio_chunks.append(audio_chunk.unsqueeze(0))
+            all_labels.append(label.unsqueeze(0))
+            file_indices.append(i)
+
+    return (
+        torch.cat(tuple(all_audio_chunks), dim=0),
+        torch.cat(tuple(all_labels), dim=0),
+        torch.tensor(file_indices),
+    )
+
+
+def chunk_collate_audio(batch: list[torch.Tensor, torch.Tensor]):
+    """Batch is tuple (waveform, label)
+
+    Example:
+
+        batch size = 3
+        max_size = 2
+
+        batch = [
+            [5, 6, 1, 2, 3], [1,0,0]
+            [1, 5, 3, 8, 9], [0,0,1]
+            [2, 5, 3, 1, 7], [0,1,0]
+        ]
+
+        output_audio_batch = [
+            [5, 6],
+            [1, 2],
+            [3, 0],
+              ....,
+            [3, 1],
+            [7, 0],
+        ]
+
+        output_lables_batch = [
+            [1,0,0],
+            [1,0,0],
+            [1,0,0],
+            .......,
+            [0,1,0],
+            [0,1,0]
+        ]
+
+        output_labels = [
+            0,
+            0,
+            0,
+            ...,
+            2,
+            2
+        ]
+        output = output_image_batch, output_lables_batch, output_labels
+    """
+    audio_chunks, labels, file_indices = [], [], []
+    for file_idx, (audio, label) in enumerate(batch):
+        chunks = list(torch.split(audio, config_defaults.DEFAULT_AUDIO_CHUNK_SIZE))
+        audio_chunks.extend(chunks)  # [[5,6], [1,2], [3]]
+        repeat_times = len(chunks)
+
+        repeated_labels = label.repeat([repeat_times, 1])
+        labels.extend(repeated_labels)  # [[1,0,0], [1,0,0], [1,0,0]]
+
+        file_id_repeated = torch.full([repeat_times], file_idx)
+        file_indices.extend(file_id_repeated)  # [0, 0, 0]
+
+    audio_chunks = torch.nn.utils.rnn.pad_sequence(
+        audio_chunks,
+        batch_first=True,
+        padding_value=0.0,
+    )  # Shape [chunks, width, height]
+
+    labels = torch.vstack(labels)  # Shape [audio_chunks, labels]
+    file_indices = torch.vstack(file_indices)  # Shape [audio_chunks, 1]
+
+    return audio_chunks, labels, file_indices
+
+
+def calc_instrument_weight(per_instrument_count: dict[str, int], as_tensor=True):
+    """Caculates weight for each class in the following way: count all negative samples and divide
+    them with positive samples. Positive is the same label, negative is a different one.
+
+    Example:
+        guitar: 50       70/50
+        flute: 30        90/30
+        piano: 40        80/40
+    """
+
+    instruments = [k.value for k in config_defaults.InstrumentEnums]
+    weight_dict = {}
+    total = 0
+    for count in per_instrument_count.values():
+        total += count
+
+    for instrument in instruments:
+        positive = per_instrument_count[instrument]
+        negative = total - positive
+        weight_dict[instrument] = negative / positive
+
+    if as_tensor:
+        weights = torch.zeros(config_defaults.DEFAULT_NUM_LABELS)
+        for instrument in weight_dict.keys():
+            instrument_idx = config_defaults.INSTRUMENT_TO_IDX[instrument]
+            weights[instrument_idx] = weight_dict[instrument]
+        return weights
+    else:
+        return weight_dict
 
 
 if __name__ == "__main__":
