@@ -10,21 +10,6 @@ from src.utils.utils_audio import load_audio_from_file
 from src.utils.utils_functions import EnumStr
 
 
-class UnsupportedAudioTransforms(Exception):
-    pass
-
-
-class AudioTransforms(EnumStr):
-    """List of supported AudioTransforms we use."""
-
-    AST = "ast"
-    MEL_SPECTROGRAM_RESIZE_REPEAT = "mel_spectrogram_resize_repeat"
-    MEL_SPECTROGRAM_FIXED_REPEAT = "mel_spectrogram_fixed_repeat"
-    WAV2VEC = "wav2vec"
-    MFCC_FIXED_REPEAT = "mfcc_fixed_repeat"
-    WAV2VECCNN = "wav2veccnn"
-
-
 class AudioTransformBase(ABC):
     """Base class for all audio transforms. Ideally, each audio transform class should be self
     contained and shouldn't depened on the outside context.
@@ -36,8 +21,8 @@ class AudioTransformBase(ABC):
     def __init__(
         self,
         sampling_rate: int,
-        spectrogram_augmentation: SpectrogramAugmentation | None,
-        waveform_augmentation: WaveformAugmentation | None,
+        spectrogram_augmentation: SpectrogramAugmentation,
+        waveform_augmentation: WaveformAugmentation,
     ) -> None:
         super().__init__()
         self.sampling_rate = sampling_rate

@@ -2,7 +2,6 @@ import math
 from typing import Any
 
 import torch
-import torch.nn as nn
 import torchmetrics
 from pytorch_lightning.loggers import TensorBoardLogger
 from torchmetrics.classification import MultilabelF1Score
@@ -18,36 +17,36 @@ class Wav2VecWrapper(ModelBase):
 
     def __init__(
         self,
-        model_name: str,
         time_dim_pooling_mode="mean",
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
 
-        self.model_name = model_name
         self.time_dim_pooling_mode = time_dim_pooling_mode
-
-        self.loss_function = nn.BCEWithLogitsLoss()
 
         self.hamming_distance = torchmetrics.HammingDistance(
             task="multilabel", num_labels=self.num_labels
         )
         self.f1_score = MultilabelF1Score(num_labels=self.num_labels)
 
-        config = Wav2Vec2Config(
-            pretrained_model_name_or_path=model_name,
+        config_wav2vec = Wav2Vec2Config(
+            pretrained_model_name_or_path=self.pretrained_tag,
             id2label=config_defaults.IDX_TO_INSTRUMENT,
             label2id=config_defaults.IDX_TO_INSTRUMENT,
             num_labels=self.num_labels,
         )
         self.backbone: Wav2Vec2Model = Wav2Vec2Model.from_pretrained(
-            model_name, config=config, ignore_mismatched_sizes=True
+            self.pretrained_tag,
+            config=config_wav2vec,
+            ignore_mismatched_sizes=True,
         )
         middle_size = int(
-            math.sqrt(config.hidden_size * self.num_labels) + self.num_labels
+            math.sqrt(config_wav2vec.hidden_size * self.num_labels) + self.num_labels
         )
-        self.classifier = DeepHead([config.hidden_size, middle_size, self.num_labels])
+        self.classifier = DeepHead(
+            [config_wav2vec.hidden_size, middle_size, self.num_labels]
+        )
 
         self.save_hyperparameters()
 

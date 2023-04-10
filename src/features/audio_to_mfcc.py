@@ -4,6 +4,7 @@ import torch
 import torchvision.transforms.functional as F
 
 import src.config.config_defaults as config_defaults
+from src.config.config import config
 from src.features.audio_transform_base import AudioTransformBase
 
 
@@ -13,16 +14,14 @@ class MFCC(AudioTransformBase):
     def __init__(
         self,
         n_mfcc: int,
-        dct_type: int,
-        n_fft: int = config_defaults.DEFAULT_N_FFT,
-        hop_length: int = config_defaults.DEFAULT_HOP_LENGTH,
-        n_mels: int = config_defaults.DEFAULT_N_MELS,
+        n_fft: int = config.n_fft,
+        hop_length: int = config.hop_length,
+        n_mels: int = config.n_mels,
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.n_mfcc = n_mfcc
-        self.dct_type = dct_type
         self.n_fft = n_fft
         self.hop_length = hop_length
         self.n_mels = n_mels
@@ -36,7 +35,6 @@ class MFCC(AudioTransformBase):
             y=audio,
             sr=self.sampling_rate,
             n_mfcc=self.n_mfcc,
-            dct_type=self.dct_type,
             n_fft=self.n_fft,
             hop_length=self.hop_length,
             n_mels=self.n_mels,
@@ -47,21 +45,21 @@ class MFCC(AudioTransformBase):
 
 class MFCCFixed(MFCC):
     """Resamples audio, extracts MFCC from audio and pads the original spectrogram to dimension of
-    spectrogram for max_len sequence."""
+    spectrogram for max_audio_seconds sequence."""
 
     def __init__(
         self,
-        max_len: int,
-        dim: tuple[int, int],
+        max_audio_seconds: int,
+        image_dim: tuple[int, int],
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        self.max_len = max_len
-        self.dim = dim
+        self.max_audio_seconds = max_audio_seconds
+        self.image_dim = image_dim
 
         FAKE_SAMPLE_RATE = 44_100
-        dummy_audio = np.random.random(size=(max_len * FAKE_SAMPLE_RATE,))
+        dummy_audio = np.random.random(size=(max_audio_seconds * FAKE_SAMPLE_RATE,))
         audio_resampled = librosa.resample(
             dummy_audio,
             orig_sr=FAKE_SAMPLE_RATE,
@@ -72,7 +70,6 @@ class MFCCFixed(MFCC):
             y=audio_resampled,
             sr=self.sampling_rate,
             n_mfcc=self.n_mfcc,
-            dct_type=self.dct_type,
             n_fft=self.n_fft,
             hop_length=self.hop_length,
             n_mels=self.n_mels,
@@ -96,7 +93,7 @@ class MFCCFixed(MFCC):
 
         for i, _ in enumerate(chunks):
             chunks[i] = chunks[i].reshape(1, 1, *self.spectrogram_dim)
-            chunks[i] = F.resize(chunks[i], size=self.dim, antialias=True)[0][0]
+            chunks[i] = F.resize(chunks[i], size=self.image_dim, antialias=True)[0][0]
             chunks[i] = chunks[i].type(torch.float32)
 
         return chunks
@@ -108,7 +105,7 @@ class MFCCFixedRepeat(MFCCFixed):
     This is useful for mocking RGB channels.
     """
 
-    def __init__(self, repeat=3, **kwargs):
+    def __init__(self, repeat=config_defaults.DEFAULT_RGB_CHANNELS, **kwargs):
         super().__init__(**kwargs)
         self.repeat = repeat
 

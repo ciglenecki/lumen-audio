@@ -1,4 +1,5 @@
-import src.config.config_defaults as config_defaults
+from src.config.config import config
+from src.enums.enums import AudioTransforms
 from src.features.audio_to_ast import AudioTransformAST
 from src.features.audio_to_mfcc import MFCCFixedRepeat
 from src.features.audio_to_spectrogram import (
@@ -6,12 +7,9 @@ from src.features.audio_to_spectrogram import (
     MelSpectrogramResizedRepeat,
 )
 from src.features.audio_to_wav2vec import AudioToWav2Vec2, AudioToWav2Vec2CNN
-from src.features.audio_transform_base import (
-    AudioTransformBase,
-    AudioTransforms,
-    UnsupportedAudioTransforms,
-)
+from src.features.audio_transform_base import AudioTransformBase
 from src.features.augmentations import SpectrogramAugmentation, WaveformAugmentation
+from src.utils.utils_exceptions import UnsupportedAudioTransforms
 
 
 def get_audio_transform(
@@ -19,7 +17,7 @@ def get_audio_transform(
     sampling_rate: int,
     spectrogram_augmentation: SpectrogramAugmentation | None,
     waveform_augmentation: WaveformAugmentation | None,
-    dim: tuple[int, int],
+    image_dim: tuple[int, int],
 ) -> AudioTransformBase:
     base_kwargs = dict(
         sampling_rate=sampling_rate,
@@ -29,37 +27,33 @@ def get_audio_transform(
 
     if audio_transform_enum is AudioTransforms.AST:
         return AudioTransformAST(
-            pretrained_tag=config_defaults.DEFAULT_AST_PRETRAINED_TAG,
+            pretrained_tag=config.pretrained_tag,
             **base_kwargs,
         )
     elif audio_transform_enum is AudioTransforms.MEL_SPECTROGRAM_FIXED_REPEAT:
         return MelSpectrogramFixedRepeat(
-            dim=dim,
-            repeat=config_defaults.DEFAULT_REPEAT,
-            max_len=config_defaults.DEFAULT_MAX_LEN,
+            max_audio_seconds=config.max_audio_seconds,
+            image_dim=image_dim,
             **base_kwargs,
         )
     elif audio_transform_enum is AudioTransforms.MEL_SPECTROGRAM_RESIZE_REPEAT:
         return MelSpectrogramResizedRepeat(
-            dim=dim,
-            repeat=config_defaults.DEFAULT_REPEAT,
+            image_dim=image_dim,
             **base_kwargs,
         )
     elif audio_transform_enum is AudioTransforms.WAV2VEC:
         return AudioToWav2Vec2(
-            pretrained_tag=config_defaults.DEFAULT_WAV2VEC_PRETRAINED_TAG,
+            pretrained_tag=config.pretrained_tag,
             **base_kwargs,
         )
     elif audio_transform_enum is AudioTransforms.MFCC_FIXED_REPEAT:
         return MFCCFixedRepeat(
-            dim=dim,
-            n_mfcc=config_defaults.DEFAULT_N_MFCC,
-            dct_type=config_defaults.DEFAULT_DCT_TYPE,
-            repeat=config_defaults.DEFAULT_REPEAT,
-            n_fft=config_defaults.DEFAULT_N_FFT,
-            hop_length=config_defaults.DEFAULT_HOP_LENGTH,
-            n_mels=config_defaults.DEFAULT_N_MELS,
-            max_len=config_defaults.DEFAULT_MAX_LEN,
+            image_dim=image_dim,
+            n_mfcc=config.n_mfcc,
+            n_fft=config.n_fft,
+            hop_length=config.hop_length,
+            n_mels=config.n_mels,
+            max_audio_seconds=config.max_audio_seconds,
             **base_kwargs,
         )
     elif audio_transform_enum is AudioTransforms.WAV2VECCNN:

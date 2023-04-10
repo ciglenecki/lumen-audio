@@ -14,6 +14,7 @@ import torchaudio
 from pydub.utils import get_player_name
 
 from src.config import config_defaults
+from src.config.config import config
 from src.utils.utils_functions import print_tensor
 
 
@@ -68,7 +69,7 @@ def load_audio_from_file(
     audio_path: Path | str,
     method: str = "librosa",
     normalize=True,
-    target_sr: int | None = config_defaults.DEFAULT_SAMPLING_RATE,
+    target_sr: int | None = config.sampling_rate,
 ) -> tuple[torch.Tensor | np.ndarray, int]:
     """Performs loading of the audio file.
 
@@ -225,10 +226,11 @@ def example_audio_mel_audio():
 
 
 def ast_feature_inverse(spectrogram: torch.Tensor):
-    n_fft = 400
-    hop = 160
+    n_fft = config.n_fft
+    hop = config.hop_length
     inverse_mel = torchaudio.transforms.InverseMelScale(
-        n_stft=n_fft // 2 + 1, sample_rate=config_defaults.DEFAULT_SAMPLING_RATE
+        n_stft=n_fft // 2 + 1,
+        sample_rate=config.sampling_rate,
     )
     griffin_lim = torchaudio.transforms.GriffinLim(
         n_fft=n_fft, hop_length=hop, n_iter=54

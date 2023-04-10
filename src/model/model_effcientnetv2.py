@@ -22,7 +22,10 @@ class EfficientNetV2SmallModel(ModelBase):
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-
+        self.hamming_distance = torchmetrics.HammingDistance(
+            task="multilabel", num_labels=self.num_labels
+        )
+        self.f1_score = MultilabelF1Score(num_labels=self.num_labels)
         self.backbone = efficientnet_v2_s(weights="IMAGENET1K_V1", progress=True)
 
         self.backbone.classifier = nn.Sequential(
@@ -33,18 +36,13 @@ class EfficientNetV2SmallModel(ModelBase):
                 bias=True,
             ),
         )
-        self.hamming_distance = torchmetrics.HammingDistance(
-            task="multilabel", num_labels=self.num_labels
-        )
 
-        self.f1_score = MultilabelF1Score(num_labels=self.num_labels)
-        self.loss_function = nn.BCEWithLogitsLoss()
         self.save_hyperparameters()
 
     def head(self) -> Union[nn.ModuleList, nn.Module]:
         return self.backbone.classifier
 
-    def trainable_backbone(self) -> Union[nn.ModuleList, nn.Module]:
+    def trainable_backbone(self) -> list[nn.ModuleList | nn.Module]:
         result = []
         result.extend(list(self.backbone.features)[-3:])
         return result

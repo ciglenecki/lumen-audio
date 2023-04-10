@@ -10,7 +10,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --dataset-dir data/raw/train --batch-size 2 --audio-transform ast --model ast --epochs 33 --unfreeze-at-epoch 1 --patience 500 --backbone-after backbone.classifier --head-after backbone.classifier --lr 1e-5 --lr-onecycle-max 5e-4 --lr-warmup 1e-4 --quick --num-workers 1",
+			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --val-dirs irmas:data/irmas/test --backbone-after backbone.classifier --head-after backbone.classifier --model ast --audio-transform ast --quick",
 			"justMyCode": false
 		},
 		{
@@ -19,16 +19,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --dataset-dir data/raw/train --lr 5e-5 --batch-size 2 --num-workers 4 --audio-transform wav2vec --model wav2vec --augmentations time_stretch --epochs 40  --patience 50 --backbone-after layers.9 --head-after deep_head --lr-onecycle-max 1e-3 --lr-warmup 5e-5 --unfreeze-at-epoch 4",
-			"justMyCode": false
-		},
-		{
-			"name": "Train efficientnet",
-			"type": "python",
-			"request": "launch",
-			"program": "src/train/train.py",
-			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --dataset-dir data/raw/train --lr 5e-4 --batch-size 4 --num-workers 4 --audio-transform mel_spectrogram_fixed_repeat --model efficient_net_v2_s --augmentations time_stretch radnom_pixels --epochs 20  --patience 50 --lr-onecycle-max 1e-4 --quick",
+			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --lr 5e-5 --batch-size 2 --num-workers 4 --audio-transform wav2vec --model wav2vec --epochs 40 --plateau-epoch-patience 50 --backbone-after layers.9 --head-after deep_head --lr-onecycle-max 1e-3 --lr-warmup 5e-5 --unfreeze-at-epoch 4",
 			"justMyCode": false
 		},
 		{
@@ -37,7 +28,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --dataset-dir data/raw/train --lr 5e-4 --batch-size 2 --num-workers 1 --audio-transform mel_spectrogram_fixed_repeat --model resnext50_32x4d --epochs 20 --lr-onecycle-max 1e-4 --quick",
+			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --val-dirs irmas:data/irmas/test --lr 5e-4 --audio-transform mel_spectrogram_fixed_repeat --model resnext50_32x4d --backbone-after backbone.fc --head-after backbone.fc --quick",
 			"justMyCode": false
 		},
 		{
@@ -46,25 +37,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --dataset-dir data/raw/train --lr 5e-4 --batch-size 4 --num-workers 4 --audio-transform wav2veccnn --model wav2vec_cnn --epochs 20 --lr-onecycle-max 1e-4 --head attention_head --use-multiple-optimizers --loss-function cross_entropy_pos_weight --quick",
-			"justMyCode": false
-		},
-		{
-			"name": "Train test",
-			"type": "python",
-			"request": "launch",
-			"program": "src/train.py",
-			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --dataset-dir data/raw/train --lr 1e-4 --lr-warmup 5e-4 --num-workers 1 --quick",
-			"justMyCode": false
-		},
-		{
-			"name": "Train AST main",
-			"type": "python",
-			"request": "launch",
-			"program": "src/model/model_ast.py",
-			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 ",
+			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --val-dirs irmas:data/irmas/test --audio-transform wav2veccnn --model wav2vec_cnn --head attention_head --use-multiple-optimizers --loss-function cross_entropy_pos_weight --backbone-after classifier.heads --head-after classifier.heads --quick",
 			"justMyCode": false
 		},
 	]

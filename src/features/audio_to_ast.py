@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from transformers import ASTFeatureExtractor
 
-import src.config.config_defaults as config_defaults
+from src.config.config import config
 from src.features.audio_transform_base import AudioTransformBase
 
 
@@ -16,7 +16,7 @@ class AudioTransformAST(AudioTransformBase):
 
     def __init__(
         self,
-        pretrained_tag=config_defaults.DEFAULT_AST_PRETRAINED_TAG,
+        pretrained_tag=config.pretrained_tag,
         *args,
         **kwargs,
     ):

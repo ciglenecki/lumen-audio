@@ -1,5 +1,5 @@
 {
-	"python.linting.pylintEnabled": true,
+	"python.linting.pylintEnabled": false,
 	"python.linting.enabled": true,
 	"python.analysis.typeCheckingMode": "off",
 	"python.analysis.extraPaths": [
@@ -10,5 +10,6 @@
 		"**/bower_components": true,
 		"**/*.code-search": true,
 		"**/venv": true,
-	}
+	},
+	"python.linting.mypyEnabled": true
 }
