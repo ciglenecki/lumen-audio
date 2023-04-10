@@ -1,10 +1,14 @@
 # 🎸 Lumen Data Science 2023 – Audio Classification
 
+## Project Documentation
+
+https://docs.google.com/document/d/18Ds27Myu1UrBoEp-s2LuY4JIwpjVKbguecgBt9dB3Jc/edit?usp=sharing
+
+Experiments: https://docs.google.com/spreadsheets/d/1DK04mzl79wB_NNKNJFpf8HrG24TvEzwpreovirgSjGY/edit?usp=sharing
+
 Check the code architecture drawing: https://docs.google.com/drawings/d/1DDG480MVKn_C3fZktl5t6uvWeh57Vx2wgtH9GJYsGAU/edit?usp=sharing
 
 ![ ](img/code_arh.png)
-
-Experiments: https://docs.google.com/spreadsheets/d/1DK04mzl79wB_NNKNJFpf8HrG24TvEzwpreovirgSjGY/edit?usp=sharing
 
 
 ## Notes
@@ -12,16 +16,9 @@ Experiments: https://docs.google.com/spreadsheets/d/1DK04mzl79wB_NNKNJFpf8HrG24T
 
 Tasks:
 
-- [ ] check the assumption that label instrument is present thought the whole audio (check n=200 samples and check how many occourances)
-- [ ] create random classifier
-  - [ ] best accuracy = all zeros
-  - [ ] best f1 = randomly mark 2-4 instruments as True
-  - [ ] best recall = all ones
-- [ ] implement audio and spectrogram normalization
-- [ ] include files which are NOT instruments
+- [x] check the assumption that label instrument is present thought the whole audio (check n=200 samples and check how many occourances)
+  - holds up for most cases?
 - [ ] create eval script which will caculate ALL metrics for the whole dataset
-- [ ] add method to save augmented examples to a new dataset. We need this for pretraining
-- [ ] implement chunking of the audio in inference and perform multiple forward pass
 - [ ] add tripplet loss or (classification + perceptual distance)
 - [ ] design an augmentation that we can use for progressive training
 - [ ] use validation examples in train (without data leakage)
@@ -37,41 +34,70 @@ Low priority tasks:
 - [ ] reserach the BEATs model and incorporate it to the existing training structure as fast as possible so we get concrete results. BEATs links are down below.
 - [ ] think about and reserach what happens with variable sampling rate and how can we avoid issues with time length change
 - [ ] Label smoothing. We used label smoothing to account for noisy annotations and absence of birds in “unlucky” 30sec crops.
-
+- [ ] add fluffy support for all models
 
 Matej:
 
-- [ ] add fluffy support for all models
-- [ ] download non instrument audio files and write data loader which are NOT instruments (@matej)
-- [ ] check for all models edge cases (0.1 sec, 30 sec)
-- [ ] include relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
+- [ ] download ESC50 non instrument audio files and write data loader which are NOT instruments (@matej)
+- [ ] check for all models edge cases (0.1 sec, 2h)
+- [ ] include Ivan's relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
 - [ ] perform validation on Rep's corected dataset to check how many labels are correctly marked in the original dataset
   - check if all instruments are correct
   - check if at least one instrument is correct
-- [ ] (???) check what's up with wav2vec2 padding (probably pad tokens)
+- [ ] visualize embedded features for each model with tensorboard embedder
 - [ ] use AST's features for tensorboard embedder https://projector.tensorflow.org/
+- [ ] Low priortiy pretraning: SparK https://github.com/keyu-tian/SparK
+- [ ] create random classifier
+  - [ ] best accuracy = all zeros
+  - [ ] best f1 = randomly mark 2-4 instruments as True
+  - [ ] best recall = all ones
 
 Mirko:
-- [ ] validate that chunking is written well for our codebase
-- [ ] implement Fluffy nn.Module
-- [ ] use Fluffy on Torch CNN, multi-head
-- [ ] train some model Fluffy
-- [ ] Wav2Vec2 feature extractor only
+- [x] implement Fluffy nn.Module
+- [x] use Fluffy on Torch CNN, multi-head
+- [x] train some model Fluffy
+- [x] Wav2Vec2 feature extractor only
+- [ ] Train Wav2Vec2 Transformer "m3hrdadfi/wav2vec2-base-100k-gtzan-music-genres"
+  - [ ] nothing better than simple CNN?
+- [ ] Directly compare Fluffy to non. Fluffy (include metrics)
+  - [ ] report your findings in Google Docs
+- [ ] Train OpenMIC with Wav2Vec2 both
+  - maybe
+  - if Fluffy showed no improvement in previous step then don't use Fluffy
+  - if Fluffy showed improvement train with Fluffy and no Fluffy
+  - [ ] report your findings in Google Docs
+- [ ] add new metric loss function inside `src/model/loss_function.py` and train model using it. Compare metrics.
+  - [ ] report your findings in Google Docs
+- [ ] add Contrastive loss from here https://kevinmusgrave.github.io/pytorch-metric-learning/losses/#contrastiveloss
+  - [ ] report your findings in Google Docs
+  - [ ] implement dataset anchor, positive and negative based on a given loss function, should work for all
+    - [ ] how do you sample positive and negative? Is it uniform acorss dataset, uniform across classes or p=0.5 positive/negative
+- [ ] add ArcFace loss and repeat everything for the above
+  - [ ] report your findings in Google Docs
+- [ ] create attention visualization
+- ![](img/attention_weights.png)
 
 Ivan:
-
+- [ ] cleanup audio transform for spectrograms (remove repeat)
+  - [ ] you still need to resize because the height isn't 224 (it's 128) but make sure the width is the same as the pretrained model image width
+- [ ] move spectrogram chunking to collate. Use caculate_audio_max_seconds_for_image_width to dynamically determine the audio length.
 - [ ] train  ResNeXt 50_32x4d on MelSpectrogram
-  - [ ] with no augmentations
-  - [ ] with augmentations
-  - [ ] (optional a lot of work because of Spark framework) with pretraining. Ping @matej if performance issues arise.
+  - [ ] Compare how augmentations affect the final metrics:
+    - [ ] with no augmentations
+    - [ ] with augmentations
 - [ ] train  ResNeXt 50_32x4d on MFCC
-  - [ ] with no augmentations
-  - [ ] with augmentations
-  - [ ] pretraining
-
+  - [ ] Compare how augmentations affect the final metrics:
+    - [ ] with no augmentations
+    - [ ] with augmentations
+- [ ] prototype pretraining phase:
+  - Shuffle parts of the spectrogram in the following way: (16x16 grid)
+    - shuffle 15% of patches
+    - electra, is the patch shuffled?
+- [ ] add gradient/activation visualization for a predicted image. Which parts of the image light up during inference?
+- ![](img/cnn_activations.png)
+- [ ] implement spectrogram normalization and std (norm,std) and use those paramters to preprocess the image before training.
 
 Vinko:
-
 - [ ] research audio augmentations
 - [ ] research classical audio features
 
@@ -237,20 +263,22 @@ OpenMIC-2018 https://zenodo.org/record/1432913#.W6dPeJNKjOR
 
 ### Distance between classes
 
+https://kevinmusgrave.github.io/pytorch-metric-learning/losses/
+How to construct tripplets: https://omoindrot.github.io/triplet-loss
+Softmax loss and center loss:
+https://hav4ik.github.io/articles/deep-metric-learning-survey
+
 Some instruments are similar and their class should be (somehow) close together.
 
 Standard classification loss + (alpha * distance between two classes)
 1. distance is probably embedings from some pretrained audio model (audio transformer)
 
-https://kevinmusgrave.github.io/pytorch-metric-learning/losses/
 
 Tripplet loss, how do we form triplets
 1. real: guitar
 2. postive: guitar
 3. negative: not guitar?
 
-Softmax loss and center loss:
-https://hav4ik.github.io/articles/deep-metric-learning-survey
 
 ### Audio which are not instruments
 
@@ -438,7 +466,7 @@ Tasks:
   - [x] research if SVM can perform multilabel classification or use 11 SVMs
 - [x] add more augmentations
 - [x] check if wavelet works
-
+- [x] implement chunking of the audio in inference and perform multiple forward pass
 ______________________________________________________________________
 
 ## 🏆 Team members

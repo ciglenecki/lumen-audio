@@ -21,6 +21,13 @@ def caculate_spectrogram_width_for_one_second(sampling_rate: int, hop_size: int)
     return (sampling_rate / hop_size) + 1
 
 
+def caculate_audio_max_seconds_for_image_width(
+    sampling_rate: int, hop_size: int, image_width: int
+) -> float:
+    audio_seconds = image_width / ((sampling_rate / hop_size) + 1)
+    return audio_seconds
+
+
 def stereo_to_mono(audio: torch.Tensor | np.ndarray):
     if isinstance(audio, torch.Tensor):
         return torch.mean(audio, dim=0).unsqueeze(0)
