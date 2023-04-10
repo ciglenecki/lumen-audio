@@ -37,7 +37,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --dataset-dir data/raw/train --lr 5e-4 --batch-size 2 --num-workers 1 --audio-transform mfcc_fixed_repeat --model resnext50_32x4d --epochs 20 --lr-onecycle-max 1e-4 --quick",
+			"args": "--accelerator gpu --devices -1 --dataset-dir data/raw/train --lr 5e-4 --batch-size 2 --num-workers 1 --audio-transform mel_spectrogram_fixed_repeat --model resnext50_32x4d --epochs 20 --lr-onecycle-max 1e-4 --quick",
 			"justMyCode": false
 		},
 		{

@@ -17,6 +17,10 @@ from src.config import config_defaults
 from src.utils.utils_functions import print_tensor
 
 
+def caculate_spectrogram_width_for_one_second(sampling_rate: int, hop_size: int):
+    return (sampling_rate / hop_size) + 1
+
+
 def stereo_to_mono(audio: torch.Tensor | np.ndarray):
     if isinstance(audio, torch.Tensor):
         return torch.mean(audio, dim=0).unsqueeze(0)

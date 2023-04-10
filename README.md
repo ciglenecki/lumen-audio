@@ -418,6 +418,11 @@ hop_length
                #ms    #len
 1/(1 / 44100 * 1000) * 20
 
+with a 25ms Hamming window every 10ms (hop)
+
+nfft = 1/(1 / 44100 * 1000) * 25
+hop = 1/(1 / 44100 * 1000) * 10
+
 ### Web
 
 https://github.com/janmyler/web-audio-editor

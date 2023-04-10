@@ -39,6 +39,7 @@ class MelSpectrogramOurs(AudioTransformBase):
         return spectrogram
 
 
+# TODO: unify and change 4 classes so it's clear what the do, we might need a single class
 class MelSpectrogramResize(MelSpectrogramOurs):
     """Resamples audio, extracts melspectrogram from audio, resizes it to the given dimensions."""
 
