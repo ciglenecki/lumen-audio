@@ -52,7 +52,7 @@ DEFAULT_AST_N_MELS = 128
 
 _augs = list(SupportedAugmentations)
 _augs.remove(SupportedAugmentations.RANDOM_ERASE)
-# _augs.remove(SupportedAugmentations.CONCAT_TWO)
+_augs.remove(SupportedAugmentations.CONCAT_TWO)
 DEFAULT_AUGMENTATIONS = _augs  # all excepted removed ones
 
 DEFAULT_AUGMENTATION_KWARSG = dict(
