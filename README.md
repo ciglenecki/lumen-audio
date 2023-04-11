@@ -22,12 +22,24 @@ Low priority tasks:
 - [ ] design an augmentation that we can use for progressive training
 - [ ] try out focal loss and label smoothing: https://pytorch.org/vision/main/_modules/torchvision/ops/focal_loss.html
 - [ ] convert all augmentations so they happen on the GPU
+  - remove audio transform from the dataset class
+  - implement on_after_batch_transfer
+  - both whole audio transform (along with augmentations) in the Model itself
+  - model then calls on_after_batch_trasnfer automatically and does the augmenations
 - [ ] compare Mirko's wavelet transform with scipy's native transformation
   - run experiments in both cases
 - [ ] make sure augmetantions happen in batch
 
 
 Matej:
+<<<<<<< HEAD
+=======
+- [ ] create backend API/inference
+- [ ] create technical documentation
+- [ ] create docker container
+- [ ] download ESC50 non instrument audio files and write data loader which are NOT instruments (@matej)
+- [ ] check for all models edge cases (0.1 sec, 2h)
+>>>>>>> dev
 - [ ] include Ivan's relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
 - [ ] check for all models edge cases (0.1 sec, 2h)
 - [ ] perform validation on Rep's corected dataset to check how many labels are correctly marked in the original dataset
