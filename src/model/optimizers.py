@@ -42,7 +42,7 @@ def our_configure_optimizers(
     optimizers = []
     schedulers = []
 
-    input(
+    print(
         f"WARNING: you are using n={len(list_of_module_params)} optimziers.\nPress enter to continue:"
     )
 

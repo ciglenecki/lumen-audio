@@ -57,7 +57,7 @@ _augs.remove(SupportedAugmentations.CONCAT_TWO)
 DEFAULT_AUGMENTATIONS = _augs  # all excepted removed ones
 
 DEFAULT_AUGMENTATION_KWARSG = dict(
-    stretch_factors=[0.8, 1.2],
+    stretch_factors=[0.6, 1.4],
     time_inversion_p=0.5,
     freq_mask_param=30,
     time_mask_param=30,
@@ -76,12 +76,12 @@ DEFAULT_EPOCHS = 40
 DEFAULT_FINETUNE_HEAD = True
 DEFAULT_FINETUNE_HEAD_EPOCHS = 5
 DEFAULT_PLATEAU_EPOCH_PATIENCE = 6
-DEFAULT_BATCH_SIZE = 2
+DEFAULT_BATCH_SIZE = 3
 DEFAULT_NUM_WORKERS = 4
 DEFAULT_LOG_EVERY_N_STEPS = 20
 DEFAULT_DATASET_FRACTION = 1.0
 DEFAULT_USE_WEIGHTED_TRAIN_SAMPLER = False
-DEFAULT_FLUFFY = True
+DEFAULT_USE_FLUFFY = False
 
 # OPTIM
 DEFAULT_METRIC_MODE = MetricMode.MAX

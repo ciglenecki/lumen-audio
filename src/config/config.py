@@ -54,6 +54,12 @@ lightning_parser.set_defaults(
 user_group = parser.add_argument_group(ARGS_GROUP_NAME)
 
 user_group.add_argument(
+    "--config",
+    is_config_file=True,
+    help="YAML config file path. Useful for inference or overriding.",
+)
+
+user_group.add_argument(
     "--dataset-fraction",
     metavar="float",
     default=config_defaults.DEFAULT_DATASET_FRACTION,
@@ -392,7 +398,7 @@ user_group.add_argument(
     "--use-fluffy",
     help="Use multiple optimizers for Fluffy.",
     action="store_true",
-    default=config_defaults.DEFAULT_FLUFFY,
+    default=config_defaults.DEFAULT_USE_FLUFFY,
 )
 
 user_group.add_argument(

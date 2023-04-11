@@ -4,6 +4,7 @@ from functools import partial
 from pathlib import Path
 
 import pytorch_lightning as pl
+import yaml
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import (
     EarlyStopping,
@@ -37,7 +38,15 @@ from src.utils.utils_functions import (
 from src.utils.utils_train import print_modules
 
 if __name__ == "__main__":
-    output_dir = config.output_dir
+    timestamp = get_timestamp()
+    experiment_codeword = random_codeword()
+    experiment_name = f"{timestamp}_{experiment_codeword}_{config.model.value}"
+
+    output_dir = Path(config.output_dir)
+    output_dir.mkdir(exist_ok=True)
+    experiment_dir = Path(output_dir, experiment_name)
+    experiment_dir.mkdir(exist_ok=True)
+
     num_labels = config.num_labels
     batch_size = config.batch_size
     sampling_rate = config.sampling_rate
@@ -48,13 +57,11 @@ if __name__ == "__main__":
     image_dim = config.image_dim
     use_weighted_train_sampler = config.use_weighted_train_sampler
 
-    timestamp = get_timestamp()
-    experiment_codeword = random_codeword()
-    experiment_name = f"{timestamp}_{experiment_codeword}_{config.model.value}"
+    filename_config = Path(experiment_dir, "config.yaml")
+    with open(filename_config, "w") as outfile:
+        yaml.dump(config, outfile)
 
-    os.makedirs(output_dir, exist_ok=True)
-    filename_report = Path(output_dir, experiment_name + ".txt")
-
+    filename_report = Path(output_dir, experiment_name, "log.txt")
     stdout_to_file(filename_report)
     print(str(filename_report))
     print("Config:", to_yaml(vars(config)), sep="\n")
