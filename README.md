@@ -1,10 +1,8 @@
 # 🎸 Lumen Data Science 2023 – Audio Classification
 
-## Project Documentation
+## Project Documentation https://docs.google.com/document/d/18Ds27Myu1UrBoEp-s2LuY4JIwpjVKbguecgBt9dB3Jc/edit?usp=sharing
 
-https://docs.google.com/document/d/18Ds27Myu1UrBoEp-s2LuY4JIwpjVKbguecgBt9dB3Jc/edit?usp=sharing
-
-Experiments: https://docs.google.com/spreadsheets/d/1DK04mzl79wB_NNKNJFpf8HrG24TvEzwpreovirgSjGY/edit?usp=sharing
+## Experiments: https://docs.google.com/spreadsheets/d/1DK04mzl79wB_NNKNJFpf8HrG24TvEzwpreovirgSjGY/edit?usp=sharing
 
 Check the code architecture drawing: https://docs.google.com/drawings/d/1DDG480MVKn_C3fZktl5t6uvWeh57Vx2wgtH9GJYsGAU/edit?usp=sharing
 
