@@ -32,14 +32,11 @@ Low priority tasks:
 
 
 Matej:
-<<<<<<< HEAD
-=======
 - [ ] create backend API/inference
 - [ ] create technical documentation
 - [ ] create docker container
 - [ ] download ESC50 non instrument audio files and write data loader which are NOT instruments (@matej)
 - [ ] check for all models edge cases (0.1 sec, 2h)
->>>>>>> dev
 - [ ] include Ivan's relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
 - [ ] check for all models edge cases (0.1 sec, 2h)
 - [ ] perform validation on Rep's corected dataset to check how many labels are correctly marked in the original dataset
