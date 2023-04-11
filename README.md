@@ -22,6 +22,10 @@ Low priority tasks:
 - [ ] design an augmentation that we can use for progressive training
 - [ ] try out focal loss and label smoothing: https://pytorch.org/vision/main/_modules/torchvision/ops/focal_loss.html
 - [ ] convert all augmentations so they happen on the GPU
+  - remove audio transform from the dataset class
+  - implement on_after_batch_transfer
+  - both whole audio transform (along with augmentations) in the Model itself
+  - model then calls on_after_batch_trasnfer automatically and does the augmenations
 - [ ] compare Mirko's wavelet transform with scipy's native transformation
   - run experiments in both cases
 - [ ] make sure augmetantions happen in batch
