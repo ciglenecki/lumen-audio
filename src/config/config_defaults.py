@@ -29,6 +29,7 @@ PATH_IRMAS_SAMPLE = Path(PATH_DATA, "irmas_sample")
 
 PATH_OPENMIC = Path(PATH_DATA, "openmic")
 PATH_MODELS = Path(PATH_WORK_DIR, "models")
+PATH_MODELS_QUICK = Path(PATH_WORK_DIR, "models_quick")
 
 # ===============
 # PATHS END

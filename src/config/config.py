@@ -1,4 +1,4 @@
-"""Input arguments for the train.py file.
+"""Global config file.
 
 To see the list of all arguments call `pyhton3 src/train.py -h`
 """
@@ -458,6 +458,7 @@ if args.quick:
     pl_args.log_every_n_steps = 1
     args.dataset_fraction = 0.01
     args.batch_size = 2
+    args.output_dir = config_defaults.PATH_MODELS_QUICK
 
 if args.epochs:
     pl_args.max_epochs = args.epochs
