@@ -140,6 +140,35 @@ class IRMASDataModule(pl.LightningDataModule):
             datasets.append(dataset)
         return torch.utils.data.ConcatDataset(datasets)
 
+    def _log_indices(self):
+        train_indices = self.train_sampler.indices
+        val_indices = self.val_sampler.indices
+        test_indices = self.test_sampler.indices
+
+        print()
+        print(
+            "Train size",
+            self.train_size,
+            "indices:",
+            train_indices[0:5],
+            train_indices[-5:],
+        )
+        print(
+            "Val size",
+            self.val_size,
+            "indices:",
+            val_indices[0:5],
+            val_indices[-5:],
+        )
+        print(
+            "Test size",
+            self.test_size,
+            "indices:",
+            test_indices[0:5],
+            test_indices[-5:],
+        )
+        print()
+
     def setup(self, stage=None):
         super().setup(stage)
 
@@ -182,28 +211,6 @@ class IRMASDataModule(pl.LightningDataModule):
         self.val_size = len(val_indices)
         self.test_size = len(test_indices)
 
-        print(
-            "Train size",
-            self.train_size,
-            "indices:",
-            train_indices[0:5],
-            train_indices[-5:],
-        )
-        print(
-            "Val size",
-            self.val_size,
-            "indices:",
-            val_indices[0:5],
-            val_indices[-5:],
-        )
-        print(
-            "Test size",
-            self.test_size,
-            "indices:",
-            test_indices[0:5],
-            test_indices[-5:],
-        )
-
         if self.use_weighted_train_sampler and stage["train"]:
             samples_weight = self.get_sample_class_weights(self.train_dataset)
             self.train_sampler = WeightedRandomSampler(
@@ -213,6 +220,7 @@ class IRMASDataModule(pl.LightningDataModule):
             self.train_sampler = SubsetRandomSampler(train_indices.tolist())
         self.val_sampler = SubsetRandomSampler(val_indices.tolist())
         self.test_sampler = SubsetRandomSampler(test_indices.tolist())
+        self._log_indices()
 
     def _sanity_check_difference(
         self,
