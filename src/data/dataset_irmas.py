@@ -33,9 +33,7 @@ glob_expression = "*.wav"
 
 
 class IRMASDatasetTrain(Dataset):
-    all_instrument_indices = torch.tensor(
-        list(config_defaults.INSTRUMENT_TO_IDX.values())
-    )
+    all_instrument_indices = np.array(list(config_defaults.INSTRUMENT_TO_IDX.values()))
 
     def __init__(
         self,
