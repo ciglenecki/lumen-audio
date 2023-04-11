@@ -8,7 +8,7 @@ import torch.nn as nn
 from pytorch_lightning.callbacks import BaseFinetuning
 from pytorch_lightning.loggers import TensorBoardLogger
 
-import src.config.config_defaults as config_defaults
+import src.config.defaults as defaults
 from src.config.config import config
 from src.enums.enums import MetricMode, OptimizeMetric, SupportedModels
 from src.model.fluffy import FluffyConfig
@@ -42,7 +42,7 @@ class ModelBase(pl.LightningModule, ABC):
         lr_warmup: Optional[float] = config.lr_warmup,
         metric_mode: MetricMode = config.metric_mode,
         model_enum: SupportedModels = config.model,
-        num_labels: int = config_defaults.DEFAULT_NUM_LABELS,
+        num_labels: int = defaults.DEFAULT_NUM_LABELS,
         optimization_metric: OptimizeMetric = config.metric,
         optimizer_type: SupportedOptimizer = config.optimizer,
         early_stopping_metric_patience: int = config.early_stopping_metric_patience,
@@ -130,7 +130,7 @@ class ModelBase(pl.LightningModule, ABC):
         else:
             self.lr = lr
         # save in case indices change with config changes
-        self.backup_instruments = config_defaults.INSTRUMENT_TO_IDX
+        self.backup_instruments = defaults.INSTRUMENT_TO_IDX
         self.save_hyperparameters()
 
     def setup(self, stage: str) -> None:

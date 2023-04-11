@@ -1,15 +1,10 @@
 {
-	"python.linting.pylintEnabled": false,
-	"python.linting.enabled": true,
-	"python.analysis.typeCheckingMode": "off",
-	"python.analysis.extraPaths": [
-		"./src/model"
-	],
 	"search.exclude": {
 		"**/node_modules": true,
 		"**/bower_components": true,
-		"**/*.code-search": true,
-		"**/venv": true,
+		// "**/*.code-search": true,
+		// "**/venv": true,
 	},
-	"python.linting.mypyEnabled": true
+	"python.linting.pylintEnabled": true,
+	"python.linting.enabled": true,
 }

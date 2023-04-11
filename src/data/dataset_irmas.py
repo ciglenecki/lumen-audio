@@ -12,12 +12,12 @@ import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-import src.config.config_defaults as config_defaults
+import src.config.defaults as defaults
 from src.config.config import config
 from src.features.audio_to_ast import AudioTransformAST
 from src.features.audio_transform_base import AudioTransformBase
 from src.features.augmentations import SupportedAugmentations
-from src.utils.utils_audio import load_audio_from_file
+from src.utils.utils_audio import ast_spec_to_audio, load_audio_from_file
 from src.utils.utils_dataset import (
     decode_instruments_idx,
     encode_drums,
@@ -28,18 +28,18 @@ from src.utils.utils_dataset import (
 from src.utils.utils_exceptions import InvalidDataException
 
 # '*.(wav|mp3|flac)'
-# glob_expression = f"*\.({'|'.join(config_defaults.DEFAULT_AUDIO_EXTENSIONS)})"
+# glob_expression = f"*\.({'|'.join(defaults.DEFAULT_AUDIO_EXTENSIONS)})"
 glob_expression = "*.wav"
 
 
 class IRMASDatasetTrain(Dataset):
-    all_instrument_indices = np.array(list(config_defaults.INSTRUMENT_TO_IDX.values()))
+    all_instrument_indices = np.array(list(defaults.INSTRUMENT_TO_IDX.values()))
 
     def __init__(
         self,
-        dataset_dir: Path = config_defaults.PATH_IRMAS_TRAIN,
+        dataset_dir: Path = defaults.PATH_IRMAS_TRAIN,
         audio_transform: AudioTransformBase | None = None,
-        num_classes=config_defaults.DEFAULT_NUM_LABELS,
+        num_classes=defaults.DEFAULT_NUM_LABELS,
         sampling_rate=config.sampling_rate,
         normalize_audio=config.normalize_audio,
         concat_two_samples: bool = SupportedAugmentations.CONCAT_TWO
@@ -74,8 +74,8 @@ class IRMASDatasetTrain(Dataset):
         self._populate_dataset()
 
         assert (
-            len(self.dataset) == config_defaults.DEFAULT_IRMAS_TRAIN_SIZE
-        ), f"IRMAS train set should contain {config_defaults.DEFAULT_IRMAS_TRAIN_SIZE} samples"
+            len(self.dataset) == defaults.DEFAULT_IRMAS_TRAIN_SIZE
+        ), f"IRMAS train set should contain {defaults.DEFAULT_IRMAS_TRAIN_SIZE} samples"
 
     def _populate_dataset(self):
         """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)
@@ -90,9 +90,7 @@ class IRMASDatasetTrain(Dataset):
             df = pd.concat(dfs, ignore_index=True)
             df.set_index("filename", inplace=True)
 
-        self.instrument_idx_list = {
-            i.value: [] for i in config_defaults.InstrumentEnums
-        }
+        self.instrument_idx_list = {i.value: [] for i in defaults.InstrumentEnums}
 
         for item_idx, path in tqdm(enumerate(self.dataset_dir.rglob(glob_expression))):
             filename = str(path.stem)
@@ -131,7 +129,7 @@ class IRMASDatasetTrain(Dataset):
 
     def _get_random_sample_for_instrument(self, instrument_idx: int) -> int:
         """Returns a random sample which contains the instrument with index instrument_idx."""
-        instrument = config_defaults.IDX_TO_INSTRUMENT[instrument_idx]
+        instrument = defaults.IDX_TO_INSTRUMENT[instrument_idx]
         random_sample_idx = random.choice(self.instrument_idx_list[instrument])
         return random_sample_idx
 
@@ -147,7 +145,7 @@ class IRMASDatasetTrain(Dataset):
         if len(negative_indices) > 0:
             negative_index = np.random.choice(negative_indices)
         else:
-            negative_index = np.random.randint(0, config_defaults.DEFAULT_NUM_LABELS)
+            negative_index = np.random.randint(0, defaults.DEFAULT_NUM_LABELS)
 
         random_sample_idx = self._get_random_sample_for_instrument(negative_index)
         other_audio_path, other_labels = self.dataset[random_sample_idx]
@@ -185,6 +183,7 @@ class IRMASDatasetTrain(Dataset):
             target_sr=self.sampling_rate,
         )
 
+        print(audio_path)
         if self.concat_two_samples:
             other_audio, other_labels = self._get_negative_sample(labels)
             audio, labels = self._sum_with_another_sample(
@@ -204,7 +203,7 @@ class IRMASDatasetTest(Dataset):
         self,
         dataset_dir: Path,
         audio_transform: AudioTransformBase | None = None,
-        num_classes=config_defaults.DEFAULT_NUM_LABELS,
+        num_classes=defaults.DEFAULT_NUM_LABELS,
         sampling_rate=config.sampling_rate,
         normalize_audio=config.normalize_audio,
     ):
@@ -217,8 +216,8 @@ class IRMASDatasetTest(Dataset):
         self._populate_dataset()
 
         assert (
-            len(self.dataset) == config_defaults.DEFAULT_IRMAS_TEST_SIZE
-        ), f"IRMAS test set should contain {config_defaults.DEFAULT_IRMAS_TEST_SIZE} samples"
+            len(self.dataset) == defaults.DEFAULT_IRMAS_TEST_SIZE
+        ), f"IRMAS test set should contain {defaults.DEFAULT_IRMAS_TEST_SIZE} samples"
 
     def _populate_dataset(self):
         """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)"""
@@ -235,13 +234,11 @@ class IRMASDatasetTest(Dataset):
             with open(txt_path) as f:
                 for line in f:
                     instrument = line.rstrip("\n").replace("\t", "")
-                    instrument_indices.append(
-                        config_defaults.INSTRUMENT_TO_IDX[instrument]
-                    )
+                    instrument_indices.append(defaults.INSTRUMENT_TO_IDX[instrument])
 
             labels = multi_hot_encode(
                 instrument_indices,
-                config_defaults.DEFAULT_NUM_LABELS,
+                defaults.DEFAULT_NUM_LABELS,
             )
 
             self.dataset.append((str(audio_file), labels, instrument))

@@ -13,7 +13,7 @@ import configargparse
 import pytorch_lightning as pl
 import torch
 
-import src.config.config_defaults as config_defaults
+import src.config.defaults as defaults
 import src.utils.utils_functions as utils_functions
 from src.enums.enums import (
     AudioTransforms,
@@ -46,8 +46,8 @@ parser = configargparse.get_argument_parser(formatter_class=SortingHelpFormatter
 
 lightning_parser = pl.Trainer.add_argparse_args(parser)
 lightning_parser.set_defaults(
-    log_every_n_steps=config_defaults.DEFAULT_LOG_EVERY_N_STEPS,
-    epochs=config_defaults.DEFAULT_EPOCHS,
+    log_every_n_steps=defaults.DEFAULT_LOG_EVERY_N_STEPS,
+    epochs=defaults.DEFAULT_EPOCHS,
     accelerator="gpu" if torch.cuda.is_available() else "cpu",
     devices=-1,  # use all devices
 )
@@ -62,7 +62,7 @@ user_group.add_argument(
 user_group.add_argument(
     "--dataset-fraction",
     metavar="float",
-    default=config_defaults.DEFAULT_DATASET_FRACTION,
+    default=defaults.DEFAULT_DATASET_FRACTION,
     type=utils_functions.is_between_0_1,
     help="Reduce each dataset split (train, val, test) by a fraction.",
 )
@@ -70,7 +70,7 @@ user_group.add_argument(
 user_group.add_argument(
     "--num-workers",
     metavar="int",
-    default=config_defaults.DEFAULT_NUM_WORKERS,
+    default=defaults.DEFAULT_NUM_WORKERS,
     type=utils_functions.is_positive_int,
     help="Number of workers",
 )
@@ -78,14 +78,14 @@ user_group.add_argument(
 user_group.add_argument(
     "--num-labels",
     metavar="int",
-    default=config_defaults.DEFAULT_NUM_LABELS,
+    default=defaults.DEFAULT_NUM_LABELS,
     type=utils_functions.is_positive_int,
     help="Total number of possible lables",
 )
 
 user_group.add_argument(
     "--lr",
-    default=config_defaults.DEFAULT_LR,
+    default=defaults.DEFAULT_LR,
     type=float,
     metavar="float",
     help="Learning rate",
@@ -96,7 +96,7 @@ user_group.add_argument(
     type=float,
     metavar="float",
     help="warmup learning rate",
-    default=config_defaults.DEFAULT_LR_WARMUP,
+    default=defaults.DEFAULT_LR_WARMUP,
 )
 
 user_group.add_argument(
@@ -104,7 +104,7 @@ user_group.add_argument(
     type=float,
     metavar="float",
     help="Maximum lr OneCycle scheduler reaches",
-    default=config_defaults.DEFAULT_LR_ONECYCLE_MAX,
+    default=defaults.DEFAULT_LR_ONECYCLE_MAX,
 )
 
 user_group.add_argument(
@@ -112,7 +112,7 @@ user_group.add_argument(
     type=float,
     metavar="float",
     help="Maximum lr OneCycle scheduler reaches",
-    default=config_defaults.DEFAULT_WEIGHT_DECAY,
+    default=defaults.DEFAULT_WEIGHT_DECAY,
 )
 
 
@@ -122,7 +122,7 @@ user_group.add_argument(
     nargs="+",
     type=parse_dataset_enum_dirs,
     help="Dataset root directories that will be used for training in the following format: --train-dirs irmas:/path/to openmic:/path/to",
-    default=config_defaults.DEFAULT_TRAIN_DIRS,
+    default=defaults.DEFAULT_TRAIN_DIRS,
 )
 
 user_group.add_argument(
@@ -131,7 +131,7 @@ user_group.add_argument(
     nargs="+",
     type=parse_dataset_enum_dirs,
     help="Dataset root directories that will be used for validation in the following format: --val-dirs irmas:/path/to openmic:/path/to",
-    default=config_defaults.DEFAULT_VAL_DIRS,
+    default=defaults.DEFAULT_VAL_DIRS,
 )
 
 user_group.add_argument(
@@ -147,33 +147,33 @@ user_group.add_argument(
     metavar="dir",
     type=Path,
     help="Output directory of the model and report file.",
-    default=config_defaults.PATH_MODELS,
+    default=defaults.PATH_MODELS,
 )
 
 user_group.add_argument(
     "--pretrained",
     help="Use a pretrained model loaded from the web.",
     action="store_true",
-    default=config_defaults.DEFAULT_PRETRAINED,
+    default=defaults.DEFAULT_PRETRAINED,
 )
 
 user_group.add_argument(
     "--freeze-train-bn",
     help="If true, the batch norm will be trained even if module is frozen.",
     action="store_true",
-    default=config_defaults.DEFAULT_FREEZE_TRAIN_BN,
+    default=defaults.DEFAULT_FREEZE_TRAIN_BN,
 )
 user_group.add_argument(
     "--normalize-audio",
     help="Normalize audio to [-1, 1]",
     action="store_true",
-    default=config_defaults.DEFAULT_NORMALIZE_AUDIO,
+    default=defaults.DEFAULT_NORMALIZE_AUDIO,
 )
 user_group.add_argument(
     "--train-only-dataset",
     help="Use only the train portion of the dataset and split it 0.8 0.2",
     action="store_true",
-    default=config_defaults.DEFAULT_ONLY_TRAIN_DATASET,
+    default=defaults.DEFAULT_ONLY_TRAIN_DATASET,
 )
 user_group.add_argument(
     "--drop-last",
@@ -186,13 +186,13 @@ user_group.add_argument(
     "--check-on-train-epoch-end",
     help="Whether to run early stopping at the end of the training epoch.",
     action="store_true",
-    default=config_defaults.DEFAULT_CHECK_ON_TRAIN_EPOCH_END,
+    default=defaults.DEFAULT_CHECK_ON_TRAIN_EPOCH_END,
 )
 
 user_group.add_argument(
     "--save-on-train-epoch-end",
     action="store_true",
-    default=config_defaults.DEFAULT_SAVE_ON_TRAIN_EPOCH_END,
+    default=defaults.DEFAULT_SAVE_ON_TRAIN_EPOCH_END,
     help="Whether to run checkpointing at the end of the training epoch.",
 )
 
@@ -200,7 +200,7 @@ user_group.add_argument(
     "--metric",
     type=OptimizeMetric.from_string,
     help="Metric which the model will optimize for.",
-    default=config_defaults.DEFAULT_OPTIMIZE_METRIC,
+    default=defaults.DEFAULT_OPTIMIZE_METRIC,
     choices=list(OptimizeMetric),
 )
 
@@ -208,7 +208,7 @@ user_group.add_argument(
     "--metric-mode",
     type=MetricMode.from_string,
     help="Maximize or minimize the --metric.",
-    default=config_defaults.DEFAULT_METRIC_MODE,
+    default=defaults.DEFAULT_METRIC_MODE,
     choices=list(MetricMode),
 )
 
@@ -230,7 +230,7 @@ user_group.add_argument(
 
 user_group.add_argument(
     "--augmentations",
-    default=config_defaults.DEFAULT_AUGMENTATIONS,
+    default=defaults.DEFAULT_AUGMENTATIONS,
     nargs="*",
     choices=list(SupportedAugmentations),
     type=SupportedAugmentations.from_string,
@@ -257,7 +257,7 @@ user_group.add_argument(
     "--use-weighted-train-sampler",
     help="Use weighted train sampler instead of a random one.",
     action="store_true",
-    default=config_defaults.DEFAULT_USE_WEIGHTED_TRAIN_SAMPLER,
+    default=defaults.DEFAULT_USE_WEIGHTED_TRAIN_SAMPLER,
 )
 
 user_group.add_argument(
@@ -271,7 +271,7 @@ user_group.add_argument(
     "--early-stopping-metric-patience",
     help="Number of checks with no improvement after which training will be stopped. Under the default configuration, one check happens after every training epoch",
     metavar="int",
-    default=config_defaults.DEFAULT_EARLY_STOPPING_METRIC_PATIENCE,
+    default=defaults.DEFAULT_EARLY_STOPPING_METRIC_PATIENCE,
     type=utils_functions.is_positive_int,
 )
 
@@ -279,7 +279,7 @@ user_group.add_argument(
     "--batch-size",
     metavar="int",
     type=int,
-    default=config_defaults.DEFAULT_BATCH_SIZE,
+    default=defaults.DEFAULT_BATCH_SIZE,
 )
 
 user_group.add_argument(
@@ -287,14 +287,14 @@ user_group.add_argument(
     metavar="int",
     type=int,
     help="Epoch at which the backbone will be unfrozen.",
-    default=config_defaults.DEFAULT_FINETUNE_HEAD_EPOCHS,
+    default=defaults.DEFAULT_FINETUNE_HEAD_EPOCHS,
 )
 
 user_group.add_argument(
     "--sampling-rate",
     metavar="int",
     type=int,
-    default=config_defaults.DEFAULT_SAMPLING_RATE,
+    default=defaults.DEFAULT_SAMPLING_RATE,
 )
 
 user_group.add_argument(
@@ -314,7 +314,7 @@ user_group.add_argument(
 user_group.add_argument(
     "--epochs",
     metavar="int",
-    default=config_defaults.DEFAULT_EPOCHS,
+    default=defaults.DEFAULT_EPOCHS,
     type=utils_functions.is_positive_int,
     help="Number epochs. Works only if learning rate scheduler has fixed number of steps (onecycle, cosine...). It won't have an effect on 'reduce on palteau' lr scheduler.",
 )
@@ -322,7 +322,7 @@ user_group.add_argument(
 user_group.add_argument(
     "--bar-update",
     metavar="int",
-    default=config_defaults.DEFUALT_TQDM_REFRESH,
+    default=defaults.DEFUALT_TQDM_REFRESH,
     type=utils_functions.is_positive_int,
     help="Number of TQDM updates in one epoch.",
 )
@@ -330,7 +330,7 @@ user_group.add_argument(
 
 user_group.add_argument(
     "--pretrained-tag",
-    default=config_defaults.DEFAULT_PRETRAINED_TAG,
+    default=defaults.DEFAULT_PRETRAINED_TAG,
     type=str,
     help="The string that denotes the pretrained weights used.",
 )
@@ -352,7 +352,7 @@ user_group.add_argument(
 user_group.add_argument(
     "--image-dim",
     metavar="height width",
-    default=config_defaults.DEFAULT_IMAGE_DIM,
+    default=defaults.DEFAULT_IMAGE_DIM,
     type=tuple[int, int],
     help="The dimension to resize the image to.",
 )
@@ -361,14 +361,14 @@ user_group.add_argument(
     "--log-per-instrument-metrics",
     help="Along with aggregated metrics, also log per instrument metrics.",
     action="store_true",
-    default=config_defaults.DEFAULT_LOG_PER_INSTRUMENT_METRICS,
+    default=defaults.DEFAULT_LOG_PER_INSTRUMENT_METRICS,
 )
 
 user_group.add_argument(
     "--finetune-head",
     help="Performs head only finetuning for --finetune-head-epochs epochs with starting lr of --lr-warmup which eventually becomes --lr.",
     action="store_true",
-    default=config_defaults.DEFAULT_FINETUNE_HEAD,
+    default=defaults.DEFAULT_FINETUNE_HEAD,
 )
 
 user_group.add_argument(
@@ -391,57 +391,63 @@ user_group.add_argument(
     type=SupportedHeads,
     help="classifier head",
     choices=list(SupportedHeads),
-    default=config_defaults.DEAFULT_HEAD,
+    default=defaults.DEAFULT_HEAD,
 )
 
 user_group.add_argument(
     "--use-fluffy",
     help="Use multiple optimizers for Fluffy.",
     action="store_true",
-    default=config_defaults.DEFAULT_USE_FLUFFY,
+    default=defaults.DEFAULT_USE_FLUFFY,
 )
 
 user_group.add_argument(
     "--use-multiple-optimizers",
     help="Use multiple optimizers for Fluffy. Each head will have it's own optimizer.",
     action="store_true",
-    default=config_defaults.DEFAULT_USE_MULTIPLE_OPTIMIZERS,
+    default=defaults.DEFAULT_USE_MULTIPLE_OPTIMIZERS,
 )
 
 user_group.add_argument(
     "--n-fft",
     metavar="int",
     type=int,
-    default=config_defaults.DEFAULT_N_FFT,
+    default=defaults.DEFAULT_N_FFT,
 )
 
 user_group.add_argument(
     "--n-mels",
     metavar="int",
     type=int,
-    default=config_defaults.DEFAULT_N_MELS,
+    default=defaults.DEFAULT_N_MELS,
 )
 
 user_group.add_argument(
     "--n-mfcc",
     metavar="int",
     type=int,
-    default=config_defaults.DEFAULT_N_MFCC,
+    default=defaults.DEFAULT_N_MFCC,
 )
 
 user_group.add_argument(
     "--hop-length",
     metavar="int",
     type=int,
-    default=config_defaults.DEFAULT_HOP_LENGTH,
+    default=defaults.DEFAULT_HOP_LENGTH,
 )
 
 user_group.add_argument(
     "--max-audio-seconds",
     metavar="float",
     type=float,
-    default=config_defaults.DEFAULT_MAX_AUDIO_SECONDS,
+    default=defaults.DEFAULT_MAX_AUDIO_SECONDS,
     help="Maximum number of seconds of audio which will be processed at one time.",
+)
+user_group.add_argument(
+    "--skip-validation",
+    action="store_true",
+    default=defaults.DEFAULT_SKIP_VALIDATION,
+    help="Skips validation part during training.",
 )
 
 
@@ -464,7 +470,7 @@ if args.quick:
     pl_args.log_every_n_steps = 1
     args.dataset_fraction = 0.01
     args.batch_size = 2
-    args.output_dir = config_defaults.PATH_MODELS_QUICK
+    args.output_dir = defaults.PATH_MODELS_QUICK
 
 if args.epochs:
     pl_args.max_epochs = args.epochs
@@ -475,7 +481,7 @@ if args.metric and not args.metric_mode:
 
 
 if args.aug_kwargs is None:
-    args.aug_kwargs = config_defaults.DEFAULT_AUGMENTATION_KWARSG
+    args.aug_kwargs = defaults.DEFAULT_AUGMENTATION_KWARSG
 else:
     args.aug_kwargs = utils_functions.parse_kwargs(args.aug_kwargs)
 
@@ -489,11 +495,12 @@ if args.model != SupportedModels.WAV2VECCNN and args.use_multiple_optimizers:
         "You can't use mutliple optimizers if you are not using Fluffy!",
     )
 
-if args.pretrained and args.pretrained_tag == config_defaults.DEFAULT_PRETRAINED_TAG:
+# Dynamically set pretrained tag
+if args.pretrained and args.pretrained_tag == defaults.DEFAULT_PRETRAINED_TAG:
     if args.model == SupportedModels.AST:
-        args.pretrained_tag = config_defaults.DEFAULT_AST_PRETRAINED_TAG
+        args.pretrained_tag = defaults.DEFAULT_AST_PRETRAINED_TAG
     elif args.model in [SupportedModels.WAV2VECCNN, SupportedModels.WAV2VEC]:
-        args.pretrained_tag = config_defaults.DEFAULT_WAV2VEC_PRETRAINED_TAG
+        args.pretrained_tag = defaults.DEFAULT_WAV2VEC_PRETRAINED_TAG
     elif args.model in [
         SupportedModels.EFFICIENT_NET_V2_S,
         SupportedModels.EFFICIENT_NET_V2_M,
@@ -502,13 +509,16 @@ if args.pretrained and args.pretrained_tag == config_defaults.DEFAULT_PRETRAINED
         SupportedModels.RESNEXT101_32X8D,
         SupportedModels.RESNEXT101_64X4D,
     ]:
-        args.pretrained_tag = config_defaults.DEFAULT_TORCH_CNN_PRETRAINED_TAG
+        args.pretrained_tag = defaults.DEFAULT_TORCH_CNN_PRETRAINED_TAG
     else:
         raise Exception("Shouldn't happen")
 
+# Dynamically AST DSP attributes
 if args.model == SupportedModels.AST:
-    args.n_fft = config_defaults.DEFAULT_AST_N_FFT
-    args.hop_length = config_defaults.DEFAULT_HOP_LENGTH
-    args.n_mels = config_defaults.DEFAULT_AST_N_MELS
+    args.n_fft = defaults.DEFAULT_AST_N_FFT
+    args.hop_length = defaults.DEFAULT_AST_HOP_LENGTH
+    args.n_mels = defaults.DEFAULT_AST_N_MELS
 
+if args.skip_validation:
+    pl_args.limit_val_batches = 0
 config = args

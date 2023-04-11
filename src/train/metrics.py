@@ -7,14 +7,14 @@ from torchmetrics.functional.classification import (
     multilabel_recall,
 )
 
-import src.config.config_defaults as config_defaults
-from src.config.config_defaults import INSTRUMENT_TO_FULLNAME, INSTRUMENT_TO_IDX
+import src.config.defaults as defaults
+from src.config.defaults import INSTRUMENT_TO_FULLNAME, INSTRUMENT_TO_IDX
 
 
 def get_metrics(
     y_pred: torch.Tensor,
     y_true: torch.Tensor,
-    num_labels=config_defaults.DEFAULT_NUM_LABELS,
+    num_labels=defaults.DEFAULT_NUM_LABELS,
     return_per_instrument=False,
 ):
     kwargs = dict(preds=y_pred, target=y_true, num_labels=num_labels)

@@ -7,7 +7,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from torchmetrics.classification import MultilabelF1Score
 from transformers import Wav2Vec2Config, Wav2Vec2Model
 
-import src.config.config_defaults as config_defaults
+import src.config.defaults as defaults
 from src.model.heads import DeepHead
 from src.model.model_base import ModelBase
 
@@ -32,8 +32,8 @@ class Wav2VecWrapper(ModelBase):
 
         config_wav2vec = Wav2Vec2Config(
             pretrained_model_name_or_path=self.pretrained_tag,
-            id2label=config_defaults.IDX_TO_INSTRUMENT,
-            label2id=config_defaults.IDX_TO_INSTRUMENT,
+            id2label=defaults.IDX_TO_INSTRUMENT,
+            label2id=defaults.IDX_TO_INSTRUMENT,
             num_labels=self.num_labels,
         )
         self.backbone: Wav2Vec2Model = Wav2Vec2Model.from_pretrained(

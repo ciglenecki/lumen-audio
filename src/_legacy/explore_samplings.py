@@ -1,7 +1,7 @@
 """Checks if all audio files are indeed sampled at 44_100."""
 import wave
 
-import config_defaults as cd
+import defaults as cd
 
 val_dict = {}
 

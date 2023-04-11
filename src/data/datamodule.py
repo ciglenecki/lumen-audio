@@ -13,7 +13,7 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, SubsetRandomSampler, WeightedRandomSampler
 from tqdm import tqdm
 
-import src.config.config_defaults as config_defaults
+import src.config.defaults as defaults
 from src.config.config import config
 from src.data.dataset_irmas import IRMASDatasetTest, IRMASDatasetTrain
 from src.enums.enums import SupportedDatasets
@@ -81,7 +81,7 @@ class IRMASDataModule(pl.LightningDataModule):
             len(self.train_dirs) == 1
             and self.train_dirs[0][0] == SupportedDatasets.IRMAS
         ):
-            self.class_count_dict = config_defaults.IRMAS_TRAIN_CLASS_COUNT
+            self.class_count_dict = defaults.IRMAS_TRAIN_CLASS_COUNT
         else:
             self.class_count_dict = {}
         self.setup()
@@ -247,7 +247,7 @@ class IRMASDataModule(pl.LightningDataModule):
         for dataset in self.train_dataset.datasets:
             for _, label in tqdm(dataset, desc="Counting classes"):
                 idx = int(np.where(label == 1)[0])
-                instrument = config_defaults.IDX_TO_INSTRUMENT[idx]
+                instrument = defaults.IDX_TO_INSTRUMENT[idx]
                 if instrument not in output:
                     output[instrument] = 0
                 output[instrument] += 1

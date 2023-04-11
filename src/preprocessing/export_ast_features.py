@@ -11,7 +11,7 @@ import torch.utils.data
 from tqdm import tqdm
 from transformers import ASTConfig, ASTModel
 
-import src.config.config_defaults as config_defaults
+import src.config.defaults as defaults
 from src.data.dataset_irmas import IRMASDatasetTrain
 from src.features.audio_to_ast import AudioTransformAST
 
@@ -21,11 +21,11 @@ current_working_dir = os.getcwd()
 
 def main():
     BATCH_SIZE = 1
-    OUTPUT_DIR = config_defaults.PATH_IRMAS_TRAIN_FEATURES
+    OUTPUT_DIR = defaults.PATH_IRMAS_TRAIN_FEATURES
     OUTPUT_DIR.mkdir(exist_ok=True)
 
     # Create model and transform
-    model_name = config_defaults.DEFAULT_AST_PRETRAINED_TAG
+    model_name = defaults.DEFAULT_AST_PRETRAINED_TAG
     config = ASTConfig.from_pretrained(pretrained_model_name_or_path=model_name)
     model = ASTModel.from_pretrained(
         model_name, config=config, ignore_mismatched_sizes=True
@@ -35,8 +35,8 @@ def main():
     model = model.to(device)
 
     audio_transform = AudioTransformAST(
-        sampling_rate=config_defaults.DEFAULT_SAMPLING_RATE,
-        pretrained_tag=config_defaults.DEFAULT_AST_PRETRAINED_TAG,
+        sampling_rate=defaults.DEFAULT_SAMPLING_RATE,
+        pretrained_tag=defaults.DEFAULT_AST_PRETRAINED_TAG,
         augmentation_enums=[],
     )
 
@@ -66,8 +66,8 @@ def main():
             stem = Path(audio_path).stem  # e.g. [cel][cla]0001__1
             audio_path = str(Path(audio_path).relative_to(current_working_dir))
             instrument_idx = int(label)
-            instrument = config_defaults.IDX_TO_INSTRUMENT[instrument_idx]
-            instrument_name = config_defaults.INSTRUMENT_TO_FULLNAME[instrument]
+            instrument = defaults.IDX_TO_INSTRUMENT[instrument_idx]
+            instrument_name = defaults.INSTRUMENT_TO_FULLNAME[instrument]
 
             json_item = dict(
                 sample_path=audio_path,

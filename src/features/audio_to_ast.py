@@ -34,7 +34,7 @@ class AudioTransformAST(AudioTransformBase):
             return_tensors="pt",
         )["input_values"]
 
-        spectrogram = self.spectrogram_augmentation(spectrogram)
+        spectrogram = self.spectrogram_augmentation(spectrogram)  # [Batch, 1024, 128]
 
         # TODO: chunking
         spectrogram_chunks = spectrogram

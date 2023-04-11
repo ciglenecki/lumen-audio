@@ -8,7 +8,7 @@ from torch_scatter import scatter_max
 from transformers import ASTConfig, ASTFeatureExtractor, ASTForAudioClassification
 from transformers.modeling_outputs import SequenceClassifierOutput
 
-import src.config.config_defaults as config_defaults
+import src.config.defaults as defaults
 from src.config.config import config
 from src.model.heads import DeepHead
 from src.model.model_base import ModelBase
@@ -27,8 +27,8 @@ class ASTModelWrapper(ModelBase):
 
         ast_config = ASTConfig.from_pretrained(
             pretrained_model_name_or_path=self.pretrained_tag,
-            id2label=config_defaults.IDX_TO_INSTRUMENT,
-            label2id=config_defaults.INSTRUMENT_TO_IDX,
+            id2label=defaults.IDX_TO_INSTRUMENT,
+            label2id=defaults.INSTRUMENT_TO_IDX,
             num_labels=self.num_labels,
             finetuning_task="audio-classification",
             problem_type="multi_label_classification",
@@ -45,8 +45,7 @@ class ASTModelWrapper(ModelBase):
         # middle_size = int(
         #     math.sqrt(config.hidden_size * self.num_labels) + self.num_labels
         # )
-
-        self.backbone.classifier = DeepHead([ast_config.hidden_size, self.num_labels])
+        # self.backbone.classifier = DeepHead([ast_config.hidden_size, self.num_labels])
         self.save_hyperparameters()
 
     def forward(self, audio: torch.Tensor, labels: torch.Tensor):
@@ -109,16 +108,16 @@ class ASTModelWrapper(ModelBase):
 if __name__ == "__main__":
     # example_audio_mel_audio()
     config_ = ASTConfig.from_pretrained(
-        pretrained_model_name_or_path=config_defaults.DEFAULT_AST_PRETRAINED_TAG,
-        id2label=config_defaults.IDX_TO_INSTRUMENT,
-        label2id=config_defaults.IDX_TO_INSTRUMENT,
-        num_labels=config_defaults.DEFAULT_NUM_LABELS,
+        pretrained_model_name_or_path=defaults.DEFAULT_AST_PRETRAINED_TAG,
+        id2label=defaults.IDX_TO_INSTRUMENT,
+        label2id=defaults.INSTRUMENT_TO_IDX,
+        num_labels=defaults.DEFAULT_NUM_LABELS,
         finetuning_task="audio-classification",
         problem_type="multi_label_classification",
     )
 
     backbone: ASTForAudioClassification = ASTForAudioClassification.from_pretrained(
-        config_defaults.DEFAULT_AST_PRETRAINED_TAG,
+        defaults.DEFAULT_AST_PRETRAINED_TAG,
         config=config_,
         ignore_mismatched_sizes=True,
     )
@@ -129,7 +128,7 @@ if __name__ == "__main__":
     fname = "data/irmas_sample/1 - Hank's Other Bag-1.wav"
 
     feature_extractor = ASTFeatureExtractor.from_pretrained(
-        config_defaults.DEFAULT_AST_PRETRAINED_TAG,
+        defaults.DEFAULT_AST_PRETRAINED_TAG,
         do_normalize=False,
     )
 

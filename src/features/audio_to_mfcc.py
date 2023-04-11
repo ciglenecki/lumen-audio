@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import torchvision.transforms.functional as F
 
-import src.config.config_defaults as config_defaults
+import src.config.defaults as defaults
 from src.config.config import config
 from src.features.audio_transform_base import AudioTransformBase
 
@@ -105,7 +105,7 @@ class MFCCFixedRepeat(MFCCFixed):
     This is useful for mocking RGB channels.
     """
 
-    def __init__(self, repeat=config_defaults.DEFAULT_RGB_CHANNELS, **kwargs):
+    def __init__(self, repeat=defaults.DEFAULT_RGB_CHANNELS, **kwargs):
         super().__init__(**kwargs)
         self.repeat = repeat
 

@@ -1,7 +1,9 @@
+import math
 import os
 import subprocess
 from pathlib import Path, PurePath
 from tempfile import NamedTemporaryFile
+from typing import Literal
 
 import librosa
 import librosa.display
@@ -11,9 +13,10 @@ import pydub
 import torch
 import torch_audiomentations
 import torchaudio
+from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from pydub.utils import get_player_name
+from torch.nn.utils.rnn import pad_sequence
 
-from src.config import config_defaults
 from src.config.config import config
 from src.utils.utils_functions import print_tensor
 
@@ -22,7 +25,7 @@ def caculate_spectrogram_width_for_one_second(sampling_rate: int, hop_size: int)
     return (sampling_rate / hop_size) + 1
 
 
-def caculate_audio_max_seconds_for_image_width(
+def caculate_spectrogram_duration_in_seconds(
     sampling_rate: int, hop_size: int, image_width: int
 ) -> float:
     audio_seconds = image_width / ((sampling_rate / hop_size) + 1)
@@ -94,67 +97,118 @@ def load_audio_from_file(
     return waveform, return_sr
 
 
-def spec_to_npy(spectrogram: torch.Tensor):
-    assert (
-        spectrogram.dim() <= 3
-    ), "Shape can't be larger than 3, if it can, implement it"
-    if spectrogram.dim() == 3 and spectrogram.shape[0] == 1:
-        # single spectrogram with extra dimension
-        spectrogram = spectrogram.squeeze(dim=0)
-    return spectrogram.numpy()
+def spectrogram_batchify(
+    spectrograms: np.ndarray | torch.Tensor | list[np.ndarray | torch.Tensor],
+) -> np.ndarray:
+    """Send one or multiple spectrograms [height, weight] and return as [batch, height, weight]"""
+    if isinstance(spectrograms, list):
+        spectrograms = np.array(spectrograms)
+    if isinstance(spectrograms, torch.Tensor):
+        spectrograms = spectrograms.detach().cpu().numpy()
+    if not isinstance(spectrograms, np.ndarray):
+        assert False, "Invalid type"
+    if len(spectrograms.shape) == 2:
+        spectrograms = [spectrograms]
+    elif len(spectrograms.shape) > 3:
+        assert False, "spectrograms has to be 1D or 2D (batch) {spectrograms.shape}"
+    # Make all spectrograms equal size
+    spectrograms = torch.tensor(spectrograms)
+    spectrograms = pad_sequence(spectrograms, batch_first=True)
+
+    # Make sure it's [batch, height, width]
+    if spectrograms.shape[1] != config.n_mels:
+        spectrograms = torch.permute(spectrograms, (0, 2, 1))
+    if spectrograms.shape[1] != config.n_mels:
+        assert False, f"Check spectrogram dimensions {spectrograms.shape}"
+    return spectrograms.numpy()
 
 
-# TODO: FIX all plots and add comments
-def plot_spec_general(spectrogram: np.ndarray, sr: int, type="mel", fmax=8000):
-    spectrogram = spec_to_npy(spectrogram)
-    if len(spectrogram.shape) == 3:
-        spectrograms = [spectrogram[i] for i in spectrogram]
-    else:
-        spectrograms = [spectrogram]
+def plot_spectrograms(
+    spectrograms: np.ndarray | torch.Tensor | list[np.ndarray | torch.Tensor],
+    sr=config.sampling_rate,
+    titles: list[str] | None = None,
+    y_axis: Literal[None, "linear", "fft", "hz", "log", "mel"] = "mel",
+    hop_length=config.hop_length,
+    n_fft=config.n_fft,
+    use_power_to_db=True,
+):
+    """Plot one or multiple spectrograms."""
+    spectrograms = spectrogram_batchify(spectrograms)
 
-    for s in spectrograms:
-        # s = librosa.power_to_db(s, ref=np.max)
-        img = librosa.display.specshow(s, x_axis="time", y_axis=type, sr=sr, fmax=fmax)
-        plt.title("Mel spectrogram display")
-        plt.colorbar(img)
+    # Prepare sizes, nrows, ncols
+    batch_size = len(spectrograms)
+    if titles is not None and len(titles) != batch_size:
+        assert False, "There should be n titles or None"
+    sqrt = math.ceil(math.sqrt(batch_size))
+    n_rows = sqrt
+    n_cols = sqrt
+    fig = plt.figure(figsize=(13, 9))
+
+    # AST scale
+    norm = plt.Normalize(-1.25, 1.25) if y_axis is None else None
+    # Plot each spectrogram
+    for i, spec in enumerate(spectrograms):
+        title = titles[i] if titles is not None else ""
+        ax = plt.subplot(n_rows, n_cols, i + 1)
+        if use_power_to_db:
+            spec = librosa.power_to_db(spec, ref=np.max)
+        img = librosa.display.specshow(
+            spec,
+            y_axis=y_axis,
+            x_axis="time",
+            sr=sr,
+            hop_length=hop_length,
+            n_fft=n_fft,
+            norm=norm,
+        )
+
+        # Add an Axes to the right of the main Axes.
+        ax_divider = make_axes_locatable(ax)
+        cax = ax_divider.append_axes("right", size="2%", pad="2%")
+        fig.colorbar(img, cax=cax, format="%+2.f dB")
+
+        plt.title(title)
+    plt.tight_layout()
     plt.show()
 
 
-def plot_spec_general_no_scale(mel_spectrogram: np.ndarray, sr: int):
-    # mel_spectrogram_db = librosa.power_to_db(mel_spectrogram, ref=np.max)
-    img = librosa.display.specshow(mel_spectrogram, x_axis="time", sr=sr)
-    plt.title("Mel spectrogram display")
-    plt.colorbar(img)
-    plt.show()
+def audios_to_mel_spectrograms(
+    audio: np.ndarray | torch.Tensor | list[np.ndarray | torch.Tensor],
+    sr=config.sampling_rate,
+    hop_length=config.hop_length,
+    n_fft=config.n_fft,
+):
+    """Convert audio(s) to mel spectrogram(s)"""
+    if isinstance(audio, list):
+        audio = np.array(audio)
+    if isinstance(audio, torch.Tensor):
+        audio = audio.detach().cpu().numpy()
+    if not isinstance(audio, np.ndarray):
+        assert False, "Invalid type"
+    if len(audio.shape) == 1:
+        audio = [audio]
+    elif len(audio.shape) > 2:
+        assert False, "Audio has to be 1D or 2D (batch)"
+    spectrograms = [
+        librosa.feature.melspectrogram(y=a, sr=sr, hop_length=hop_length, n_fft=n_fft)
+        for a in audio
+    ]
+    batched_spectrograms = np.stack(spectrograms)
+    return batched_spectrograms
 
 
-def plot_spectrogram(spec, title=None, ylabel="freq_bin", aspect="auto", xmax=None):
-    fig, axs = plt.subplots(1, 1)
-    axs.set_title(title or "Spectrogram (db)")
-    axs.set_ylabel(ylabel)
-    axs.set_xlabel("frame")
-    im = axs.imshow(librosa.power_to_db(spec), origin="lower", aspect=aspect)
-    if xmax:
-        axs.set_xlim((0, xmax))
-    fig.colorbar(im, ax=axs)
-    plt.show(block=False)
-
-
-def plot_spectrogram_librosa(spec):
-    fig, ax = plt.subplots()
-    img = librosa.display.specshow(spec, ax=ax)
-    fig.colorbar(img, ax=ax)
-    plt.show()
-
-
-def plot_mel_spectrogram(mel_spectrogram: np.ndarray, sr: int, fmax=16_000):
-    # mel_spectrogram_db = librosa.power_to_db(mel_spectrogram, ref=np.max)
-    img = librosa.display.specshow(
-        mel_spectrogram, y_axis="mel", x_axis="time", sr=sr, fmax=fmax
+def audio_melspectrogram_plot(
+    audio: np.ndarray | torch.Tensor | list[np.ndarray | torch.Tensor],
+    sr=config.sampling_rate,
+    hop_length=config.hop_length,
+    n_fft=config.n_fft,
+    titles: list[str] | None = None,
+):
+    """Plot spectrogram(s) from audio signal(s)"""
+    spectrograms = audios_to_mel_spectrograms(
+        audio, sr, hop_length=hop_length, n_fft=n_fft
     )
-    plt.title("Mel spectrogram display")
-    plt.colorbar(img, format="%+2.f dB")
-    plt.show()
+    plot_spectrograms(spectrograms, sr=sr, titles=titles)
 
 
 def librosa_to_pydub(waveform: np.ndarray, sr: int) -> pydub.AudioSegment:
@@ -225,19 +279,27 @@ def example_audio_mel_audio():
     play_audio(audio_reconstructed, sr=16_000, max_seconds=3)
 
 
-def ast_feature_inverse(spectrogram: torch.Tensor):
-    n_fft = config.n_fft
-    hop = config.hop_length
+def ast_spec_to_audio(
+    spectrogram: torch.Tensor,
+    n_fft=config.n_fft,
+    sampling_rate=config.sampling_rate,
+    hop_length=config.hop_length,
+):
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    n_fft = n_fft
+    hop = hop_length
     inverse_mel = torchaudio.transforms.InverseMelScale(
         n_stft=n_fft // 2 + 1,
-        sample_rate=config.sampling_rate,
+        sample_rate=sampling_rate,
     )
+    inverse_mel = inverse_mel
     griffin_lim = torchaudio.transforms.GriffinLim(
-        n_fft=n_fft, hop_length=hop, n_iter=54
+        n_fft=n_fft, hop_length=hop, n_iter=32
     )
+    griffin_lim = griffin_lim
 
     with torch.enable_grad():
-        spectrogram = spectrogram.clone().cpu()[0, :, :].T
+        spectrogram = torch.permute(spectrogram.clone().detach().cpu(), (0, 2, 1))
         tmp = inverse_mel(spectrogram)
         audio = griffin_lim(tmp)
 
