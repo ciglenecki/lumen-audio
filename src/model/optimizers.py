@@ -93,7 +93,8 @@ def our_configure_optimizers(
                 max_lr=lr_onecycle_max,  # TOOD:lr,
                 div_factor=lr_onecycle_max / start_lr,  # initial_lr = max_lr/div_factor
                 # final_div_factor=lr_onecycle_max / end_lr,
-                total_steps=int(total_lr_sch_steps),
+                total_steps=int(total_lr_sch_steps)
+                + 1,  # add one more step because the condition is > instead of >=
                 three_phase=False,
                 verbose=False,
             )

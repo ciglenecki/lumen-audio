@@ -268,10 +268,10 @@ user_group.add_argument(
 )
 
 user_group.add_argument(
-    "--plateau-epoch-patience",
+    "--early-stopping-metric-patience",
     help="Number of checks with no improvement after which training will be stopped. Under the default configuration, one check happens after every training epoch",
     metavar="int",
-    default=config_defaults.DEFAULT_PLATEAU_EPOCH_PATIENCE,
+    default=config_defaults.DEFAULT_EARLY_STOPPING_METRIC_PATIENCE,
     type=utils_functions.is_positive_int,
 )
 

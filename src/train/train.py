@@ -135,7 +135,7 @@ if __name__ == "__main__":
     callback_early_stopping = EarlyStopping(
         monitor=optimizer_metric_str,
         mode=metric_mode_str,
-        patience=config.plateau_epoch_patience,
+        patience=config.early_stopping_metric_patience,
         check_on_train_epoch_end=config.check_on_train_epoch_end,
         verbose=True,
     )

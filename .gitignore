@@ -13,6 +13,8 @@ data/openmic
 data/nsynth-train
 models/**
 models_archive/
+models_quick/
+
 # =============================================
 # Ignore files
 # =============================================
