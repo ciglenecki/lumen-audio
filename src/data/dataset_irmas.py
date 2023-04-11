@@ -7,6 +7,7 @@ from pathlib import Path
 
 import librosa
 import numpy as np
+import pandas as pd
 import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
@@ -17,7 +18,13 @@ from src.features.audio_to_ast import AudioTransformAST
 from src.features.audio_transform_base import AudioTransformBase
 from src.features.augmentations import SupportedAugmentations
 from src.utils.utils_audio import load_audio_from_file
-from src.utils.utils_dataset import encode_drums, encode_genre, multi_hot_indices
+from src.utils.utils_dataset import (
+    decode_instruments_idx,
+    encode_drums,
+    encode_genre,
+    encode_instruments,
+    multi_hot_encode,
+)
 from src.utils.utils_exceptions import InvalidDataException
 
 # '*.(wav|mp3|flac)'
@@ -26,7 +33,9 @@ glob_expression = "*.wav"
 
 
 class IRMASDatasetTrain(Dataset):
-    all_instrument_indices = np.array(list(config_defaults.INSTRUMENT_TO_IDX.values()))
+    all_instrument_indices = torch.tensor(
+        list(config_defaults.INSTRUMENT_TO_IDX.values())
+    )
 
     def __init__(
         self,
@@ -35,7 +44,9 @@ class IRMASDatasetTrain(Dataset):
         num_classes=config_defaults.DEFAULT_NUM_LABELS,
         sampling_rate=config.sampling_rate,
         normalize_audio=config.normalize_audio,
-        concat_two_samples=SupportedAugmentations.CONCAT_TWO in config.augmentations,
+        concat_two_samples: bool = SupportedAugmentations.CONCAT_TWO
+        in config.augmentations,
+        train_override_csvs: list[Path] | None = config.train_override_csvs,
     ):
         """_summary_
 
@@ -61,6 +72,7 @@ class IRMASDatasetTrain(Dataset):
         self.normalize_audio = normalize_audio
         self.concat_two_samples = concat_two_samples
         self.instrument_idx_list: dict[str, list[int]] = {}
+        self.train_override_csvs = train_override_csvs
         self._populate_dataset()
 
         assert (
@@ -75,101 +87,98 @@ class IRMASDatasetTrain(Dataset):
         }
         """
 
+        if self.train_override_csvs:
+            dfs = [pd.read_csv(csv_path) for csv_path in self.train_override_csvs]
+            df = pd.concat(dfs, ignore_index=True)
+            df.set_index("filename", inplace=True)
+
         self.instrument_idx_list = {
-            k.value: [] for k in config_defaults.InstrumentEnums
+            i.value: [] for i in config_defaults.InstrumentEnums
         }
-        for item_idx, audio_path in tqdm(
-            enumerate(self.dataset_dir.rglob(glob_expression))
-        ):
-            filename = str(audio_path.stem)
+
+        for item_idx, path in tqdm(enumerate(self.dataset_dir.rglob(glob_expression))):
+            filename = str(path.stem)
             characteristics = re.findall(
                 r"\[(.*?)\]", filename
             )  # 110__[org][dru][jaz_blu]1117__2 => ["org", "dru", "jaz_blue"]
 
-            drums, genre = None, None
-            if len(characteristics) == 2:
-                instrument, genre = characteristics
-            elif len(characteristics) == 3:
-                instrument, drums, genre = characteristics
+            path_str = str(path)
+            if self.train_override_csvs and path_str in df.index:  # override label
+                inner_instrument_indices = np.where(df.loc[path_str])[0]
+                item_instruments = df.columns[inner_instrument_indices]
             else:
-                raise InvalidDataException(filename)
+                instrument = characteristics[0]
+                item_instruments = [instrument]
 
-            drums_vector = encode_drums(drums)
-            genre_vector = encode_genre(genre)
+            labels = encode_instruments(item_instruments)
 
-            instrument_idx = config_defaults.INSTRUMENT_TO_IDX[instrument]  # 2
-            instrument_indices = []
-            instrument_indices.append(instrument_idx)  # [2]
+            # drums, genre = None, None
+            # if len(characteristics) == 2:
+            #     _, genre = characteristics
+            # elif len(characteristics) == 3:
+            #     _, drums, genre = characteristics
+            # else:
+            #     raise InvalidDataException(filename)
 
-            labels = multi_hot_indices(
-                instrument_indices,
-                config_defaults.DEFAULT_NUM_LABELS,
-            )
-            labels = torch.tensor(labels).float()  # [0, 0, 1, 0...]
+            # drums_vector = encode_drums(drums)
+            # genre_vector = encode_genre(genre)
 
-            self.dataset.append((str(audio_path), labels, instrument))
-            self.instrument_idx_list[instrument].append(item_idx)
+            self.dataset.append((str(path), labels))
+
+            for instrument in item_instruments:
+                self.instrument_idx_list[instrument].append(item_idx)
 
     def __len__(self) -> int:
         return len(self.dataset)
 
-    def _get_another_random_sample_idx(self, not_instrument_idx: int) -> int:
-        """Returns a random sample whose label is NOT not_instrument_idx.
-
-        Example:
-            not_instrument_idx = 1
-            random_instrument_idx = 3 # note: this index cannot be 1
-            random_sample_idx ...
-            return random_sample_idx
-        Args:
-            not_instrument_idx: Label instrument whose sampels won't be considered.
-
-        Returns:
-            random dataset index
-        """
-        random_instrument_idx = np.random.choice(
-            self.all_instrument_indices[
-                self.all_instrument_indices != not_instrument_idx
-            ]
-        )
-        instrument = config_defaults.IDX_TO_INSTRUMENT[random_instrument_idx]
+    def _get_random_sample_for_instrument(self, instrument_idx: int) -> int:
+        """Returns a random sample which contains the instrument with index instrument_idx."""
+        instrument = config_defaults.IDX_TO_INSTRUMENT[instrument_idx]
         random_sample_idx = random.choice(self.instrument_idx_list[instrument])
         return random_sample_idx
 
-    def _sum_with_another_sample(
-        self, audio: np.ndarray, labels: np.ndarray, instrument_idx: int
-    ) -> tuple[np.ndarray, np.ndarray]:
-        """Sum two examples from the dataset in the following way:
+    def _get_negative_sample(self, original_label: np.ndarray):
+        """Returns audio whose labels doesn't contain any label from the original labels.
 
-            - audio: sum and divide by 2
-            - labels: logical or, union of ones
-        Args:
-            audio
-            labels
-            instrument_idx
-
-        Returns:
-            tuple[np.ndarray, np.ndarray]: audio, label
+        Example:
+            original_label: [1,0,0,0,0,1]
+            returns: other_audio, [0,0,0,0,1,0]
         """
 
-        # Load random sample
-        random_sample_idx = self._get_another_random_sample_idx(instrument_idx)
-        other_audio_path, other_labels, _ = self.dataset[random_sample_idx]
+        negative_indices = self.all_instrument_indices[original_label.astype(bool)]
+        if len(negative_indices) > 0:
+            negative_index = np.random.choice(negative_indices)
+        else:
+            negative_index = np.random.randint(0, config_defaults.DEFAULT_NUM_LABELS)
+
+        random_sample_idx = self._get_random_sample_for_instrument(negative_index)
+        other_audio_path, other_labels = self.dataset[random_sample_idx]
         other_audio, _ = load_audio_from_file(
             other_audio_path,
             method="librosa",
             normalize=self.normalize_audio,
             target_sr=self.sampling_rate,
         )
+        return other_audio, other_labels
 
-        # Sum audio and labels
+    def _sum_with_another_sample(
+        self,
+        audio: np.ndarray,
+        labels: np.ndarray,
+        other_audio: np.ndarray,
+        other_labels: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Sum two examples from the dataset in the following way:
+
+        - audio: sum and divide by 2 (mean)
+        - labels: logical or, union of ones
+        """
         audio = (audio + other_audio) / 2
         labels = np.logical_or(labels, other_labels).astype(labels.dtype)
         return audio, labels
 
     def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
-        audio_path, labels, instrument = self.dataset[index]
-        instrument_idx = config_defaults.INSTRUMENT_TO_IDX[instrument]
+        audio_path, labels = self.dataset[index]
 
         audio, _ = load_audio_from_file(
             audio_path,
@@ -179,12 +188,16 @@ class IRMASDatasetTrain(Dataset):
         )
 
         if self.concat_two_samples:
-            audio, labels = self._sum_with_another_sample(audio, labels, instrument_idx)
+            other_audio, other_labels = self._get_negative_sample(labels)
+            audio, labels = self._sum_with_another_sample(
+                audio, labels, other_audio, other_labels
+            )
 
         if self.audio_transform is None:
             return audio, labels
 
         features = self.audio_transform.process(audio)
+        labels = torch.tensor(labels).float()
         return features, labels
 
 
@@ -228,11 +241,10 @@ class IRMASDatasetTest(Dataset):
                         config_defaults.INSTRUMENT_TO_IDX[instrument]
                     )
 
-            labels = multi_hot_indices(
+            labels = multi_hot_encode(
                 instrument_indices,
                 config_defaults.DEFAULT_NUM_LABELS,
             )
-            labels = torch.tensor(labels).float()
 
             self.dataset.append((str(audio_file), labels, instrument))
 
@@ -253,6 +265,8 @@ class IRMASDatasetTest(Dataset):
             return audio, labels
 
         features = self.audio_transform.process(audio)
+
+        labels = torch.tensor(labels).float()
         return features, labels
 
 

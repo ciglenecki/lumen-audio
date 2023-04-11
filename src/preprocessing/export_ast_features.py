@@ -16,6 +16,7 @@ from src.data.dataset_irmas import IRMASDatasetTrain
 from src.features.audio_to_ast import AudioTransformAST
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
+current_working_dir = os.getcwd()
 
 
 def main():
@@ -44,8 +45,6 @@ def main():
     training_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=BATCH_SIZE, shuffle=False, pin_memory=True
     )
-
-    current_working_dir = os.getcwd()
 
     print("Saving embeddings to: ", str(OUTPUT_DIR))
     for data in tqdm(training_loader, total=len(training_loader)):

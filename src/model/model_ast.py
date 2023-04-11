@@ -46,8 +46,7 @@ class ASTModelWrapper(ModelBase):
         #     math.sqrt(config.hidden_size * self.num_labels) + self.num_labels
         # )
 
-        self.backbone.classifier = DeepHead([config.hidden_size, self.num_labels])
-
+        self.backbone.classifier = DeepHead([ast_config.hidden_size, self.num_labels])
         self.save_hyperparameters()
 
     def forward(self, audio: torch.Tensor, labels: torch.Tensor):

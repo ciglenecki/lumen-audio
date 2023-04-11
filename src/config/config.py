@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 from operator import attrgetter
+from pathlib import Path
 
 import configargparse
 import pytorch_lightning as pl
@@ -128,9 +129,17 @@ user_group.add_argument(
 )
 
 user_group.add_argument(
+    "--train-override-csvs",
+    metavar="file.csv file2.csv",
+    nargs="+",
+    type=Path,
+    help="CSV files with columns 'filename, sax, gac, org, ..., cla' where filename is path and each instrument is either 0 or 1",
+)
+
+user_group.add_argument(
     "--output-dir",
     metavar="dir",
-    type=str,
+    type=Path,
     help="Output directory of the model and report file.",
     default=config_defaults.PATH_MODELS,
 )

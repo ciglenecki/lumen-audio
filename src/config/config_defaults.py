@@ -25,6 +25,7 @@ PATH_IRMAS_TRAIN = Path(PATH_IRMAS, "train")
 PATH_IRMAS_VAL = Path(PATH_IRMAS, "val")
 PATH_IRMAS_TEST = Path(PATH_IRMAS, "test")
 PATH_IRMAS_TRAIN_FEATURES = Path(PATH_IRMAS, "train_features")
+PATH_IRMAS_SAMPLE = Path(PATH_DATA, "irmas_sample")
 
 PATH_OPENMIC = Path(PATH_DATA, "openmic")
 PATH_MODELS = Path(PATH_WORK_DIR, "models")
@@ -51,7 +52,7 @@ DEFAULT_AST_N_MELS = 128
 
 _augs = list(SupportedAugmentations)
 _augs.remove(SupportedAugmentations.RANDOM_ERASE)
-_augs.remove(SupportedAugmentations.CONCAT_TWO)
+# _augs.remove(SupportedAugmentations.CONCAT_TWO)
 DEFAULT_AUGMENTATIONS = _augs  # all excepted removed ones
 
 DEFAULT_AUGMENTATION_KWARSG = dict(
