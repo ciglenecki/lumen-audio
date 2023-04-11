@@ -211,7 +211,7 @@ class IRMASDataModule(pl.LightningDataModule):
         self.val_size = len(val_indices)
         self.test_size = len(test_indices)
 
-        if self.use_weighted_train_sampler and stage["train"]:
+        if self.use_weighted_train_sampler and stage == "train":
             samples_weight = self.get_sample_class_weights(self.train_dataset)
             self.train_sampler = WeightedRandomSampler(
                 samples_weight, len(samples_weight)
