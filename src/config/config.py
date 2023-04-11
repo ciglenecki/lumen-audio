@@ -363,6 +363,13 @@ user_group.add_argument(
     action="store_true",
     default=defaults.DEFAULT_LOG_PER_INSTRUMENT_METRICS,
 )
+user_group.add_argument(
+    "--no-log-per-instrument-metrics",
+    help="Along with aggregated metrics, also log per instrument metrics.",
+    action="store_false",
+    dest="log_per_instrument_metrics",
+)
+
 
 user_group.add_argument(
     "--finetune-head",
