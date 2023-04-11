@@ -1,25 +1,24 @@
 -f https://data.pyg.org/whl/torch-2.0.0+cu117.html
-numpy
-matplotlib
-pandas
-transformers
-scipy
-librosa
-ipykernel
+numpy==1.23.5
+matplotlib==3.7.1
+pandas==2.0.0
+transformers==4.27.4
+scipy==1.10.1
+librosa==0.10.0.post2
+ipykernel==6.22.0
+ConfigArgParse==1.5.3
 
 # ----------- torch -------- #
-torchvision
-torcheval
-torchmetrics
-torch
+torchvision==0.15.1
+torcheval==0.0.6
+torchmetrics==0.11.4
+torch==2.0.0
 tensorboard
 tensorboardX
-torchaudio
+torchaudio==2.0.1
 pytorch-lightning==1.9.4
-torchmetrics
-torch-scatter
+torchmetrics==0.11.4
+torch-scatter==2.1.1
 
 # --------- others --------- #
-pyrootutils     # standardizing the project root setup
-pre-commit      # hooks for applying linters on commit
-rich            # beautiful text formatting in terminal
+pyrootutils==1.0.4     # standardizing the project root setup

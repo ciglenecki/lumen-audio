@@ -8,6 +8,38 @@ from src.enums.enums import SupportedDatasets
 from src.utils.utils_exceptions import InvalidArgument, InvalidDataException
 
 
+def encode_instruments(instruments: list[str]) -> np.ndarray:
+    """Returns multi hot encoded array.
+
+    Example
+        instruments = ["gel", "flu"]
+        returns [0,0,0,1,0,0,0,1,0]
+    """
+    size = config_defaults.DEFAULT_NUM_LABELS
+    indices = [config_defaults.INSTRUMENT_TO_IDX[i] for i in instruments]
+    return multi_hot_encode(indices=indices, size=size)
+
+
+def decode_instruments(multi_hot_array: np.ndarray) -> list[str]:
+    """Return [unknown_drum, drum/no_drum]
+    Example
+        instruments = [0,0,0,1,0,0,0,1,0]
+        returns ["gel", "flu"]
+    """
+    indices = np.where(multi_hot_array)[0]
+    instruments = [config_defaults.IDX_TO_INSTRUMENT[i] for i in indices]
+    return instruments
+
+
+def decode_instruments_idx(multi_hot_array: np.ndarray) -> np.ndarray:
+    """Return [unknown_drum, drum/no_drum]
+    Example
+        instruments = [0,0,0,1,0,0,0,1,0]
+        returns [3, 7]
+    """
+    return np.where(multi_hot_array)[0]
+
+
 def encode_drums(drum: str | None) -> np.ndarray:
     """Return [unknown_drum, drum/no_drum]
     Example
@@ -95,7 +127,7 @@ def decode_genre(one_hot: np.ndarray) -> str:
     return config_defaults.IDX_TO_GENRE[i]
 
 
-def multi_hot_indices(indices: np.ndarray | list, size: int) -> np.ndarray:
+def multi_hot_encode(indices: np.ndarray | list, size: int) -> np.ndarray:
     """Returns mutli-hot encoded label vector for given indices.
 
     Example

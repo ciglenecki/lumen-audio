@@ -23,7 +23,6 @@ def get_all_modules_after(
             modules.add_module(sub_module_name.replace(".", "_"), sub_module)
 
     if not found_layer:
-        # print_modules(module)
         raise ValueError(
             f"module_str '{module_str}' not found. should be (e.g. layer3.2)"
         )

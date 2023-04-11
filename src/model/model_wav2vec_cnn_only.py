@@ -171,7 +171,7 @@ class Wav2VecCNNWrapper(ModelBase):
             list_of_module_params=list_of_module_params,  # [Modul1, Modul2, Modul3], [Modul]
             scheduler_type=self.scheduler_type,
             metric_mode=self.metric_mode,
-            plateau_epoch_patience=(self.plateau_epoch_patience // 2) + 1,
+            plateau_epoch_patience=(self.early_stopping_metric_patience // 2) + 1,
             lr_backbone=self.lr_backbone,
             weight_decay=self.weight_decay,
             optimizer_type=self.optimizer_type,

@@ -57,7 +57,7 @@ class DeepHead(nn.Module):
 
         initialization, initialization_kwargs = get_linear_init(activation)
         linears = filter_modules(modules, nn.Linear)
-        assert len(linears) != 0, "Why is this empty? Y u runnin?"
+        assert len(linears) != 0, "Why is this empty?"
         initialize_weights(linears, initialization, initialization_kwargs)
 
         self.deep_head = modules

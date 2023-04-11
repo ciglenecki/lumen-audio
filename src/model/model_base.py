@@ -19,6 +19,7 @@ from src.model.optimizers import (
 )
 from src.train.metrics import get_metrics
 from src.utils.utils_functions import add_prefix_to_keys
+from src.utils.utils_model import count_module_params
 from src.utils.utils_train import get_all_modules_after
 
 
@@ -44,7 +45,7 @@ class ModelBase(pl.LightningModule, ABC):
         num_labels: int = config_defaults.DEFAULT_NUM_LABELS,
         optimization_metric: OptimizeMetric = config.metric,
         optimizer_type: SupportedOptimizer = config.optimizer,
-        plateau_epoch_patience: int = config.plateau_epoch_patience,
+        early_stopping_metric_patience: int = config.early_stopping_metric_patience,
         pretrained: bool = config.pretrained,
         scheduler_type: SupportedScheduler = config.scheduler,
         use_fluffy: bool = config.use_fluffy,
@@ -79,7 +80,7 @@ class ModelBase(pl.LightningModule, ABC):
 
             optimizer_type: SupportedOptimizer.ADAM, ADAMW
 
-            plateau_epoch_patience: how many epochs should pass, without metric getting better, before reduce on plateau scheduler lowers the lr
+            early_stopping_metric_patience: how many epochs should pass, without metric getting better, before reduce on plateau scheduler lowers the lr
 
             pretrained: use pretrained model
 
@@ -114,7 +115,7 @@ class ModelBase(pl.LightningModule, ABC):
         self.num_labels = num_labels
         self.optimization_metric = optimization_metric
         self.optimizer_type = optimizer_type
-        self.plateau_epoch_patience = plateau_epoch_patience
+        self.early_stopping_metric_patience = early_stopping_metric_patience
         self.pretrained = pretrained
         self.pretrained_tag = pretrained_tag
         self.scheduler_type = scheduler_type
@@ -225,15 +226,7 @@ class ModelBase(pl.LightningModule, ABC):
 
     def count_trainable_params(self):
         """Returns number of total, trainable and non trainable parameters."""
-        return {
-            "total": int(sum(p.numel() for p in self.parameters())),
-            "trainable": int(
-                sum(p.numel() for p in self.parameters() if p.requires_grad)
-            ),
-            "non_trainable": int(
-                sum(p.numel() for p in self.parameters() if not p.requires_grad)
-            ),
-        }
+        return count_module_params(self)
 
     def is_finetuning_phase(self):
         if not self.finetune_head:
@@ -329,7 +322,7 @@ class ModelBase(pl.LightningModule, ABC):
             list_of_module_params=[self.parameters()],
             scheduler_type=self.scheduler_type,
             metric_mode=self.metric_mode,
-            plateau_epoch_patience=(self.plateau_epoch_patience // 2) + 1,
+            plateau_epoch_patience=(self.early_stopping_metric_patience // 2) + 1,
             lr_backbone=self.lr_backbone,
             weight_decay=self.weight_decay,
             optimizer_type=self.optimizer_type,

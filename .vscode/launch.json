@@ -10,7 +10,16 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --val-dirs irmas:data/irmas/test --backbone-after backbone.classifier --head-after backbone.classifier --model ast --audio-transform ast --quick",
+			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --val-dirs irmas:data/irmas/test --backbone-after encoder.layer.11.output --head-after backbone.classifier --model ast --audio-transform ast --quick",
+			"justMyCode": false
+		},
+		{
+			"name": "Train AST fixed labels",
+			"type": "python",
+			"request": "launch",
+			"program": "src/train/train.py",
+			"console": "integratedTerminal",
+			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --val-dirs irmas:data/irmas/test --backbone-after backbone.classifier --head-after backbone.classifier --model ast --audio-transform ast --quick --train-override-csv data/irmas_sample/normalized_random_samples_relabeling.csv",
 			"justMyCode": false
 		},
 		{

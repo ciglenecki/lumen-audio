@@ -1,4 +1,4 @@
-"""Input arguments for the train.py file.
+"""Global config file.
 
 To see the list of all arguments call `pyhton3 src/train.py -h`
 """
@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 from operator import attrgetter
+from pathlib import Path
 
 import configargparse
 import pytorch_lightning as pl
@@ -51,6 +52,12 @@ lightning_parser.set_defaults(
     devices=-1,  # use all devices
 )
 user_group = parser.add_argument_group(ARGS_GROUP_NAME)
+
+user_group.add_argument(
+    "--config",
+    is_config_file=True,
+    help="YAML config file path. Useful for inference or overriding.",
+)
 
 user_group.add_argument(
     "--dataset-fraction",
@@ -128,9 +135,17 @@ user_group.add_argument(
 )
 
 user_group.add_argument(
+    "--train-override-csvs",
+    metavar="file.csv file2.csv",
+    nargs="+",
+    type=Path,
+    help="CSV files with columns 'filename, sax, gac, org, ..., cla' where filename is path and each instrument is either 0 or 1",
+)
+
+user_group.add_argument(
     "--output-dir",
     metavar="dir",
-    type=str,
+    type=Path,
     help="Output directory of the model and report file.",
     default=config_defaults.PATH_MODELS,
 )
@@ -253,10 +268,10 @@ user_group.add_argument(
 )
 
 user_group.add_argument(
-    "--plateau-epoch-patience",
+    "--early-stopping-metric-patience",
     help="Number of checks with no improvement after which training will be stopped. Under the default configuration, one check happens after every training epoch",
     metavar="int",
-    default=config_defaults.DEFAULT_PLATEAU_EPOCH_PATIENCE,
+    default=config_defaults.DEFAULT_EARLY_STOPPING_METRIC_PATIENCE,
     type=utils_functions.is_positive_int,
 )
 
@@ -383,7 +398,7 @@ user_group.add_argument(
     "--use-fluffy",
     help="Use multiple optimizers for Fluffy.",
     action="store_true",
-    default=config_defaults.DEFAULT_FLUFFY,
+    default=config_defaults.DEFAULT_USE_FLUFFY,
 )
 
 user_group.add_argument(
@@ -449,6 +464,7 @@ if args.quick:
     pl_args.log_every_n_steps = 1
     args.dataset_fraction = 0.01
     args.batch_size = 2
+    args.output_dir = config_defaults.PATH_MODELS_QUICK
 
 if args.epochs:
     pl_args.max_epochs = args.epochs

@@ -50,7 +50,7 @@ def get_model(
         optimization_metric=config.metric,
         weight_decay=config.weight_decay,
         metric_mode=config.metric_mode,
-        plateau_epoch_patience=config.plateau_epoch_patience,
+        early_stopping_metric_patience=config.early_stopping_metric_patience,
         finetune_head_epochs=config.finetune_head_epochs,
         finetune_head=config.finetune_head,
         backbone_after=config.backbone_after,

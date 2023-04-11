@@ -32,12 +32,16 @@ Low priority tasks:
 
 
 Matej:
+<<<<<<< HEAD
+=======
 - [ ] create backend API/inference
 - [ ] create technical documentation
 - [ ] create docker container
 - [ ] download ESC50 non instrument audio files and write data loader which are NOT instruments (@matej)
 - [ ] check for all models edge cases (0.1 sec, 2h)
+>>>>>>> dev
 - [ ] include Ivan's relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
+- [ ] check for all models edge cases (0.1 sec, 2h)
 - [ ] perform validation on Rep's corected dataset to check how many labels are correctly marked in the original dataset
   - check if all instruments are correct
   - check if at least one instrument is correct
@@ -52,6 +56,7 @@ Matej:
 - [ ] check the assumption that label instrument is present thought the whole audio (check n=200 samples and check how many occourances) VALIDATION
   - holds up for most cases?
 - High priority: Steal Vinko's menza reciept so he pays 10€ and get beaten by the Teta Mafia
+- [ ] this might not be important since the model usually gives [0,0,0,0,0] anyways: download ESC50 non instrument audio files and write data loader which are NOT instruments (@matej)
 
 Mirko:
 - [x] implement Fluffy nn.Module

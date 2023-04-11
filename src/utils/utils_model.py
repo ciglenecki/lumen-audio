@@ -29,3 +29,18 @@ def get_linear_init(activation: nn.Module) -> tuple[Callable, dict]:
         return nn.init.xavier_normal, {}
     else:
         return (nn.init.kaiming_uniform,)
+
+
+def count_module_params(module: nn.Module):
+    total_params = float(sum(p.numel() for p in module.parameters()))
+    trainable_params = float(
+        sum(p.numel() for p in module.parameters() if p.requires_grad)
+    )
+    non_trainable_params = float(
+        sum(p.numel() for p in module.parameters() if not p.requires_grad)
+    )
+    return dict(
+        total_params=total_params,
+        trainable_params=trainable_params,
+        non_trainable_params=non_trainable_params,
+    )
