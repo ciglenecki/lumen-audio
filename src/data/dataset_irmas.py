@@ -183,7 +183,6 @@ class IRMASDatasetTrain(Dataset):
             target_sr=self.sampling_rate,
         )
 
-        print(audio_path)
         if self.concat_two_samples:
             other_audio, other_labels = self._get_negative_sample(labels)
             audio, labels = self._sum_with_another_sample(
