@@ -45,11 +45,13 @@ def print_params(module: Union[nn.ModuleList, nn.Module]):
 
 def print_modules(module: Union[nn.ModuleList, nn.Module]):
     """Print module."""
+    print()
     for sub_module_name, sub_module in module.named_modules():
         sub_module_req_grad = any(
             [x[1].requires_grad for x in sub_module.named_parameters()]
         )
         print(sub_module_name, "requires_grad:", sub_module_req_grad)
+    print()
 
 
 def multi_acc(y_pred_log, y_test):
