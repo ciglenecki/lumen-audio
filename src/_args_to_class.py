@@ -45,19 +45,19 @@ for line in lines:
 lst = []
 for item in out:
     name = item["name"] if "name" in item else None
-    item_type = item["type"] if "type" in item else None
+    item_type = item["type"] if "type" in item else "bool"
     item_default = item["default"] if "default" in item else None
     item_help = item["help"] if "help" in item else None
     if name.startswith("--"):
         name = name[2:]
     name = name.replace("-", "_")
-
-    # if item_type is None:
-    #     t = type(item_default).__name__
-    # else:
-    #     t = item_type.__name__
+    # lst.append(
+    #     f'{name}: {item_type} = Field(default={item_default}, description="{item_help}")'
+    # )
     lst.append(
-        f'{name}: {item_type} = Field(default={item_default}, description="{item_help}")'
+        f"""{name}: {item_type} = create({item_default})
+\"\"\"{item_help}\"\"\"
+"""
     )
 lst.sort()
 for i in lst:

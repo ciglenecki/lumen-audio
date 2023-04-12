@@ -1,18 +1,15 @@
-"""Global default config."""
+"""Default global config. Important: 0 dependencies except to enums!"""
 
 from __future__ import annotations
 
-from dataclasses import Field
-from operator import attrgetter
+from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
+from typing import Optional
 
-import configargparse
-import pytorch_lightning as pl
-import torch
-from pydantic import BaseModel, Field, PositiveInt, validator
+import pyrootutils
+import yaml
 
-import src.config.defaults as defaults
-import src.utils.utils_functions as utils_functions
 from src.enums.enums import (
     AudioTransforms,
     MetricMode,
@@ -25,196 +22,467 @@ from src.enums.enums import (
     SupportedOptimizer,
     SupportedScheduler,
 )
-from src.utils.utils_dataset import parse_dataset_enum_dirs
-from src.utils.utils_exceptions import InvalidArgument
 
 
-class ConfigDefaults(BaseModel):
-    audio_transform: AudioTransforms = Field(
-        default=None,
-        description="Transformation which will be performed on audio and labels",
-    )
-    aug_kwargs: str = Field(
-        default=None,
-        description="Arguments are split by space, mutiple values are sep'ed by comma (,). E.g. stretch_factors=0.8,1.2 freq_mask_param=30 time_mask_param=30 hide_random_pixels_p=0.5",
-    )
-    augmentations: list[SupportedAugmentations] = Field(
-        default=defaults.DEFAULT_AUGMENTATIONS,
-        description="Transformation which will be performed on audio and labels",
-    )
-    backbone_after: str = Field(
-        default=None,
-        description="Name of the submodule after which the all submodules are considered as backbone, e.g. layer.11.dense",
-    )
-    bar_update: PositiveInt = Field(
-        default=defaults.DEFUALT_TQDM_REFRESH,
-        description="Number of TQDM updates in one epoch.",
-    )
-    batch_size: int = Field(default=defaults.DEFAULT_BATCH_SIZE, description="None")
-    check_on_train_epoch_end: bool = Field(
-        default=defaults.DEFAULT_CHECK_ON_TRAIN_EPOCH_END,
-        description="Whether to run early stopping at the end of the training epoch.",
-    )
-    ckpt: str = Field(
-        default=None,
-        description=".ckpt file, automatically restores model, epoch, step, LR schedulers, etc...",
-    )
-
-    dataset_fraction: int | float = Field(
-        default=defaults.DEFAULT_DATASET_FRACTION,
-        description="Reduce each dataset split (train, val, test) by a fraction.",
-        ge=0,
-    )
-    drop_last: bool = Field(
-        default=True,
-        description="Drop last sample if the size of the sample is smaller than batch size",
-    )
-    early_stopping_metric_patience: PositiveInt = Field(
-        default=defaults.DEFAULT_EARLY_STOPPING_METRIC_PATIENCE,
-        description="Number of checks with no improvement after which training will be stopped. Under the default configuration, one check happens after every training epoch",
-    )
-    epochs: PositiveInt = Field(
-        default=defaults.DEFAULT_EPOCHS,
-        description="Number epochs. Works only if learning rate scheduler has fixed number of steps (onecycle, cosine...). It won't have an effect on 'reduce on palteau' lr scheduler.",
-    )
-    finetune_head: bool = Field(
-        default=defaults.DEFAULT_FINETUNE_HEAD,
-        description="Performs head only finetuning for --finetune-head-epochs epochs with starting lr of --lr-warmup which eventually becomes --lr.",
-    )
-    finetune_head_epochs: int = Field(
-        default=defaults.DEFAULT_FINETUNE_HEAD_EPOCHS,
-        description="Epoch at which the backbone will be unfrozen.",
-    )
-    freeze_train_bn: bool = Field(
-        default=defaults.DEFAULT_FREEZE_TRAIN_BN,
-        description="If true, the batch norm will be trained even if module is frozen.",
-    )
-    head: SupportedHeads = Field(
-        default=defaults.DEAFULT_HEAD, description="classifier head"
-    )
-    head_after: str | None = Field(
-        default=None,
-        description="Name of the submodule after which the all submodules are considered as head, e.g. classifier.dense",
-    )
-    hop_length: int = Field(default=defaults.DEFAULT_HOP_LENGTH, description="None")
-    image_dim: tuple[int, int] = Field(
-        default=defaults.DEFAULT_IMAGE_DIM,
-        description="The dimension to resize the image to.",
-    )
-    log_per_instrument_metrics: bool = Field(
-        default=defaults.DEFAULT_LOG_PER_INSTRUMENT_METRICS,
-        description="Along with aggregated metrics, also log per instrument metrics.",
-    )
-    loss_function: SupportedLossFunctions = Field(
-        default=SupportedLossFunctions.CROSS_ENTROPY, description="Loss function"
-    )
-    loss_function_kwargs: dict = Field(default={}, description="Loss function kwargs")
-    lr: float = Field(default=defaults.DEFAULT_LR, description="Learning rate")
-    lr_onecycle_max: float = Field(
-        default=defaults.DEFAULT_LR_ONECYCLE_MAX,
-        description="Maximum lr OneCycle scheduler reaches",
-    )
-    lr_warmup: float = Field(
-        default=defaults.DEFAULT_LR_WARMUP, description="warmup learning rate"
-    )
-    max_audio_seconds: float = Field(
-        default=defaults.DEFAULT_MAX_AUDIO_SECONDS,
-        description="Maximum number of seconds of audio which will be processed at one time.",
-    )
-    metric: OptimizeMetric = Field(
-        default=defaults.DEFAULT_OPTIMIZE_METRIC,
-        description="Metric which the model will optimize for.",
-    )
-    metric_mode: MetricMode = Field(
-        default=defaults.DEFAULT_METRIC_MODE,
-        description="Maximize or minimize the --metric.",
-    )
-    model: SupportedModels = Field(description="Models used for training.")
-    n_fft: int = Field(default=defaults.DEFAULT_N_FFT, description="None")
-    n_mels: int = Field(default=defaults.DEFAULT_N_MELS, description="None")
-    n_mfcc: int = Field(default=defaults.DEFAULT_N_MFCC, description="None")
-
-    normalize_audio: bool = Field(
-        default=defaults.DEFAULT_NORMALIZE_AUDIO,
-        description="Normalize audio to [-1, 1]",
-    )
-    num_labels: PositiveInt = Field(
-        default=defaults.DEFAULT_NUM_LABELS,
-        description="Total number of possible lables",
-    )
-    num_workers: PositiveInt = Field(
-        default=defaults.DEFAULT_NUM_WORKERS, description="Number of workers"
-    )
-    optimizer: str = Field(default=SupportedOptimizer.ADAMW, description="None")
-    output_dir: Path = Field(
-        default=defaults.PATH_MODELS,
-        description="Output directory of the model and report file.",
-    )
-    pretrained: bool = Field(
-        default=defaults.DEFAULT_PRETRAINED,
-        description="Use a pretrained model loaded from the web.",
-    )
-    pretrained_tag: str = Field(
-        default=defaults.DEFAULT_PRETRAINED_TAG,
-        description="The string that denotes the pretrained weights used.",
-    )
-    quick: bool = Field(
-        default=False,
-        description="For testing bugs. Simulates --limit_train_batches 2 --limit_val_batches 2 --limit_test_batches 2",
-    )
-    sampling_rate: int = Field(
-        default=defaults.DEFAULT_SAMPLING_RATE, description="None"
-    )
-    save_on_train_epoch_end: bool = Field(
-        default=defaults.DEFAULT_SAVE_ON_TRAIN_EPOCH_END,
-        description="Whether to run checkpointing at the end of the training epoch.",
-    )
-    scheduler: SupportedScheduler = Field(
-        default=SupportedScheduler.ONECYCLE, description="None"
-    )
-    skip_validation: bool = Field(
-        default=defaults.DEFAULT_SKIP_VALIDATION,
-        description="Skips validation part during training.",
-    )
-    train_dirs: list[tuple[SupportedDatasets, Path]] = Field(
-        default=[defaults.DEFAULT_TRAIN_DIRS],
-        description="Dataset root directories that will be used for training in the following format: --train-dirs irmas:/path/to openmic:/path/to",
-    )
-    train_only_dataset: bool = Field(
-        default=defaults.DEFAULT_ONLY_TRAIN_DATASET,
-        description="Use only the train portion of the dataset and split it 0.8 0.2",
-    )
-    train_override_csvs: Path = Field(
-        default=None,
-        description="CSV files with columns 'filename, sax, gac, org, ..., cla' where filename is path and each instrument is either 0 or 1",
-    )
-    use_fluffy: bool = Field(
-        default=defaults.DEFAULT_USE_FLUFFY,
-        description="Use multiple optimizers for Fluffy.",
-    )
-    use_multiple_optimizers: bool = Field(
-        default=defaults.DEFAULT_USE_MULTIPLE_OPTIMIZERS,
-        description="Use multiple optimizers for Fluffy. Each head will have it's own optimizer.",
-    )
-    use_weighted_train_sampler: bool = Field(
-        default=defaults.DEFAULT_USE_WEIGHTED_TRAIN_SAMPLER,
-        description="Use weighted train sampler instead of a random one.",
-    )
-    val_dirs: list[tuple[SupportedDatasets, Path]] = Field(
-        default=defaults.DEFAULT_VAL_DIRS,
-        description="Dataset root directories that will be used for validation in the following format: --val-dirs irmas:/path/to openmic:/path/to",
-    )
-    weight_decay: float = Field(
-        default=defaults.DEFAULT_WEIGHT_DECAY,
-        description="Maximum lr OneCycle scheduler reaches",
-    )
-
-    @validator("train_dirs")
-    def transform_it(cls, train_dirs):
-        return parse_dataset_enum_dirs(train_dirs)
-
-    class Config:
-        use_enum_values = True
+class InvalidArgument(Exception):
+    """Argument is invalid."""
 
 
-# config_defaults = ConfigDefaults()
+class InstrumentEnums(Enum):
+    CELLO = "cel"
+    CLARINET = "cla"
+    FLUTE = "flu"
+    ACOUSTIC_GUITAR = "gac"
+    ELECTRIC_GUITAR = "gel"
+    ORGAN = "org"
+    PIANO = "pia"
+    SAXOPHONE = "sax"
+    TRUMPET = "tru"
+    VIOLIN = "vio"
+    VOICE = "voi"
+
+
+INSTRUMENT_TO_IDX = {
+    InstrumentEnums.CELLO.value: 0,
+    InstrumentEnums.CLARINET.value: 1,
+    InstrumentEnums.FLUTE.value: 2,
+    InstrumentEnums.ACOUSTIC_GUITAR.value: 3,
+    InstrumentEnums.ELECTRIC_GUITAR.value: 4,
+    InstrumentEnums.ORGAN.value: 5,
+    InstrumentEnums.PIANO.value: 6,
+    InstrumentEnums.SAXOPHONE.value: 7,
+    InstrumentEnums.TRUMPET.value: 8,
+    InstrumentEnums.VIOLIN.value: 9,
+    InstrumentEnums.VOICE.value: 10,
+}
+
+INSTRUMENT_TO_FULLNAME = {
+    InstrumentEnums.CELLO.value: "cello",
+    InstrumentEnums.CLARINET.value: "clarinet",
+    InstrumentEnums.FLUTE.value: "flute",
+    InstrumentEnums.ACOUSTIC_GUITAR.value: "acoustic_guitar",
+    InstrumentEnums.ELECTRIC_GUITAR.value: "electric_guitar",
+    InstrumentEnums.ORGAN.value: "organ",
+    InstrumentEnums.PIANO.value: "piano",
+    InstrumentEnums.SAXOPHONE.value: "saxophone",
+    InstrumentEnums.TRUMPET.value: "trumpet",
+    InstrumentEnums.VIOLIN.value: "violin",
+    InstrumentEnums.VOICE.value: "human_voice",
+}
+
+IDX_TO_INSTRUMENT = {v: k for k, v in INSTRUMENT_TO_IDX.items()}
+
+
+class DrumKeys(Enum):
+    UNKNOWN = "unknown-dru"
+    IS_PRESENT = "dru"
+    NOT_PRESENT = "nod"
+
+
+DRUMS_TO_IDX = {  # no drums is 0 at DrumKeys.IS_PRESENT
+    DrumKeys.UNKNOWN.value: 0,
+    DrumKeys.IS_PRESENT.value: 1,
+}
+IDX_TO_DRUMS = {v: k for k, v in DRUMS_TO_IDX.items()}
+
+
+class GenreKeys(Enum):
+    COUNTRY_FOLK = "cou_fol"
+    CLASSICAL = "cla"
+    POP_ROCK = "pop_roc"
+    LATINO_SOUL = "lat_sou"
+    JAZZ_BLUES = "jaz_blu"
+    UNKNOWN = "unknown"
+
+
+GENRE_TO_IDX = {
+    GenreKeys.COUNTRY_FOLK.value: 0,
+    GenreKeys.CLASSICAL.value: 1,
+    GenreKeys.POP_ROCK.value: 2,
+    GenreKeys.LATINO_SOUL.value: 3,
+    GenreKeys.JAZZ_BLUES.value: 4,
+}
+
+
+IDX_TO_GENRE = {v: k for k, v in GENRE_TO_IDX.items()}
+
+DEFAULT_NUM_LABELS = len(INSTRUMENT_TO_IDX)
+DEFAULT_IRMAS_TRAIN_SIZE = 6705
+DEFAULT_IRMAS_TEST_SIZE = 2874
+DEFAULT_RGB_CHANNELS = 3
+DEFAULT_LR_PLATEAU_FACTOR = 0.5
+
+DEFAULT_AST_PRETRAINED_TAG = "MIT/ast-finetuned-audioset-10-10-0.4593"
+DEFAULT_WAV2VEC_PRETRAINED_TAG = "m3hrdadfi/wav2vec2-base-100k-gtzan-music-genres"
+DEFAULT_TORCH_CNN_PRETRAINED_TAG = "IMAGENET1K_V2"
+DEFAULT_PRETRAINED_TAG = "DEFAULT"
+
+DEAFULT_HEAD = SupportedHeads.DEEP_HEAD
+DEFAULT_AUDIO_EXTENSIONS = ["wav"]
+
+IRMAS_TRAIN_CLASS_COUNT = {
+    "voi": 778,
+    "gel": 760,
+    "pia": 721,
+    "org": 682,
+    "gac": 637,
+    "sax": 626,
+    "vio": 580,
+    "tru": 577,
+    "cla": 505,
+    "flu": 451,
+    "cel": 388,
+}
+
+
+_augs = list(SupportedAugmentations)
+_augs.remove(SupportedAugmentations.RANDOM_ERASE)
+_augs.remove(SupportedAugmentations.CONCAT_TWO)
+
+
+def create(arg):
+    return field(default_factory=lambda: arg)
+
+
+@dataclass
+class ConfigDefault:
+    audio_transform: AudioTransforms = create(None)
+    """Transformation which will be performed on audio and labels"""
+
+    aug_kwargs: dict | str = create(
+        dict(
+            stretch_factors=[0.6, 1.4],
+            time_inversion_p=0.5,
+            freq_mask_param=30,
+            time_mask_param=30,
+            hide_random_pixels_p=0.25,
+            std_noise=0.01,
+        )
+    )
+    """Arguments are split by space, mutiple values are sep'ed by comma (,). E.g. stretch_factors=0.8,1.2 freq_mask_param=30 time_mask_param=30 hide_random_pixels_p=0.5"""
+
+    augmentations: SupportedAugmentations = create(_augs)
+    """Transformation which will be performed on audio and labels"""
+
+    backbone_after: Optional[str] = create(None)
+    """Name of the submodule after which the all submodules are considered as backbone, e.g. layer.11.dense"""
+
+    bar_update: int = create(30)
+    """Number of TQDM updates in one epoch."""
+
+    batch_size: int = create(3)
+    """None"""
+
+    check_on_train_epoch_end: bool = create(False)
+    """Whether to run early stopping at the end of the training epoch."""
+
+    ckpt: Optional[str] = create(None)
+    """.ckpt file, automatically restores model, epoch, step, LR schedulers, etc..."""
+
+    dataset_fraction: float = create(1.0)
+    """Reduce each dataset split (train, val, test) by a fraction."""
+
+    drop_last: bool = create(True)
+    """Drop last sample if the size of the sample is smaller than batch size"""
+
+    early_stopping_metric_patience: int = create(10)
+    """Number of checks with no improvement after which training will be stopped. Under the default configuration, one check happens after every training epoch"""
+
+    epochs: int = create(40)
+    """Number epochs. Works only if learning rate scheduler has fixed number of steps (onecycle, cosine...). It won't have an effect on 'reduce on palteau' lr scheduler."""
+
+    finetune_head: bool = create(True)
+    """Performs head only finetuning for --finetune-head-epochs epochs with starting lr of --lr-warmup which eventually becomes --lr."""
+
+    finetune_head_epochs: int = create(5)
+    """Epoch at which the backbone will be unfrozen."""
+
+    freeze_train_bn: bool = create(True)
+    """If true, the batch norm will be trained even if module is frozen."""
+
+    head: SupportedHeads = create(SupportedHeads.DEEP_HEAD)
+    """classifier head"""
+
+    head_after: Optional[str] = create(None)
+    """Name of the submodule after which the all submodules are considered as head, e.g. classifier.dense"""
+
+    hop_length: int = create(200)
+    """None"""
+
+    image_dim: tuple[int, int] = create((384, 384))
+    """The dimension to resize the image to."""
+
+    log_per_instrument_metrics: bool = create(True)
+    """Along with aggregated metrics, also log per instrument metrics."""
+
+    loss_function: SupportedLossFunctions = create(SupportedLossFunctions.CROSS_ENTROPY)
+    """Loss function"""
+
+    loss_function_kwargs: dict = create({})
+    """Loss function kwargs"""
+
+    lr: float = create(0.5)
+    """Learning rate"""
+
+    lr_onecycle_max: float = create(5e-4)
+    """Maximum lr OneCycle scheduler reaches"""
+
+    lr_warmup: float = create(1e-4)
+    """warmup learning rate"""
+
+    max_audio_seconds: float = create(3)
+    """Maximum number of seconds of audio which will be processed at one time."""
+
+    metric: OptimizeMetric = create(OptimizeMetric.VAL_F1)
+    """Metric which the model will optimize for."""
+
+    metric_mode: MetricMode = create(MetricMode.MAX)
+    """Maximize or minimize the --metric."""
+
+    model: SupportedModels = create(None)
+    """Models used for training."""
+    """Models used for training."""
+
+    n_fft: int = create(400)
+    """None"""
+
+    n_mels: int = create(128)
+    """None"""
+
+    n_mfcc: int = create(20)
+    """None"""
+
+    normalize_audio: bool = create(True)
+    """Normalize audio to [-1, 1]"""
+
+    num_labels: int = create(DEFAULT_NUM_LABELS)
+    """Total number of possible lables"""
+
+    num_workers: int = create(4)
+    """Number of workers"""
+
+    optimizer: str = create(SupportedOptimizer.ADAMW)
+    """None"""
+
+    pretrained: bool = create(True)
+    """Use a pretrained model loaded from the web."""
+
+    pretrained_tag: str = create("DEFAULT")
+    """The string that denotes the pretrained weights used."""
+
+    quick: bool = create(False)
+    """For testing bugs. Simulates --limit_train_batches 2 --limit_val_batches 2 --limit_test_batches 2"""
+
+    sampling_rate: int = create(16_000)
+    """None"""
+
+    save_on_train_epoch_end: bool = create(False)
+    """Whether to run checkpointing at the end of the training epoch."""
+
+    scheduler: SupportedScheduler = create(SupportedScheduler.ONECYCLE)
+    """None"""
+
+    skip_validation: bool = create(False)
+    """Skips validation part during training."""
+
+    train_dirs: Optional[list[str]] = create(None)
+    """Dataset root directories that will be used for training in the following format: --train-dirs irmas:/path/to openmic:/path/to"""
+
+    train_only_dataset: bool = create(False)
+    """Use only the train portion of the dataset and split it 0.8 0.2"""
+
+    train_override_csvs: Optional[Path] = create(None)
+    """CSV files with columns 'filename, sax, gac, org, ..., cla' where filename is path and each instrument is either 0 or 1"""
+
+    use_fluffy: bool = create(False)
+    """Use multiple optimizers for Fluffy."""
+
+    use_multiple_optimizers: bool = create(False)
+    """Use multiple optimizers for Fluffy. Each head will have it's own optimizer."""
+
+    use_weighted_train_sampler: bool = create(False)
+    """Use weighted train sampler instead of a random one."""
+
+    val_dirs: Optional[list[str]] = create(None)
+    """Dataset root directories that will be used for validation in the following format: --val-dirs irmas:/path/to openmic:/path/to"""
+
+    weight_decay: float = create(1e-5)
+    """Maximum lr OneCycle scheduler reaches"""
+
+    path_workdir: Path = create(
+        Path(pyrootutils.find_root(search_from=__file__, indicator=".project-root"))
+    )
+    path_data: Optional[Path] = create(None)
+    path_data: Optional[Path] = create(None)
+    path_irmas: Optional[Path] = create(None)
+    path_irmas_train: Optional[Path] = create(None)
+    path_irmas_test: Optional[Path] = create(None)
+    path_irmas_train_features: Optional[Path] = create(None)
+    path_irmas_sample: Optional[Path] = create(None)
+    path_openmic: Optional[Path] = create(None)
+    path_models: Optional[Path] = create(None)
+    path_models_quick: Optional[Path] = create(None)
+
+    def _validate_train_args(self):
+        if self.model is None:
+            raise InvalidArgument(
+                f"--model is required for training {list(SupportedModels)}"
+            )
+        if self.audio_transform is None:
+            raise InvalidArgument(
+                f"--audio-transform is required for training {list(AudioTransforms)}"
+            )
+        if self.metric and not self.metric_mode:
+            raise InvalidArgument("Can't pass --metric without passing --metric-mode")
+
+        # aug_kwargs can be either a dictionary or a string which will be parsed as kwargs dict
+        if isinstance(self.aug_kwargs, str):
+            self.aug_kwargs = self.parse_kwargs(self.aug_kwargs)
+
+        if (
+            self.scheduler == SupportedScheduler.ONECYCLE
+            and self.lr_onecycle_max is None
+        ):
+            raise InvalidArgument(
+                f"You have to pass the --lr-onecycle-max if you use the {self.scheduler}",
+            )
+
+        if self.model != SupportedModels.WAV2VECCNN and self.use_multiple_optimizers:
+            raise InvalidArgument(
+                "You can't use mutliple optimizers if you are not using Fluffy!",
+            )
+
+    def __post_init__(self):
+        self.path_data: Path = Path(self.path_workdir, "data").relative_to(
+            self.path_workdir
+        )
+        self.path_irmas: Path = Path(self.path_data, "irmas")
+        self.path_irmas_train: Path = Path(self.path_irmas, "train")
+        self.path_irmas_test: Path = Path(self.path_irmas, "test")
+        self.path_irmas_train_features: Path = Path(self.path_irmas, "train_features")
+        self.path_irmas_sample: Path = Path(self.path_data, "irmas_sample")
+        self.path_openmic: Path = Path(self.path_data, "openmic")
+        self.path_models: Path = Path(self.path_workdir, "models").relative_to(
+            self.path_workdir
+        )
+        self.path_models_quick: Path = Path(
+            self.path_workdir, "models_quick"
+        ).relative_to(self.path_workdir)
+        self.output_dir: Path = self.path_models
+        """Output directory of the model and report file."""
+
+        if self.train_dirs is None:
+            self.train_dirs = [f"irmas:{str(self.path_irmas_test)}"]
+
+        if self.val_dirs is None:
+            self.val_dirs = [f"irmas:{str(self.path_irmas_test)}"]
+
+        self.train_dirs = [self.parse_dataset_enum_dirs(d) for d in self.train_dirs]
+        self.val_dirs = [self.parse_dataset_enum_dirs(d) for d in self.val_dirs]
+
+        # Dynamically set pretrained tag
+        default_pretrain_tag = get_default_value_for_field("pretrained_tag", self)
+        if self.pretrained and self.pretrained_tag == default_pretrain_tag:
+            if self.model == SupportedModels.AST:
+                self.pretrained_tag = DEFAULT_AST_PRETRAINED_TAG
+            elif self.model in [SupportedModels.WAV2VECCNN, SupportedModels.WAV2VEC]:
+                self.pretrained_tag = DEFAULT_WAV2VEC_PRETRAINED_TAG
+            elif self.model in [
+                SupportedModels.EFFICIENT_NET_V2_S,
+                SupportedModels.EFFICIENT_NET_V2_M,
+                SupportedModels.EFFICIENT_NET_V2_L,
+                SupportedModels.RESNEXT50_32X4D,
+                SupportedModels.RESNEXT101_32X8D,
+                SupportedModels.RESNEXT101_64X4D,
+            ]:
+                self.pretrained_tag = DEFAULT_TORCH_CNN_PRETRAINED_TAG
+
+        # Dynamically AST DSP attributes
+        if (
+            self.model == SupportedModels.AST
+            and self.pretrained
+            and self.pretrained_tag == DEFAULT_AST_PRETRAINED_TAG
+        ):
+            self.n_fft = 400
+            self.hop_length = 160
+            self.n_mels = 128
+
+    def parse_dataset_enum_dirs(
+        self,
+        string: str,
+    ) -> tuple[SupportedDatasets, Path]:
+        """
+        Example:
+            string: irmas:/path/to/irmas
+            return (SupportedDatasets.IRMAS, Path("/path/to/irmas"))
+        """
+
+        pair = string.split(":")
+        if len(pair) != 2:
+            raise InvalidArgument(
+                f"Pair {pair} needs to have two elements. First arg is {list(SupportedDatasets)} and the second is the path "
+            )
+        dataset_name, dataset_path = pair
+        dataset = SupportedDatasets(dataset_name)
+        dataset_path = Path(dataset_path)
+        if not dataset_path.exists():
+            raise InvalidArgument(f"Dataset path {dataset_path} doesn't exist.")
+        return dataset, dataset_path
+
+    def isfloat(self, x: str):
+        try:
+            a = float(x)
+        except (TypeError, ValueError):
+            return False
+        else:
+            return True
+
+    def isint(self, x: str):
+        try:
+            a = float(x)
+            b = int(x)
+        except (TypeError, ValueError):
+            return False
+        else:
+            return a == b
+
+    def parse_kwargs(self, kwargs_strs: list[str], list_sep=",", key_value_sep="="):
+        """
+        Example:
+            kwargs_str = stretch_factors=0.8,1.2 freq_mask_param=30
+            returns {"stretch_factors": [0.8, 1.2], "freq_mask_param": 30}
+
+        Args:
+            kwargs_str: _description_
+            list_sep: _description_..
+            arg_sep: _description_..
+        """
+        if isinstance(kwargs_strs, str):
+            kwargs_strs = [kwargs_strs]
+
+        def parse_value(value: str):
+            if self.isint(value):
+                return int(value)
+            if self.isfloat(value):
+                return float(value)
+            return value
+
+        # print(kwargs_strs)
+        kwargs = {}
+        for key_value in kwargs_strs:
+            _kv = key_value.split(key_value_sep)
+            assert (
+                len(_kv) == 2
+            ), f"Exactly one `{key_value_sep}` should appear in {key_value}"
+            key, value = _kv
+            value = [parse_value(v) for v in value.split(list_sep)]
+            value = value if len(value) > 1 else value[0]
+            kwargs[key] = value
+        return kwargs
+
+    def __str__(self):
+        return yaml.dump(vars(self), allow_unicode=True, default_flow_style=False)
+
+
+def get_default_value_for_field(field_str: str, cls=ConfigDefault):
+    return cls.__dataclass_fields__[field_str].default_factory()

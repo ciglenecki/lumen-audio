@@ -1,9 +1,7 @@
 from enum import Enum
 
-from src.utils.utils_functions import EnumStr
 
-
-class SupportedModels(str, EnumStr):
+class SupportedModels(Enum):
     AST = "ast"
     EFFICIENT_NET_V2_S = "efficient_net_v2_s"
     EFFICIENT_NET_V2_M = "efficient_net_v2_m"
@@ -15,12 +13,12 @@ class SupportedModels(str, EnumStr):
     WAV2VECCNN = "wav2vec_cnn"
 
 
-class SupportedHeads(EnumStr):
+class SupportedHeads(Enum):
     DEEP_HEAD = "deep_head"
     ATTENTION_HEAD = "attention_head"
 
 
-class SupportedAugmentations(EnumStr):
+class SupportedAugmentations(Enum):
     """List of supported spectrogram augmentations we use."""
 
     TIME_STRETCH = "time_stretch"
@@ -35,24 +33,24 @@ class SupportedAugmentations(EnumStr):
     CONCAT_TWO = "concat_two"
 
 
-class SupportedScheduler(EnumStr):
+class SupportedScheduler(Enum):
     ONECYCLE = "onecycle"
     PLATEAU = "plateau"
     AUTO_LR = "auto_lr"
     COSINEANNEALING = "cosine_annealing"
 
 
-class SupportedOptimizer(EnumStr):
+class SupportedOptimizer(Enum):
     ADAM = "adam"
     ADAMW = "adamw"
 
 
-class SupportedLossFunctions(EnumStr):
+class SupportedLossFunctions(Enum):
     CROSS_ENTROPY = "cross_entropy"
     CROSS_ENTROPY_POS_WEIGHT = "cross_entropy_pos_weight"
 
 
-class AudioTransforms(EnumStr):
+class AudioTransforms(Enum):
     """List of supported AudioTransforms we use."""
 
     AST = "ast"
@@ -63,23 +61,23 @@ class AudioTransforms(EnumStr):
     WAV2VECCNN = "wav2veccnn"
 
 
-class SupportedDatasets(EnumStr):
+class SupportedDatasets(Enum):
     """List of SupportedDatasets we use."""
 
     IRMAS = "irmas"
     OPENMIC = "openmic"
 
 
-class MetricMode(EnumStr):
+class MetricMode(Enum):
     MIN = "min"
     MAX = "max"
 
 
-class OptimizeMetric(EnumStr):
+class OptimizeMetric(Enum):
     VAL_HAMMING = "val/hamming_distance"
     VAL_F1 = "val/f1"
 
 
-class ModelInputDataType(EnumStr):
+class ModelInputDataType(Enum):
     WAVEFORM = "waveform"
     IMAGE = "image"
