@@ -49,5 +49,13 @@
 			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --val-dirs irmas:data/irmas/test --audio-transform wav2veccnn --model wav2vec_cnn --head attention_head --use-multiple-optimizers --loss-function cross_entropy_pos_weight --backbone-after classifier.heads --head-after classifier.heads --quick",
 			"justMyCode": false
 		},
+		{
+			"name": "Python: Current File",
+			"type": "python",
+			"request": "launch",
+			"program": "${file}",
+			"console": "integratedTerminal",
+			"justMyCode": true
+		},
 	]
 }

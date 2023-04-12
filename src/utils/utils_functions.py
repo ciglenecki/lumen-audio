@@ -269,9 +269,11 @@ def timeit(func):
 
 
 class EnumStr(Enum):
-    @classmethod
-    def keys(cls):
-        return [elem.value for elem in list(cls)]
+    # @classmethod
+    # # def keys(cls):
+    # #     return [elem.value for elem in list(cls)]
+    # def keys(cls):
+    #     return [elem.value for elem in list(cls)]
 
     @classmethod
     def from_string(cls, s, do_except=False):
@@ -284,6 +286,7 @@ class EnumStr(Enum):
                 print(f"Skipping enum parsing {s}")
 
     def __str__(self) -> str:
+        return super().__str__()
         first = super().__str__()
         return f"{first}: '{self.value}'"
 

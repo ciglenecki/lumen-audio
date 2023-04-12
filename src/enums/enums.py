@@ -1,7 +1,9 @@
+from enum import Enum
+
 from src.utils.utils_functions import EnumStr
 
 
-class SupportedModels(EnumStr):
+class SupportedModels(str, EnumStr):
     AST = "ast"
     EFFICIENT_NET_V2_S = "efficient_net_v2_s"
     EFFICIENT_NET_V2_M = "efficient_net_v2_m"
