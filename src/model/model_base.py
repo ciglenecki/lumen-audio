@@ -8,8 +8,8 @@ import torch.nn as nn
 from pytorch_lightning.callbacks import BaseFinetuning
 from pytorch_lightning.loggers import TensorBoardLogger
 
-import src.config.defaults as defaults
-from src.config.config import config
+import src.config.config_defaults as config_defaults
+from src.config.config_train import config
 from src.enums.enums import MetricMode, OptimizeMetric, SupportedModels
 from src.model.fluffy import FluffyConfig
 from src.model.optimizers import (
@@ -28,30 +28,30 @@ class ModelBase(pl.LightningModule, ABC):
 
     def __init__(
         self,
-        batch_size: int = config.batch_size,
-        epochs: Optional[int] = config.epochs,
-        finetune_head: bool = config.finetune_head,
-        finetune_head_epochs: Optional[int] = config.finetune_head_epochs,
+        batch_size: int = config_defaults.batch_size,
+        epochs: Optional[int] = config_defaults.epochs,
+        finetune_head: bool = config_defaults.finetune_head,
+        finetune_head_epochs: Optional[int] = config_defaults.finetune_head_epochs,
         fluffy_config: FluffyConfig | None = None,
-        freeze_train_bn: bool = config.freeze_train_bn,
-        head_after: str | None = config.head_after,
-        backbone_after: str | None = config.backbone_after,
-        loss_function=config.loss_function,
-        lr: float = config.lr,
-        lr_onecycle_max: int | None = config.lr_onecycle_max,
-        lr_warmup: Optional[float] = config.lr_warmup,
-        metric_mode: MetricMode = config.metric_mode,
-        model_enum: SupportedModels = config.model,
-        num_labels: int = defaults.DEFAULT_NUM_LABELS,
-        optimization_metric: OptimizeMetric = config.metric,
-        optimizer_type: SupportedOptimizer = config.optimizer,
-        early_stopping_metric_patience: int = config.early_stopping_metric_patience,
-        pretrained: bool = config.pretrained,
-        scheduler_type: SupportedScheduler = config.scheduler,
-        use_fluffy: bool = config.use_fluffy,
-        weight_decay: float = config.weight_decay,
-        log_per_instrument_metrics=config.log_per_instrument_metrics,
-        pretrained_tag: str = config.pretrained_tag,
+        freeze_train_bn: bool = config_defaults.freeze_train_bn,
+        head_after: str | None = config_defaults.head_after,
+        backbone_after: str | None = config_defaults.backbone_after,
+        loss_function=config_defaults.loss_function,
+        lr: float = config_defaults.lr,
+        lr_onecycle_max: int | None = config_defaults.lr_onecycle_max,
+        lr_warmup: Optional[float] = config_defaults.lr_warmup,
+        metric_mode: MetricMode = config_defaults.metric_mode,
+        model_enum: SupportedModels = config_defaults.model,
+        num_labels: int = config_defaults.DEFAULT_NUM_LABELS,
+        optimization_metric: OptimizeMetric = config_defaults.metric,
+        optimizer_type: SupportedOptimizer = config_defaults.optimizer,
+        early_stopping_metric_patience: int = config_defaults.early_stopping_metric_patience,
+        pretrained: bool = config_defaults.pretrained,
+        scheduler_type: SupportedScheduler = config_defaults.scheduler,
+        use_fluffy: bool = config_defaults.use_fluffy,
+        weight_decay: float = config_defaults.weight_decay,
+        log_per_instrument_metrics=config_defaults.log_per_instrument_metrics,
+        pretrained_tag: str = config_defaults.pretrained_tag,
         *args,
         **kwargs,
     ) -> None:
@@ -130,7 +130,7 @@ class ModelBase(pl.LightningModule, ABC):
         else:
             self.lr = lr
         # save in case indices change with config changes
-        self.backup_instruments = defaults.INSTRUMENT_TO_IDX
+        self.backup_instruments = config_defaults.INSTRUMENT_TO_IDX
         self.save_hyperparameters()
 
     def setup(self, stage: str) -> None:

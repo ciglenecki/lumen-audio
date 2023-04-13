@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.config.defaults import (
+from src.config.config_defaults import (
     PATH_IRMAS_SAMPLE,
     PATH_IRMAS_TRAIN,
     DrumKeys,

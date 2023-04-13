@@ -39,7 +39,6 @@ def parse_kwargs(kwargs_strs: list[str], list_sep=",", key_value_sep="="):
             return float(value)
         return value
 
-    # print(kwargs_strs)
     kwargs = {}
     for key_value in kwargs_strs:
         _kv = key_value.split(key_value_sep)

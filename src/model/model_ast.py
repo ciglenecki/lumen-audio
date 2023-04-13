@@ -8,8 +8,8 @@ from torch_scatter import scatter_max
 from transformers import ASTConfig, ASTFeatureExtractor, ASTForAudioClassification
 from transformers.modeling_outputs import SequenceClassifierOutput
 
-import src.config.defaults as defaults
-from src.config.config import config
+import src.config.config_defaults as config_defaults
+from src.config.config_train import config
 from src.model.heads import DeepHead
 from src.model.model_base import ModelBase
 from src.utils.utils_audio import load_audio_from_file, play_audio
@@ -27,8 +27,8 @@ class ASTModelWrapper(ModelBase):
 
         ast_config = ASTConfig.from_pretrained(
             pretrained_model_name_or_path=self.pretrained_tag,
-            id2label=defaults.IDX_TO_INSTRUMENT,
-            label2id=defaults.INSTRUMENT_TO_IDX,
+            id2label=config_defaults.IDX_TO_INSTRUMENT,
+            label2id=config_defaults.INSTRUMENT_TO_IDX,
             num_labels=self.num_labels,
             finetuning_task="audio-classification",
             problem_type="multi_label_classification",
@@ -108,16 +108,16 @@ class ASTModelWrapper(ModelBase):
 if __name__ == "__main__":
     # example_audio_mel_audio()
     config_ = ASTConfig.from_pretrained(
-        pretrained_model_name_or_path=defaults.DEFAULT_AST_PRETRAINED_TAG,
-        id2label=defaults.IDX_TO_INSTRUMENT,
-        label2id=defaults.INSTRUMENT_TO_IDX,
-        num_labels=defaults.DEFAULT_NUM_LABELS,
+        pretrained_model_name_or_path=config_defaults.DEFAULT_AST_PRETRAINED_TAG,
+        id2label=config_defaults.IDX_TO_INSTRUMENT,
+        label2id=config_defaults.INSTRUMENT_TO_IDX,
+        num_labels=config_defaults.DEFAULT_NUM_LABELS,
         finetuning_task="audio-classification",
         problem_type="multi_label_classification",
     )
 
     backbone: ASTForAudioClassification = ASTForAudioClassification.from_pretrained(
-        defaults.DEFAULT_AST_PRETRAINED_TAG,
+        config_defaults.DEFAULT_AST_PRETRAINED_TAG,
         config=config_,
         ignore_mismatched_sizes=True,
     )
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     fname = "data/irmas_sample/1 - Hank's Other Bag-1.wav"
 
     feature_extractor = ASTFeatureExtractor.from_pretrained(
-        defaults.DEFAULT_AST_PRETRAINED_TAG,
+        config_defaults.DEFAULT_AST_PRETRAINED_TAG,
         do_normalize=False,
     )
 

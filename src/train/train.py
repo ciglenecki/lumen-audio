@@ -13,7 +13,7 @@ from pytorch_lightning.callbacks import (
     TQDMProgressBar,
 )
 
-from src.config.config import config, pl_args
+from src.config.config_train import config, pl_args
 from src.data.datamodule import IRMASDataModule
 from src.enums.enums import MetricMode, ModelInputDataType, OptimizeMetric
 from src.features.audio_transform import AudioTransformBase, get_audio_transform

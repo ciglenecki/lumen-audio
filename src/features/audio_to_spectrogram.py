@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import torchvision.transforms.functional as F
 
-from src.config.config import config
+from src.config.config_train import config
 from src.features.audio_transform_base import AudioTransformBase
 
 

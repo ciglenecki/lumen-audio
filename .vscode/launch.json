@@ -10,7 +10,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --val-dirs irmas:data/irmas/test --backbone-after encoder.layer.11.output --head-after backbone.classifier --model ast --audio-transform ast",
+			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --val-dirs irmas:data/irmas/test --backbone-after encoder.layer.11.output --head-after backbone.classifier --model AST --audio-transform AST",
 			"justMyCode": false
 		},
 		{
@@ -19,7 +19,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --val-dirs irmas:data/irmas/test --backbone-after backbone.classifier --head-after backbone.classifier --model ast --audio-transform ast --quick --train-override-csv data/irmas_sample/normalized_random_samples_relabeling.csv",
+			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --val-dirs irmas:data/irmas/test --backbone-after backbone.classifier --head-after backbone.classifier --model AST --audio-transform AST --quick --train-override-csv data/irmas_sample/normalized_random_samples_relabeling.csv",
 			"justMyCode": false
 		},
 		{
@@ -28,7 +28,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --lr 5e-5 --batch-size 2 --num-workers 4 --audio-transform wav2vec --model wav2vec --epochs 40 --plateau-epoch-patience 50 --backbone-after layers.9 --head-after deep_head --lr-onecycle-max 1e-3 --lr-warmup 5e-5 --unfreeze-at-epoch 4",
+			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --lr 5e-5 --batch-size 2 --num-workers 4 --audio-transform WAV2VEC --model WAV2VEC --epochs 40 --plateau-epoch-patience 50 --backbone-after layers.9 --head-after deep_head --lr-onecycle-max 1e-3 --lr-warmup 5e-5 --unfreeze-at-epoch 4",
 			"justMyCode": false
 		},
 		{
@@ -37,7 +37,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --val-dirs irmas:data/irmas/test --lr 5e-4 --audio-transform mel_spectrogram_fixed_repeat --model resnext50_32x4d --backbone-after backbone.fc --head-after backbone.fc --quick",
+			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --val-dirs irmas:data/irmas/test --lr 5e-4 --audio-transform MEL_SPECTROGRAM_FIXED_REPEAT --model RESNEXT50_32X4D --backbone-after backbone.fc --head-after backbone.fc --quick",
 			"justMyCode": false
 		},
 		{
@@ -46,7 +46,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --val-dirs irmas:data/irmas/test --audio-transform wav2veccnn --model wav2vec_cnn --head attention_head --use-multiple-optimizers --loss-function cross_entropy_pos_weight --backbone-after classifier.heads --head-after classifier.heads --quick",
+			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --val-dirs irmas:data/irmas/test --audio-transform WAV2VECCNN --model WAV2VEC_CNN --head attention_head --use-multiple-optimizers --loss-function cross_entropy_pos_weight --backbone-after classifier.heads --head-after classifier.heads --quick",
 			"justMyCode": false
 		},
 		{

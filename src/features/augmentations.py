@@ -5,7 +5,7 @@ import torch_audiomentations
 from torchaudio.transforms import FrequencyMasking, TimeMasking
 from torchvision.transforms import RandomErasing
 
-from src.config.config import config
+from src.config.config_train import config
 from src.enums.enums import SupportedAugmentations
 
 

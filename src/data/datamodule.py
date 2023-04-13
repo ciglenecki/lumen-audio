@@ -13,8 +13,8 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, SubsetRandomSampler, WeightedRandomSampler
 from tqdm import tqdm
 
-import src.config.defaults as defaults
-from src.config.config import config
+import src.config.config_defaults as config_defaults
+from src.config.config_train import config
 from src.data.dataset_irmas import IRMASDatasetTest, IRMASDatasetTrain
 from src.enums.enums import SupportedDatasets
 from src.features.audio_transform_base import AudioTransformBase
@@ -50,14 +50,14 @@ class IRMASDataModule(pl.LightningDataModule):
         train_audio_transform: AudioTransformBase,
         val_audio_transform: AudioTransformBase,
         collate_fn: Callable | None = None,
-        train_dirs: list[tuple[SupportedDatasets, Path]] = config.train_dirs,
-        val_dirs: list[tuple[SupportedDatasets, Path]] = config.val_dirs,
-        test_dirs: list[tuple[SupportedDatasets, Path]] = config.val_dirs,
-        train_only_dataset: bool = config.train_only_dataset,
-        normalize_audio: bool = config.normalize_audio,
+        train_dirs: list[tuple[SupportedDatasets, Path]] = config_defaults.train_dirs,
+        val_dirs: list[tuple[SupportedDatasets, Path]] = config_defaults.val_dirs,
+        test_dirs: list[tuple[SupportedDatasets, Path]] = config_defaults.val_dirs,
+        train_only_dataset: bool = config_defaults.train_only_dataset,
+        normalize_audio: bool = config_defaults.normalize_audio,
         concat_two_samples: bool = SupportedAugmentations.CONCAT_TWO
-        in config.augmentations,
-        use_weighted_train_sampler=config.use_weighted_train_sampler,
+        in config_defaults.augmentations,
+        use_weighted_train_sampler=config_defaults.use_weighted_train_sampler,
     ):
         super().__init__()
         self.batch_size = batch_size
@@ -81,7 +81,7 @@ class IRMASDataModule(pl.LightningDataModule):
             len(self.train_dirs) == 1
             and self.train_dirs[0][0] == SupportedDatasets.IRMAS
         ):
-            self.class_count_dict = defaults.IRMAS_TRAIN_CLASS_COUNT
+            self.class_count_dict = config_defaults.IRMAS_TRAIN_CLASS_COUNT
         else:
             self.class_count_dict = {}
         self.setup()
@@ -247,7 +247,7 @@ class IRMASDataModule(pl.LightningDataModule):
         for dataset in self.train_dataset.datasets:
             for _, label in tqdm(dataset, desc="Counting classes"):
                 idx = int(np.where(label == 1)[0])
-                instrument = defaults.IDX_TO_INSTRUMENT[idx]
+                instrument = config_defaults.IDX_TO_INSTRUMENT[idx]
                 if instrument not in output:
                     output[instrument] = 0
                 output[instrument] += 1

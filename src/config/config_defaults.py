@@ -144,6 +144,7 @@ _augs.remove(SupportedAugmentations.CONCAT_TWO)
 
 
 def create(arg):
+    """We need this useless helper function since you can't type augmentations: SupportedAugmentations = {} in ConfigDefault."""
     return field(default_factory=lambda: arg)
 
 
@@ -167,7 +168,7 @@ class ConfigDefault:
     augmentations: SupportedAugmentations = create(_augs)
     """Transformation which will be performed on audio and labels"""
 
-    backbone_after: Optional[str] = create(None)
+    backbone_after: str | None = create(None)
     """Name of the submodule after which the all submodules are considered as backbone, e.g. layer.11.dense"""
 
     bar_update: int = create(30)
@@ -178,7 +179,7 @@ class ConfigDefault:
     check_on_train_epoch_end: bool = create(False)
     """Whether to run early stopping at the end of the training epoch."""
 
-    ckpt: Optional[str] = create(None)
+    ckpt: str | None = create(None)
     """.ckpt file, automatically restores model, epoch, step, LR schedulers, etc..."""
 
     dataset_fraction: float = create(1.0)
@@ -205,7 +206,7 @@ class ConfigDefault:
     head: SupportedHeads = create(SupportedHeads.DEEP_HEAD)
     """Type of classification head which will be used for classification. This is almost always the last layer."""
 
-    head_after: Optional[str] = create(None)
+    head_after: str | None = create(None)
     """Name of the submodule after which the all submodules are considered as head, e.g. classifier.dense"""
 
     hop_length: int = create(200)
@@ -290,7 +291,7 @@ class ConfigDefault:
     train_only_dataset: bool = create(False)
     """Use only the train portion of the dataset and split it 0.8 0.2"""
 
-    train_override_csvs: Optional[Path] = create(None)
+    train_override_csvs: Path | None = create(None)
     """CSV files with columns 'filename, sax, gac, org, ..., cla' where filename is path and each instrument is either 0 or 1"""
 
     use_fluffy: bool = create(False)
@@ -313,49 +314,21 @@ class ConfigDefault:
     )
     """Path to the root of the project."""
 
-    path_data: Optional[Path] = create(None)
+    path_data: Path | None = create(None)
     """Path to the data directory."""
 
-    path_data: Optional[Path] = create(None)
-    path_irmas: Optional[Path] = create(None)
-    path_irmas_train: Optional[Path] = create(None)
-    path_irmas_test: Optional[Path] = create(None)
-    path_irmas_train_features: Optional[Path] = create(None)
-    path_irmas_sample: Optional[Path] = create(None)
-    path_openmic: Optional[Path] = create(None)
-    path_models: Optional[Path] = create(None)
-    path_models_quick: Optional[Path] = create(None)
-
-    def _validate_train_args(self):
-        if self.model is None:
-            raise InvalidArgument(
-                f"--model is required for training {list(SupportedModels)}"
-            )
-        if self.audio_transform is None:
-            raise InvalidArgument(
-                f"--audio-transform is required for training {list(AudioTransforms)}"
-            )
-        if self.metric and not self.metric_mode:
-            raise InvalidArgument("Can't pass --metric without passing --metric-mode")
-
-        # aug_kwargs can be either a dictionary or a string which will be parsed as kwargs dict
-        if isinstance(self.aug_kwargs, str):
-            self.aug_kwargs = self.parse_kwargs(self.aug_kwargs)
-
-        if (
-            self.scheduler == SupportedScheduler.ONECYCLE
-            and self.lr_onecycle_max is None
-        ):
-            raise InvalidArgument(
-                f"You have to pass the --lr-onecycle-max if you use the {self.scheduler}",
-            )
-
-        if self.model != SupportedModels.WAV2VECCNN and self.use_multiple_optimizers:
-            raise InvalidArgument(
-                "You can't use mutliple optimizers if you are not using Fluffy!",
-            )
+    path_data: Path | None = create(None)
+    path_irmas: Path | None = create(None)
+    path_irmas_train: Path | None = create(None)
+    path_irmas_test: Path | None = create(None)
+    path_irmas_train_features: Path | None = create(None)
+    path_irmas_sample: Path | None = create(None)
+    path_openmic: Path | None = create(None)
+    path_models: Path | None = create(None)
+    path_models_quick: Path | None = create(None)
 
     def __post_init__(self):
+        """This function dynamically changes some of the arguments based on other arguments."""
         self.path_data: Path = Path(self.path_workdir, "data").relative_to(
             self.path_workdir
         )
@@ -409,6 +382,36 @@ class ConfigDefault:
             self.n_fft = 400
             self.hop_length = 160
             self.n_mels = 128
+
+    def _validate_train_args(self):
+        """This function validates arguments before training."""
+        if self.model is None:
+            raise InvalidArgument(
+                f"--model is required for training {list(SupportedModels)}"
+            )
+        if self.audio_transform is None:
+            raise InvalidArgument(
+                f"--audio-transform is required for training {list(AudioTransforms)}"
+            )
+        if self.metric and not self.metric_mode:
+            raise InvalidArgument("Can't pass --metric without passing --metric-mode")
+
+        # aug_kwargs can be either a dictionary or a string which will be parsed as kwargs dict
+        if isinstance(self.aug_kwargs, str):
+            self.aug_kwargs = self.parse_kwargs(self.aug_kwargs)
+
+        if (
+            self.scheduler == SupportedScheduler.ONECYCLE
+            and self.lr_onecycle_max is None
+        ):
+            raise InvalidArgument(
+                f"You have to pass the --lr-onecycle-max if you use the {self.scheduler}",
+            )
+
+        if self.model != SupportedModels.WAV2VECCNN and self.use_multiple_optimizers:
+            raise InvalidArgument(
+                "You can't use mutliple optimizers if you are not using Fluffy!",
+            )
 
     def parse_dataset_enum_dirs(
         self,

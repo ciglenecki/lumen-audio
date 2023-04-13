@@ -17,7 +17,7 @@ from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from pydub.utils import get_player_name
 from torch.nn.utils.rnn import pad_sequence
 
-from src.config.config import config
+from src.config.config_train import config
 from src.utils.utils_functions import print_tensor
 
 

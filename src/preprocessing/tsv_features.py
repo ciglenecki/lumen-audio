@@ -4,9 +4,9 @@ from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 
-import src.config.defaults as defaults
+import src.config.config_defaults as config_defaults
 
-OUT_DIR = embeddings_dir = defaults.PATH_IRMAS_TRAIN_FEATURES
+OUT_DIR = embeddings_dir = config_defaults.path_irmas_train_features
 
 embeddings = None
 labels = []

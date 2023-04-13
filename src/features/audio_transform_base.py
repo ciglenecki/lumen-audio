@@ -7,7 +7,6 @@ import torch
 
 from src.features.augmentations import SpectrogramAugmentation, WaveformAugmentation
 from src.utils.utils_audio import load_audio_from_file
-from src.utils.utils_functions import EnumStr
 
 
 class AudioTransformBase(ABC):

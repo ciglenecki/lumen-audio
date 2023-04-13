@@ -4,7 +4,7 @@ from typing import Callable, Type, Union
 import torch
 import torch.nn as nn
 
-import src.config.defaults as defaults
+import src.config.config_defaults as config_defaults
 from src.model.heads import AttentionHead, DeepHead
 
 
@@ -34,8 +34,8 @@ class Fluffy(nn.Module):
         super().__init__()
 
         heads_dict = {}
-        for idx in range(defaults.DEFAULT_NUM_LABELS):
-            instrument_name = defaults.IDX_TO_INSTRUMENT[idx]
+        for idx in range(config_defaults.DEFAULT_NUM_LABELS):
+            instrument_name = config_defaults.IDX_TO_INSTRUMENT[idx]
             key = instrument_name
             value = head_constructor(**head_kwargs)
             heads_dict[key] = value

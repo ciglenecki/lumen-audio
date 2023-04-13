@@ -8,7 +8,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import cross_val_predict
 from tqdm import tqdm
 
-from src.config.defaults import (
+from src.config.config_defaults import (
     IDX_TO_INSTRUMENT,
     PATH_IRMAS_TRAIN,
     PATH_IRMAS_TRAIN_FEATURES,
