@@ -63,8 +63,9 @@ if __name__ == "__main__":
     filename_report = Path(output_dir, experiment_name, "log.txt")
     stdout_to_file(filename_report)
     print(str(filename_report))
-    print("Config:", to_yaml(vars(config)), sep="\n")
+    print("Config:\n", config)
     print("Config PyTorch Lightning:", to_yaml(vars(pl_args)), sep="\n")
+    input("Read the config above. Press enter if you wish to continue: ")
 
     data_input_type = get_data_input_type(model_enum=config.model)
     if data_input_type == ModelInputDataType.IMAGE:

@@ -66,6 +66,9 @@ def get_config() -> tuple[ConfigDefault, Namespace]:
     pl_args = Namespace(**args_dict)
 
     # Dynamically set some PyTorch lightning arguments
+    if config.log_every_n_steps:
+        pl_args.log_every_n_steps = config.log_every_n_steps
+
     if config.quick:
         pl_args.limit_train_batches = 2
         pl_args.limit_val_batches = 2

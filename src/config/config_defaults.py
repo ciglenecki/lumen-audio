@@ -5,7 +5,7 @@ Important: 0 dependencies except to enums!
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from enum import Enum
 from pathlib import Path
 from typing import Optional
@@ -169,6 +169,26 @@ class ConfigDefault:
     path_models: Path | None = create(None)
     path_models_quick: Path | None = create(None)
 
+    train_dirs: list[str] | None = create(None)
+    """Dataset root directories that will be used for training in the following format: --train-dirs irmas:/path/to openmic:/path/to"""
+
+    val_dirs: list[str] | None = create(None)
+    """Dataset root directories that will be used for validation in the following format: --val-dirs irmas:/path/to openmic:/path/to"""
+
+    train_only_dataset: bool = create(False)
+    """Use only the train portion of the dataset and split it 0.8 0.2"""
+
+    dataset_fraction: float = create(1.0)
+    """Reduce each dataset split (train, val, test) by a fraction."""
+
+    num_labels: int = create(DEFAULT_NUM_LABELS)
+    """Total number of possible lables"""
+
+    train_override_csvs: Path | None = create(None)
+    """CSV files with columns 'filename, sax, gac, org, ..., cla' where filename is path and each instrument is either 0 or 1"""
+
+    # ======================== DPS ===========================
+
     sampling_rate: int = create(16_000)
     """Audio sampling rate"""
 
@@ -193,20 +213,6 @@ class ConfigDefault:
     hop_length: int = create(200)
     """Hop length which will be used during STFT cacualtion"""
 
-    # ======================== DATASET ===========================
-
-    train_dirs: list[str] | None = create(None)
-    """Dataset root directories that will be used for training in the following format: --train-dirs irmas:/path/to openmic:/path/to"""
-
-    val_dirs: list[str] | None = create(None)
-    """Dataset root directories that will be used for validation in the following format: --val-dirs irmas:/path/to openmic:/path/to"""
-
-    train_only_dataset: bool = create(False)
-    """Use only the train portion of the dataset and split it 0.8 0.2"""
-
-    dataset_fraction: float = create(1.0)
-    """Reduce each dataset split (train, val, test) by a fraction."""
-
     augmentations: set[SupportedAugmentations] = create(_augs)
     """Transformation which will be performed on audio and labels"""
 
@@ -223,13 +229,12 @@ class ConfigDefault:
     )
     """Arguments are split by space, mutiple values are sep'ed by comma (,). E.g. stretch_factors=0.8,1.2 freq_mask_param=30 time_mask_param=30 hide_random_pixels_p=0.5"""
 
-    num_labels: int = create(DEFAULT_NUM_LABELS)
-    """Total number of possible lables"""
-
-    train_override_csvs: Path | None = create(None)
-    """CSV files with columns 'filename, sax, gac, org, ..., cla' where filename is path and each instrument is either 0 or 1"""
-
     # ======================== TRAIN ===========================
+
+    audio_transform: AudioTransforms = create(None)
+    """Transformation which will be performed on audio and labels"""
+
+    batch_size: int = create(3)
 
     epochs: int = create(40)
     """Number epochs. Works only if learning rate scheduler has fixed number of steps (onecycle, cosine...). It won't have an effect on 'reduce on palteau' lr scheduler."""
@@ -237,10 +242,14 @@ class ConfigDefault:
     finetune_head_epochs: int = create(5)
     """Epoch at which the backbone will be unfrozen."""
 
+    metric: OptimizeMetric = create(OptimizeMetric.VAL_F1)
+    """Metric which the model will optimize for."""
+
+    metric_mode: MetricMode = create(MetricMode.MAX)
+    """Maximize or minimize the --metric."""
+
     early_stopping_metric_patience: int = create(10)
     """Number of checks with no improvement after which training will be stopped. Under the default configuration, one check happens after every training epoch"""
-
-    batch_size: int = create(3)
 
     num_workers: int = create(4)
     """Number of workers"""
@@ -251,17 +260,8 @@ class ConfigDefault:
     weight_decay: float = create(1e-5)
     """Maximum lr OneCycle scheduler reaches"""
 
-    audio_transform: AudioTransforms = create(None)
-    """Transformation which will be performed on audio and labels"""
-
     freeze_train_bn: bool = create(True)
     """If true, the batch norm will be trained even if module is frozen."""
-
-    metric: OptimizeMetric = create(OptimizeMetric.VAL_F1)
-    """Metric which the model will optimize for."""
-
-    metric_mode: MetricMode = create(MetricMode.MAX)
-    """Maximize or minimize the --metric."""
 
     quick: bool = create(False)
     """For testing bugs. Simulates --limit_train_batches 2 --limit_val_batches 2 --limit_test_batches 2"""
@@ -278,46 +278,10 @@ class ConfigDefault:
     check_on_train_epoch_end: bool = create(False)
     """Whether to run early stopping at the end of the training epoch."""
 
-    # ======================== OPTIM ===========================
-
-    lr: float = create(0.5)
-    """Learning rate"""
-
-    lr_onecycle_max: float = create(5e-4)
-    """Maximum lr OneCycle scheduler reaches"""
-
-    lr_warmup: float = create(1e-4)
-    """warmup learning rate"""
-
-    loss_function: SupportedLossFunctions = create(SupportedLossFunctions.CROSS_ENTROPY)
-    """Loss function"""
-
-    loss_function_kwargs: dict = create({})
-    """Loss function kwargs"""
-
-    use_multiple_optimizers: bool = create(False)
-    """Use multiple optimizers for Fluffy. Each head will have it's own optimizer."""
-
-    optimizer: str = create(SupportedOptimizer.ADAMW)
-
-    scheduler: SupportedScheduler = create(SupportedScheduler.ONECYCLE)
-
     # ======================== MODEL ===========================
 
     model: SupportedModels = create(None)
     """Models used for training."""
-
-    pretrained: bool = create(True)
-    """Use a pretrained model loaded from the web."""
-
-    pretrained_tag: str = create("DEFAULT")
-    """The string that denotes the pretrained weights used."""
-
-    head: SupportedHeads = create(SupportedHeads.DEEP_HEAD)
-    """Type of classification head which will be used for classification. This is almost always the last layer."""
-
-    use_fluffy: bool = create(False)
-    """Use multiple optimizers for Fluffy."""
 
     finetune_head: bool = create(True)
     """Performs head only finetuning for --finetune-head-epochs epochs with starting lr of --lr-warmup which eventually becomes --lr."""
@@ -328,8 +292,44 @@ class ConfigDefault:
     head_after: str | None = create(None)
     """Name of the submodule after which the all submodules are considered as head, e.g. classifier.dense"""
 
+    pretrained: bool = create(True)
+    """Use a pretrained model loaded from the web."""
+
+    pretrained_tag: str = create("DEFAULT")
+    """The string that denotes the pretrained weights used."""
+
+    head: SupportedHeads = create(SupportedHeads.DEEP_HEAD)
+    """Type of classification head which will be used for classification. This is almost always the last layer."""
+
     ckpt: str | None = create(None)
     """.ckpt file, automatically restores model, epoch, step, LR schedulers, etc..."""
+
+    use_fluffy: bool = create(False)
+    """Use multiple optimizers for Fluffy."""
+
+    # ======================== OPTIM ===========================
+
+    optimizer: str = create(SupportedOptimizer.ADAMW)
+
+    scheduler: SupportedScheduler = create(SupportedScheduler.ONECYCLE)
+
+    loss_function: SupportedLossFunctions = create(SupportedLossFunctions.CROSS_ENTROPY)
+    """Loss function"""
+
+    loss_function_kwargs: dict = create({})
+    """Loss function kwargs"""
+
+    lr: float = create(1e-4)
+    """Learning rate"""
+
+    lr_onecycle_max: float = create(5e-4)
+    """Maximum lr OneCycle scheduler reaches"""
+
+    lr_warmup: float = create(1e-4)
+    """warmup learning rate"""
+
+    use_multiple_optimizers: bool = create(False)
+    """Use multiple optimizers for Fluffy. Each head will have it's own optimizer."""
 
     # ======================== LOGS ===========================
     log_per_instrument_metrics: bool = create(True)
@@ -337,6 +337,9 @@ class ConfigDefault:
 
     bar_update: int = create(30)
     """Number of TQDM updates in one epoch."""
+
+    log_every_n_steps: int = create(30)
+    """How often (steps) to log metrics."""
 
     def __post_init__(self):
         """This function dynamically changes some of the arguments based on other arguments."""
@@ -395,6 +398,7 @@ class ConfigDefault:
             self.n_fft = 400
             self.hop_length = 160
             self.n_mels = 128
+            self.augmentations.remove(SupportedAugmentations.TIME_STRETCH)
             self.augmentations.add(SupportedAugmentations.CONCAT_N_SAMPLES)
             self.augmentations.add(SupportedAugmentations.SUM_TWO_SAMPLES)
 
@@ -489,7 +493,6 @@ class ConfigDefault:
                 return float(value)
             return value
 
-        # print(kwargs_strs)
         kwargs = {}
         for key_value in kwargs_strs:
             _kv = key_value.split(key_value_sep)
@@ -503,7 +506,27 @@ class ConfigDefault:
         return kwargs
 
     def __str__(self):
-        return yaml.dump(vars(self), allow_unicode=True, default_flow_style=False)
+        """If this casuses error at any point feel free to remove it."""
+
+        def conv_value(value):
+            if isinstance(value, set):
+                value = list(value)
+            if isinstance(value, Enum):
+                value = value.name
+            if isinstance(value, Path):
+                value = str(value)
+            return value
+
+        str_dict = {}
+        for key, value in asdict(self).items():
+            if isinstance(value, set) or isinstance(value, list):
+                value = [conv_value(v) for v in value]
+            else:
+                value = conv_value(value)
+            str_dict[key] = value
+        return yaml.dump(
+            str_dict, allow_unicode=True, default_flow_style=False, sort_keys=False
+        )
 
 
 def get_default_value_for_field(field_str: str, cls=ConfigDefault):
