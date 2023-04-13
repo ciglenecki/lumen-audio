@@ -1,6 +1,7 @@
 import pytorch_lightning as pl
 import torch
 
+from src.config.config_defaults import ConfigDefault
 from src.enums.enums import ModelInputDataType, SupportedModels
 from src.model.fluffy import FluffyConfig
 from src.model.heads import get_head_constructor
@@ -27,7 +28,7 @@ def get_data_input_type(model_enum: SupportedModels) -> ModelInputDataType:
 
 
 def get_model(
-    config, pl_args, loss_function=torch.nn.modules.loss
+    config: ConfigDefault, pl_args, loss_function=torch.nn.modules.loss
 ) -> tuple[pl.LightningModule, ModelInputDataType]:
     from src.model.model_torch import TORCHVISION_CONSTRUCTOR_DICT, TorchvisionModel
 
