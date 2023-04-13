@@ -7,7 +7,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from torchmetrics.classification import MultilabelF1Score
 from transformers import Wav2Vec2Config, Wav2Vec2Model
 
-import src.config.defaults as defaults
+import src.config.config_defaults as config_defaults
 from src.model.heads import DeepHead
 from src.model.model_base import ModelBase
 
@@ -32,8 +32,8 @@ class Wav2VecWrapper(ModelBase):
 
         config_wav2vec = Wav2Vec2Config(
             pretrained_model_name_or_path=self.pretrained_tag,
-            id2label=defaults.IDX_TO_INSTRUMENT,
-            label2id=defaults.IDX_TO_INSTRUMENT,
+            id2label=config_defaults.IDX_TO_INSTRUMENT,
+            label2id=config_defaults.IDX_TO_INSTRUMENT,
             num_labels=self.num_labels,
         )
         self.backbone: Wav2Vec2Model = Wav2Vec2Model.from_pretrained(
@@ -80,7 +80,7 @@ class Wav2VecWrapper(ModelBase):
     def _step(self, batch, batch_idx, type: str, optimizer_idx=0):
         audio, y, file_indices = batch
 
-        logits_pred = self.forward(audio, labels=y)
+        logits_pred = self.forward(audio)
         y_pred_prob = torch.sigmoid(logits_pred)
         y_pred = y_pred_prob >= 0.5
         loss = self.loss_function(logits_pred, y)
@@ -89,14 +89,14 @@ class Wav2VecWrapper(ModelBase):
             loss=loss, y_pred=y_pred, y_true=y, type=type
         )
 
-    def training_step(self, batch, batch_idx, optimizer_idx):
-        return self._step(batch, batch_idx, type="train", optimizer_idx=optimizer_idx)
+    def training_step(self, batch, batch_idx):
+        return self._step(batch, batch_idx, type="train")
 
-    def validation_step(self, batch, batch_idx, optimizer_idx):
-        return self._step(batch, batch_idx, type="val", optimizer_idx=optimizer_idx)
+    def validation_step(self, batch, batch_idx):
+        return self._step(batch, batch_idx, type="val")
 
-    def test_step(self, batch, batch_idx, optimizer_idx):
-        return self._step(batch, batch_idx, type="test", optimizer_idx=optimizer_idx)
+    def test_step(self, batch, batch_idx):
+        return self._step(batch, batch_idx, type="test")
 
     def predict_step(
         self, batch: torch.Tensor, batch_idx: int, dataloader_idx: int = 0

@@ -5,7 +5,7 @@ import torch_audiomentations
 from torchaudio.transforms import FrequencyMasking, TimeMasking
 from torchvision.transforms import RandomErasing
 
-from src.config.config import config
+from src.config.config_defaults import ConfigDefault
 from src.enums.enums import SupportedAugmentations
 
 
@@ -127,7 +127,7 @@ class SpectrogramAugmentation:
         return spectrogram
 
 
-def get_augmentations(args):
+def get_augmentations(config: ConfigDefault):
     train_kwargs = dict(
         augmentation_enums=config.augmentations,
         sampling_rate=config.sampling_rate,

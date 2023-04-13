@@ -1,6 +1,4 @@
-"""Some configurations."""
-import os
-from functools import partial
+from argparse import Namespace
 from pathlib import Path
 
 import pytorch_lightning as pl
@@ -13,13 +11,15 @@ from pytorch_lightning.callbacks import (
     TQDMProgressBar,
 )
 
-from src.config.config import config, pl_args
+from src.config.config_defaults import ConfigDefault
+from src.config.config_train import get_config
 from src.data.datamodule import IRMASDataModule
-from src.enums.enums import MetricMode, ModelInputDataType, OptimizeMetric
+from src.enums.enums import MetricMode, OptimizeMetric
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
 from src.features.augmentations import SupportedAugmentations, get_augmentations
+from src.features.chunking import get_collate_fn
 from src.model.loss_function import get_loss_fn
-from src.model.model import get_data_input_type, get_model
+from src.model.model import get_model
 from src.model.optimizers import SupportedScheduler
 from src.train.callbacks import (
     FinetuningCallback,
@@ -27,7 +27,6 @@ from src.train.callbacks import (
     OverrideEpochMetricCallback,
     TensorBoardHparamFixer,
 )
-from src.utils.utils_dataset import chunk_collate_audio, collate_fn_spectrogram
 from src.utils.utils_functions import (
     add_prefix_to_keys,
     get_timestamp,
@@ -37,7 +36,9 @@ from src.utils.utils_functions import (
 )
 from src.utils.utils_train import print_modules
 
-if __name__ == "__main__":
+
+def experiment_setup(config: ConfigDefault, pl_args: Namespace):
+    """Create experiment directory."""
     timestamp = get_timestamp()
     experiment_codeword = random_codeword()
     experiment_name = f"{timestamp}_{experiment_codeword}_{config.model.value}"
@@ -47,36 +48,24 @@ if __name__ == "__main__":
     experiment_dir = Path(output_dir, experiment_name)
     experiment_dir.mkdir(exist_ok=True)
 
-    num_labels = config.num_labels
-    batch_size = config.batch_size
-    sampling_rate = config.sampling_rate
-    metric_mode_str = MetricMode(config.metric_mode).value
-    optimizer_metric_str = OptimizeMetric(config.metric).value
-    normalize_audio = config.normalize_audio
-    aug_kwargs = config.aug_kwargs
-    image_dim = config.image_dim
-    use_weighted_train_sampler = config.use_weighted_train_sampler
-
     filename_config = Path(experiment_dir, "config.yaml")
     with open(filename_config, "w") as outfile:
         yaml.dump(config, outfile)
-
     filename_report = Path(output_dir, experiment_name, "log.txt")
-    stdout_to_file(filename_report)
-    print(str(filename_report))
-    print("Config:", to_yaml(vars(config)), sep="\n")
-    print("Config PyTorch Lightning:", to_yaml(vars(pl_args)), sep="\n")
 
-    data_input_type = get_data_input_type(model_enum=config.model)
-    if data_input_type == ModelInputDataType.IMAGE:
-        collate_fn = collate_fn_spectrogram
-    elif data_input_type == ModelInputDataType.WAVEFORM:
-        collate_fn = partial(
-            chunk_collate_audio,
-            max_audio_width=config.max_audio_seconds * config.sampling_rate,
-        )
-    else:
-        raise Exception(f"Unsupported data input type {data_input_type}")
+    stdout_to_file(filename_report)
+    print("Created experiment directory:", str(experiment_dir))
+    print("Created log file:", str(filename_report))
+    print("Config:\n", config)
+    print("Config PyTorch Lightning:", to_yaml(vars(pl_args)), sep="\n")
+    input("Read the config above. Press enter if you wish to continue: ")
+    return experiment_name, experiment_dir, output_dir
+
+
+if __name__ == "__main__":
+    config, pl_args = get_config()
+
+    experiment_name, experiment_dir, output_dir = experiment_setup(config, pl_args)
 
     (
         train_spectrogram_augmentation,
@@ -86,39 +75,40 @@ if __name__ == "__main__":
     ) = get_augmentations(config)
 
     train_audio_transform: AudioTransformBase = get_audio_transform(
+        config,
         audio_transform_enum=config.audio_transform,
-        sampling_rate=sampling_rate,
         spectrogram_augmentation=train_spectrogram_augmentation,
         waveform_augmentation=train_waveform_augmentation,
-        image_dim=config.image_dim,
     )
     val_audio_transform: AudioTransformBase = get_audio_transform(
+        config,
         audio_transform_enum=config.audio_transform,
-        sampling_rate=sampling_rate,
         spectrogram_augmentation=val_spectrogram_augmentation,
         waveform_augmentation=val_waveform_augmentation,
-        image_dim=config.image_dim,
     )
 
     concat_n_samples = (
-        aug_kwargs["concat_n_samples"]
+        config.aug_kwargs["concat_n_samples"]
         if SupportedAugmentations.CONCAT_N_SAMPLES in config.augmentations
         else None
     )
+    collate_fn = get_collate_fn(config)
 
     datamodule = IRMASDataModule(
-        batch_size=batch_size,
+        train_dirs=config.train_dirs,
+        val_dirs=config.val_dirs,
+        batch_size=config.batch_size,
         num_workers=config.num_workers,
         dataset_fraction=config.dataset_fraction,
         drop_last_sample=config.drop_last,
         train_audio_transform=train_audio_transform,
         val_audio_transform=val_audio_transform,
         collate_fn=collate_fn,
-        normalize_audio=normalize_audio,
+        normalize_audio=config.normalize_audio,
         train_only_dataset=config.train_only_dataset,
         concat_n_samples=concat_n_samples,
         sum_two_samples=SupportedAugmentations.SUM_TWO_SAMPLES in config.augmentations,
-        use_weighted_train_sampler=use_weighted_train_sampler,
+        use_weighted_train_sampler=config.use_weighted_train_sampler,
     )
 
     loss_function = get_loss_fn(
@@ -126,18 +116,24 @@ if __name__ == "__main__":
         datamodule=datamodule,
         **config.loss_function_kwargs,
     )
+
     model = get_model(config, pl_args, loss_function=loss_function)
     print_modules(model)
 
-    train_dataloader_size = len(datamodule.train_dataloader())
+    # ================= SETUP CALLBACKS (auto checkpoint, tensorboard, early stopping...)========================
+    metric_mode_str = MetricMode(config.metric_mode).value
+    optimizer_metric_str = OptimizeMetric(config.metric).value
 
-    log_dictionary = {
-        **add_prefix_to_keys(vars(config), "user_args/"),
-        **add_prefix_to_keys(vars(pl_args), "lightning_args/"),
-        "train_size": len(datamodule.train_dataloader().dataset),
-        "val_size": len(datamodule.val_dataloader().dataset),
-        "test_size": len(datamodule.test_dataloader().dataset),
-    }
+    tensorboard_logger = pl_loggers.TensorBoardLogger(
+        save_dir=str(output_dir),
+        name=experiment_name,
+        default_hp_metric=False,  # Enables a placeholder metric with key `hp_metric` when `log_hyperparams` is called without a metric (otherwise calls to log_hyperparams without a metric are ignored).
+        log_graph=True,
+        version=".",
+    )
+
+    train_dataloader_size = len(datamodule.train_dataloader())
+    bar_refresh_rate = int(train_dataloader_size / config.bar_update)
 
     callback_early_stopping = EarlyStopping(
         monitor=optimizer_metric_str,
@@ -162,15 +158,13 @@ if __name__ == "__main__":
         verbose=True,
     )
 
-    bar_refresh_rate = int(train_dataloader_size / config.bar_update)
-
-    tensorboard_logger = pl_loggers.TensorBoardLogger(
-        save_dir=str(output_dir),
-        name=experiment_name,
-        default_hp_metric=False,  # Enables a placeholder metric with key `hp_metric` when `log_hyperparams` is called without a metric (otherwise calls to log_hyperparams without a metric are ignored).
-        log_graph=True,
-        version=".",
-    )
+    log_dictionary = {
+        **add_prefix_to_keys(vars(config), "user_args/"),
+        **add_prefix_to_keys(vars(pl_args), "lightning_args/"),
+        "train_size": len(datamodule.train_dataloader().dataset),
+        "val_size": len(datamodule.val_dataloader().dataset),
+        "test_size": len(datamodule.test_dataloader().dataset),
+    }
 
     callbacks = [
         callback_checkpoint,
@@ -189,6 +183,8 @@ if __name__ == "__main__":
     callbacks.append(ModelSummary(max_depth=4))
 
     auto_lr_find = config.scheduler == SupportedScheduler.AUTO_LR
+
+    # ================= TRAINER ========================
     trainer: pl.Trainer = pl.Trainer.from_argparse_args(
         pl_args,
         logger=[tensorboard_logger],

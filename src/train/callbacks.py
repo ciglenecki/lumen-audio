@@ -223,3 +223,4 @@ class FinetuningCallback(BaseFinetuning):
             params = BaseFinetuning.filter_on_optimizer(optimizer, params)
             if params:
                 optimizer.add_param_group({"params": params})
+            print_modules(pl_module)

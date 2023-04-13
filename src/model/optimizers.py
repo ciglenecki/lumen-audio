@@ -3,7 +3,7 @@ from typing import Iterator
 import torch
 from torch.nn.parameter import Parameter
 
-import src.config.defaults as defaults
+import src.config.config_defaults as config_defaults
 from src.enums.enums import (
     MetricMode,
     OptimizeMetric,
@@ -42,9 +42,7 @@ def our_configure_optimizers(
     optimizers = []
     schedulers = []
 
-    print(
-        f"WARNING: you are using n={len(list_of_module_params)} optimziers.\nPress enter to continue:"
-    )
+    print(f"WARNING: you are using n={len(list_of_module_params)} optimziers.")
 
     for parameters in list_of_module_params:
         if optimizer_type is SupportedOptimizer.ADAMW:
@@ -104,7 +102,7 @@ def our_configure_optimizers(
             scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer,
                 mode=metric_mode.value,
-                factor=defaults.DEFAULT_LR_PLATEAU_FACTOR,
+                factor=config_defaults.DEFAULT_LR_PLATEAU_FACTOR,
                 patience=plateau_epoch_patience,
                 verbose=True,
             )

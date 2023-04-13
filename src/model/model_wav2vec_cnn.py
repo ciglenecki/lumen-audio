@@ -8,14 +8,14 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from torchmetrics.classification import MultilabelF1Score
 from transformers import Wav2Vec2Config, Wav2Vec2Model
 
-import src.config.defaults as defaults
+import src.config.config_defaults as config_defaults
 from src.model.fluffy import Fluffy
 from src.model.heads import AttentionHead, DeepHead
 from src.model.model_base import ModelBase
 from src.model.optimizers import our_configure_optimizers
 
 
-class Wav2VecCNNWrapper(ModelBase):
+class Wav2VecCnnWrapper(ModelBase):
     loggers: list[TensorBoardLogger]
 
     def __init__(
@@ -23,7 +23,6 @@ class Wav2VecCNNWrapper(ModelBase):
         time_dim_pooling_mode="mean",
         num_layers=2,
         hidden_size=64,
-        loss_function=nn.BCEWithLogitsLoss(),
         *args,
         **kwargs,
     ):
@@ -37,8 +36,6 @@ class Wav2VecCNNWrapper(ModelBase):
             )
             self.automatic_optimization = not self.fluffy_config.use_multiple_optimizers
 
-        self.loss_function = loss_function
-
         self.hamming_distance = torchmetrics.HammingDistance(
             task="multilabel", num_labels=self.num_labels
         )
@@ -46,8 +43,8 @@ class Wav2VecCNNWrapper(ModelBase):
 
         self.config = Wav2Vec2Config(
             pretrained_model_name_or_path=self.pretrained_tag,
-            id2label=defaults.IDX_TO_INSTRUMENT,
-            label2id=defaults.IDX_TO_INSTRUMENT,
+            id2label=config_defaults.IDX_TO_INSTRUMENT,
+            label2id=config_defaults.IDX_TO_INSTRUMENT,
             num_labels=self.num_labels,
             finetuning_task="audio-classification",
             problem_type="multi_label_classification",

@@ -78,4 +78,5 @@ def main():
     print(f"Saved sample to {args.save_path}.")
 
 
-main()
+if __name__ == "__main__":
+    main()

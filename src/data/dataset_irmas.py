@@ -8,18 +8,18 @@ from pathlib import Path
 import librosa
 import numpy as np
 import pandas as pd
+import pytest
 import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-import src.config.defaults as defaults
-from src.config.config import config
+import src.config.config_defaults as config_defaults
 from src.features.audio_to_ast import AudioTransformAST
 from src.features.audio_transform_base import AudioTransformBase
 from src.features.augmentations import SupportedAugmentations
 from src.utils.utils_audio import ast_spec_to_audio, load_audio_from_file, play_audio
 from src.utils.utils_dataset import (
-    decode_instruments_idx,
+    decode_instrument_label,
     encode_drums,
     encode_genre,
     encode_instruments,
@@ -31,15 +31,17 @@ from src.utils.utils_exceptions import InvalidDataException
 # glob_expression = f"*\.({'|'.join(defaults.DEFAULT_AUDIO_EXTENSIONS)})"
 glob_expression = "*.wav"
 
+config = config_defaults.get_default_config()
+
 
 class IRMASDatasetTrain(Dataset):
-    all_instrument_indices = np.array(list(defaults.INSTRUMENT_TO_IDX.values()))
+    all_instrument_indices = np.array(list(config_defaults.INSTRUMENT_TO_IDX.values()))
 
     def __init__(
         self,
-        dataset_dir: Path = defaults.PATH_IRMAS_TRAIN,
+        dataset_dir: Path = config.path_irmas_train,
         audio_transform: AudioTransformBase | None = None,
-        num_classes=defaults.DEFAULT_NUM_LABELS,
+        num_classes=config_defaults.DEFAULT_NUM_LABELS,
         sampling_rate=config.sampling_rate,
         normalize_audio=config.normalize_audio,
         sum_two_samples: bool = False,
@@ -75,8 +77,8 @@ class IRMASDatasetTrain(Dataset):
         self._populate_dataset()
 
         assert (
-            len(self.dataset) == defaults.DEFAULT_IRMAS_TRAIN_SIZE
-        ), f"IRMAS train set should contain {defaults.DEFAULT_IRMAS_TRAIN_SIZE} samples"
+            len(self.dataset) == config_defaults.DEFAULT_IRMAS_TRAIN_SIZE
+        ), f"IRMAS train set should contain {config_defaults.DEFAULT_IRMAS_TRAIN_SIZE} samples"
 
     def _populate_dataset(self):
         """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)
@@ -91,7 +93,9 @@ class IRMASDatasetTrain(Dataset):
             df = pd.concat(dfs, ignore_index=True)
             df.set_index("filename", inplace=True)
 
-        self.instrument_idx_list = {i.value: [] for i in defaults.InstrumentEnums}
+        self.instrument_idx_list = {
+            i.value: [] for i in config_defaults.InstrumentEnums
+        }
 
         for item_idx, path in tqdm(enumerate(self.dataset_dir.rglob(glob_expression))):
             filename = str(path.stem)
@@ -128,83 +132,76 @@ class IRMASDatasetTrain(Dataset):
     def __len__(self) -> int:
         return len(self.dataset)
 
-    def _get_random_sample_for_instrument(self, instrument_idx: int) -> int:
+    def load_sample(self, item_idx: int) -> tuple[np.ndarray, np.ndarray, Path]:
+        audio_path, labels = self.dataset[item_idx]
+        audio, _ = load_audio_from_file(
+            audio_path,
+            target_sr=self.sampling_rate,
+            method="librosa",
+            normalize=self.normalize_audio,
+        )
+        return audio, labels, audio_path
+
+    def get_random_sample_for_instrument(self, instrument_idx: int) -> int:
         """Returns a random sample which contains the instrument with index instrument_idx."""
-        instrument = defaults.IDX_TO_INSTRUMENT[instrument_idx]
+        instrument = config_defaults.IDX_TO_INSTRUMENT[instrument_idx]
         random_sample_idx = random.choice(self.instrument_idx_list[instrument])
         return random_sample_idx
 
-    def _get_negative_sample(self, original_label: np.ndarray):
-        """Returns audio whose labels doesn't contain any label from the original labels.
+    def sample_n_negative_samples(
+        self, n: int, original_labels: np.ndarray
+    ) -> tuple[list[np.ndarray], list[np.ndarray], list[Path]]:
+        # Take all instruments and exclude ones from the original label
+        negative_indices_pool = self.all_instrument_indices[
+            ~original_labels.astype(bool)
+        ]
 
-        Example:
-            original_label: [1,0,0,0,0,1]
-            returns: negative_audio, [0,0,0,0,1,0]
-        """
+        unique_labels = True
 
-        negative_indices = self.all_instrument_indices[~original_label.astype(bool)]
-        if len(negative_indices) > 0:
-            negative_index = np.random.choice(negative_indices)
-        else:
-            negative_index = np.random.randint(0, defaults.DEFAULT_NUM_LABELS)
+        # The pool of negative indices isn't large enough so we have to sample same negative indices mulitple times
+        if len(negative_indices_pool) < n:
+            unique_labels = False
 
-        random_sample_idx = self._get_random_sample_for_instrument(negative_index)
-        negative_audio_path, negative_label = self.dataset[random_sample_idx]
-        negative_audio, _ = load_audio_from_file(
-            negative_audio_path,
-            method="librosa",
-            normalize=self.normalize_audio,
-            target_sr=self.sampling_rate,
+        negative_indices = np.random.choice(
+            negative_indices_pool,
+            size=n,
+            replace=unique_labels,
         )
-        return negative_audio, negative_label
 
-    def _sum_with_another_sample(
+        negative_audios = []
+        negative_labels = []
+        negative_paths = []
+        for instrument_idx in negative_indices:
+            sample_idx = self.get_random_sample_for_instrument(instrument_idx)
+            negative_audio, negative_label, negative_path = self.load_sample(sample_idx)
+            negative_audios.append(negative_audio)
+            negative_labels.append(negative_label)
+            negative_paths.append(negative_path)
+        return negative_audios, negative_labels, negative_paths
+
+    def _pad_with_zeros(self, audio: np.ndarray, desired_size: int):
+        pad_width = (0, desired_size - len(audio))
+        return np.pad(audio, pad_width, mode="constant", constant_values=0)
+
+    def concat_and_sum(
         self,
-        audio: np.ndarray,
-        labels: np.ndarray,
-        other_audio: np.ndarray,
-        other_label: np.ndarray,
+        audios: list[np.ndarray],
+        labels: list[np.ndarray],
+        concat_n_samples: int | None,
+        sum_two_samples: bool,
     ) -> tuple[np.ndarray, np.ndarray]:
-        """Sum two examples from the dataset in the following way:
-
-        - audio: sum and divide by 2 (mean)
-        - labels: logical or, union of ones
-        """
-        audio = (audio + other_audio) / 2
-        labels = np.logical_or(labels, other_label).astype(labels.dtype)
-        return audio, labels
-
-    def _concat_with_another_sample(
-        self,
-        audio: np.ndarray,
-        labels: np.ndarray,
-        other_audio: np.ndarray,
-        other_label: np.ndarray,
-    ) -> tuple[np.ndarray, np.ndarray]:
-        """Concat two examples from the dataset in the following way:
-
-        - audio: concat audios
-        - labels: logical or, union of ones
-        """
-        audio = np.concatenate([audio, other_audio])
-        labels = np.logical_or(labels, other_label).astype(labels.dtype)
-        return audio, labels
-
-    def _concat_and_sum(self, original_audio: np.ndarray, original_labels: np.ndarray):
-        """Performs concaternation and summation of original audio and negative audio samples.
-        Negative audio sample doesn't share original audio's labels.
+        """Performs concaternation and summation of multiple audios and multiple labels.
 
         Args:
-            original_audio
-            labels: original sample's labels
+            audios: list[np.ndarray]
+            labels: list[np.ndarray]
 
         Example 1:
 
             concat_n_samples: 3
             sum_two_samples: False
 
-            original waveform: __x__
-            negative waveforms: __a__, __b__
+            audios: __x__, __a__, __b__
             returns: |__x__|__a__|__b__|
 
         Example 2:
@@ -212,8 +209,7 @@ class IRMASDatasetTrain(Dataset):
             concat_n_samples: None | 0 | 1
             sum_two_samples: True
 
-            original waveform: __x__
-            negative waveform: __a__
+            audios: __x__, __a__
             returns: |__xa__|
 
         Example 1:
@@ -221,86 +217,99 @@ class IRMASDatasetTrain(Dataset):
             concat_n_samples: 3
             sum_two_samples: True
 
-            original waveform: __x__
-            negative waveforms: __a__, __b__, ..., __e__
+            audios: __x__, __a__, __b__, ..., __e__
 
             |block1 |block2 |block3 |
-            |___x___|___b___|___d___| (concated audio 1)
-            |___a___|___c___|___e___| (concated audio 2)
+            |___x___|___a___|___b___| (concated audio 1)
+            |___c___|___d___|___e___| (concated audio 2)
 
-            returns: |__xa__|__bc__|__de__| (summed audios)
+            returns: |__xc__|__ad__|__be__| (summed audios)
         """
-        if self.concat_n_samples is None and not self.sum_two_samples:
-            return original_audio, original_labels
 
-        if self.concat_n_samples > 1:
-            final_audio = original_audio
-            final_labels = original_labels
+        n = len(audios)
 
-            # Handle first block sample case
-            if self.sum_two_samples:
-                negative_audio, negative_label = self._get_negative_sample(
-                    original_labels
-                )
-                final_audio, final_labels = self._sum_with_another_sample(
-                    final_audio, final_labels, negative_audio, negative_label
-                )
+        # If we want to sum two samples, create two concatenated audios
+        # Otherwise use just one long big audio
+        if concat_n_samples is not None and concat_n_samples > 1:
+            if sum_two_samples:
+                n_half = n // 2
+                top_audio = np.concatenate(audios[:n_half], axis=0)
+                bottom_audio = np.concatenate(audios[n_half:], axis=0)
+                audios = [top_audio, bottom_audio]
+            else:
+                audios = [np.concatenate(audios)]
 
-            # Handle additional samples
-            for _ in range(self.concat_n_samples - 1):
-                # Get negative sample
-                negative_audio, negative_labels = self._get_negative_sample(
-                    final_labels
-                )
+        # If at this point we have more than one audio we want to sum them
+        # For summing, audios have to have equal size
+        # Pad every audio with 0 to the maximum length
+        if len(audios) > 1:
+            max_len = max(len(a) for a in audios)
+            for i, audio in enumerate(audios):
+                if len(audio) != max_len:
+                    audios[i] = self._pad_with_zeros(audio, max_len)
 
-                if self.sum_two_samples:
-                    # Get another negative sample
-                    labels_up_until_now = np.logical_or(
-                        final_labels, negative_labels
-                    ).astype(original_labels.dtype)
+        # Now that they are equal in size we can create numpy array
+        audios = np.array(audios)
 
-                    negative_audio_2, negative_labels_2 = self._get_negative_sample(
-                        labels_up_until_now
-                    )
+        # Sum audios
+        if sum_two_samples:
+            audios = np.mean(audios, axis=0)
 
-                    # Stack negative samples in one block
-                    negative_audio, negative_labels = self._sum_with_another_sample(
-                        negative_audio,
-                        negative_labels,
-                        negative_audio_2,
-                        negative_labels_2,
-                    )
+        labels = np.logical_or.reduce(labels).astype(labels[0].dtype)
+        return audios, labels
 
-                final_audio, final_labels = self._concat_with_another_sample(
-                    final_audio, final_labels, negative_audio, negative_labels
-                )
-            return final_audio, final_labels
+    def concat_and_sum_random_negative_samples(self, original_audio, original_labels):
+        """Finds (num_negative_sampels * 2) - 1 negative samples which are concated and summed to original audio. Negative audio sample doesn't share original audio's labels"""
+        num_negative_sampels = self.concat_n_samples
+        if self.sum_two_samples:
+            num_negative_sampels = num_negative_sampels * 2
+        num_negative_sampels = num_negative_sampels - 1  # exclude original audio
 
-        elif (
-            self.concat_n_samples is None or self.concat_n_samples in [0, 1]
-        ) and self.sum_two_samples:
-            negative_audio, negative_label = self._get_negative_sample(original_labels)
-            final_audio, final_labels = self._sum_with_another_sample(
-                original_audio, original_labels, negative_audio, negative_label
-            )
-            return final_audio, final_labels
+        # Load negative samples
+        multiple_audios, multiple_labels, _ = self.sample_n_negative_samples(
+            num_negative_sampels, original_labels=original_labels
+        )
+
+        # Add original audio at the beggining
+        multiple_audios.insert(0, original_audio)
+        multiple_labels.insert(0, original_labels)
+
+        audio, labels = self.concat_and_sum(
+            multiple_audios,
+            multiple_labels,
+            self.concat_n_samples,
+            self.sum_two_samples,
+        )
+
+        return audio, labels
 
     def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
-        audio_path, labels = self.dataset[index]
+        audio, labels, _ = self.load_sample(index)
 
-        audio, _ = load_audio_from_file(
-            audio_path,
-            method="librosa",
-            normalize=self.normalize_audio,
-            target_sr=self.sampling_rate,
-        )
-        audio, labels = self._concat_and_sum(audio, labels)
+        if (
+            self.concat_n_samples is not None and self.concat_n_samples > 1
+        ) or self.sum_two_samples:
+            audio, labels = self.concat_and_sum_random_negative_samples(audio, labels)
 
         if self.audio_transform is None:
             return audio, labels
 
         features = self.audio_transform.process(audio)
         labels = torch.tensor(labels).float()
+
+        # Uncomment for playing audio
+        # print(
+        #     [
+        #         config_defaults.INSTRUMENT_TO_FULLNAME[
+        #             config_defaults.IDX_TO_INSTRUMENT[i]
+        #         ]
+        #         for i in decode_instrument_label(labels)
+        #     ]
+        # )
+        # print("first time")
+        # play_audio(audio, sr=self.sampling_rate)
+        # print("second time")
+        # play_audio(audio, sr=self.sampling_rate)
         return features, labels
 
 
@@ -309,7 +318,7 @@ class IRMASDatasetTest(Dataset):
         self,
         dataset_dir: Path,
         audio_transform: AudioTransformBase | None = None,
-        num_classes=defaults.DEFAULT_NUM_LABELS,
+        num_classes=config_defaults.DEFAULT_NUM_LABELS,
         sampling_rate=config.sampling_rate,
         normalize_audio=config.normalize_audio,
     ):
@@ -322,8 +331,8 @@ class IRMASDatasetTest(Dataset):
         self._populate_dataset()
 
         assert (
-            len(self.dataset) == defaults.DEFAULT_IRMAS_TEST_SIZE
-        ), f"IRMAS test set should contain {defaults.DEFAULT_IRMAS_TEST_SIZE} samples"
+            len(self.dataset) == config_defaults.DEFAULT_IRMAS_TEST_SIZE
+        ), f"IRMAS test set should contain {config_defaults.DEFAULT_IRMAS_TEST_SIZE} samples"
 
     def _populate_dataset(self):
         """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)"""
@@ -340,11 +349,13 @@ class IRMASDatasetTest(Dataset):
             with open(txt_path) as f:
                 for line in f:
                     instrument = line.rstrip("\n").replace("\t", "")
-                    instrument_indices.append(defaults.INSTRUMENT_TO_IDX[instrument])
+                    instrument_indices.append(
+                        config_defaults.INSTRUMENT_TO_IDX[instrument]
+                    )
 
             labels = multi_hot_encode(
                 instrument_indices,
-                defaults.DEFAULT_NUM_LABELS,
+                config_defaults.DEFAULT_NUM_LABELS,
             )
 
             self.dataset.append((str(audio_file), labels, instrument))
@@ -357,9 +368,9 @@ class IRMASDatasetTest(Dataset):
 
         audio, _ = load_audio_from_file(
             audio_path,
+            target_sr=self.sampling_rate,
             method="librosa",
             normalize=self.normalize_audio,
-            target_sr=self.sampling_rate,
         )
 
         if self.audio_transform is None:
@@ -368,6 +379,7 @@ class IRMASDatasetTest(Dataset):
         features = self.audio_transform.process(audio)
 
         labels = torch.tensor(labels).float()
+
         return features, labels
 
 
@@ -375,32 +387,98 @@ class InstrumentInference(Dataset):
     pass
 
 
-if __name__ == "__main__":  # for testing only
-    ds = IRMASDatasetTrain(audio_transform=AudioTransformAST())
-    for i in range(0, 30):
-        print(ds[i][1], ds[i][2])
-    # import matplotlib.pyplot as plt
+def test_sum_and_concat():
+    dataset = IRMASDatasetTrain()
+    sr = 16_000
+    audio_1, _ = librosa.load("data/irmas/train/cel/[cel][cla]0001__1.wav", sr=sr)
+    audio_2, _ = librosa.load("data/irmas/train/cla/[cla][cla]0150__1.wav", sr=sr)
+    audio_3, _ = librosa.load("data/irmas/train/flu/[flu][cla]0346__1.wav", sr=sr)
+    audio_4, _ = librosa.load(
+        "data/irmas/train/flu/008__[flu][nod][cla]0393__1.wav", sr=sr
+    )
+    # Simulate different legnth
+    audio_1, audio_2, audio_3 = audio_1[5:], audio_2[3:], audio_3[2:]
+    label_1 = encode_instruments(["cel"])
+    label_2 = encode_instruments(["cla"])
+    label_3 = encode_instruments(["flu"])
+    label_4 = encode_instruments(["flu"])
 
-    # item = ds[0]
-    # x, sr, y = item
+    audios = [audio_1, audio_2, audio_3, audio_4]
+    labels = [label_1, label_2, label_3, label_4]
+    final_audio, final_labels = dataset.concat_and_sum(
+        audios, labels, concat_n_samples=2, sum_two_samples=True
+    )
 
-    # filter_banks = librosa.filters.mel(n_fft=2048, sr=22050, n_mels=10)
-    # print(filter_banks.shape)
+    top = np.concatenate([audio_1, audio_2])
+    bottom = np.concatenate([audio_3, audio_4])
+    max_len = np.max([len(top), len(bottom)])
 
-    # plt.figure(figsize=(25, 10))
-    # librosa.display.specshow(filter_banks, sr=sr, x_axis="linear")
-    # plt.colorbar(format="%+2.f")
-    # plt.show()
+    if len(top) != max_len:
+        pad_width = (0, max_len - len(top))
+        top = np.pad(top, pad_width, mode="constant", constant_values=0)
+    if len(bottom) != max_len:
+        pad_width = (0, max_len - len(bottom))
+        bottom = np.pad(bottom, pad_width, mode="constant", constant_values=0)
+    test_audio = np.mean([top, bottom], axis=0)
+    test_labels = np.logical_or.reduce(labels).astype(labels[0].dtype)
+    print(test_audio.shape, final_audio.shape)
+    assert np.all(np.isclose(test_audio, final_audio))
+    assert np.all(np.isclose(test_labels, final_labels))
 
-    # mel_spectrogram = librosa.feature.melspectrogram(
-    #     y=x, sr=sr, n_fft=2048, hop_length=512, n_mels=10
-    # )
-    # print(mel_spectrogram.shape)
 
-    # log_mel_spectrogram = librosa.power_to_db(mel_spectrogram)
-    # print(log_mel_spectrogram.shape)
+def test_simple_sum():
+    dataset = IRMASDatasetTrain()
+    sr = 16_000
+    audio_1, _ = librosa.load("data/irmas/train/cel/[cel][cla]0001__1.wav", sr=sr)
+    audio_2, _ = librosa.load("data/irmas/train/cla/[cla][cla]0150__1.wav", sr=sr)
+    # Simulate different legnth
+    audio_1, audio_2 = audio_1[5:], audio_2[3:]
+    label_1 = encode_instruments(["cel"])
+    label_2 = encode_instruments(["cla"])
 
-    # plt.figure(figsize=(25, 10))
-    # librosa.display.specshow(log_mel_spectrogram, x_axis="time", y_axis="mel", sr=sr)
-    # plt.colorbar(format="%+2.f")
-    # plt.show()
+    audios = [audio_1, audio_2]
+    labels = [label_1, label_2]
+    final_audio, final_labels = dataset.concat_and_sum(
+        audios, labels, concat_n_samples=None, sum_two_samples=True
+    )
+
+    max_len = np.max([len(audio_1), len(audio_2)])
+
+    if len(audio_1) != max_len:
+        pad_width = (0, max_len - len(audio_1))
+        audio_1 = np.pad(audio_1, pad_width, mode="constant", constant_values=0)
+    if len(audio_2) != max_len:
+        pad_width = (0, max_len - len(audio_2))
+        bottom = np.pad(audio_2, pad_width, mode="constant", constant_values=0)
+    test_audio = np.mean([audio_1, audio_2], axis=0)
+    test_labels = np.logical_or.reduce(labels).astype(labels[0].dtype)
+
+    assert np.all(np.isclose(test_audio, final_audio))
+    assert np.all(np.isclose(test_labels, final_labels))
+
+
+def test_simple_concat():
+    dataset = IRMASDatasetTrain()
+    sr = 16_000
+    audio_1, _ = librosa.load("data/irmas/train/cel/[cel][cla]0001__1.wav", sr=sr)
+    audio_2, _ = librosa.load("data/irmas/train/cla/[cla][cla]0150__1.wav", sr=sr)
+    # Simulate different legnth
+    audio_1, audio_2 = audio_1[5:], audio_2[3:]
+    label_1 = encode_instruments(["cel"])
+    label_2 = encode_instruments(["cla"])
+
+    audios = [audio_1, audio_2]
+    labels = [label_1, label_2]
+    final_audio, final_labels = dataset.concat_and_sum(
+        audios, labels, concat_n_samples=2, sum_two_samples=False
+    )
+
+    test_audio = np.concatenate([audio_1, audio_2])
+    test_labels = np.logical_or.reduce(labels).astype(labels[0].dtype)
+
+    assert np.all(np.isclose(test_audio, final_audio))
+    assert np.all(np.isclose(test_labels, final_labels))
+
+
+if __name__ == "__main__":
+    test_sum_and_concat()

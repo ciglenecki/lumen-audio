@@ -7,7 +7,6 @@ import torch
 
 from src.features.augmentations import SpectrogramAugmentation, WaveformAugmentation
 from src.utils.utils_audio import load_audio_from_file
-from src.utils.utils_functions import EnumStr
 
 
 class AudioTransformBase(ABC):
@@ -60,8 +59,8 @@ class AudioTransformBase(ABC):
         """
         audio, _ = load_audio_from_file(
             audio_file_path,
+            target_sr=self.sampling_rate,
             method=method,
             normalize=normalize,
-            target_sr=self.sampling_rate,
         )
         return self.process(audio)

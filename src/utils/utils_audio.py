@@ -17,7 +17,6 @@ from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from pydub.utils import get_player_name
 from torch.nn.utils.rnn import pad_sequence
 
-from src.config.config import config
 from src.utils.utils_functions import print_tensor
 
 
@@ -70,9 +69,9 @@ def time_stretch(audio: np.ndarray, min_stretch, max_stretch, trim=True):
 
 def load_audio_from_file(
     audio_path: Path | str,
+    target_sr: int | None,
     method: str = "librosa",
     normalize=True,
-    target_sr: int | None = config.sampling_rate,
 ) -> tuple[torch.Tensor | np.ndarray, int]:
     """Performs loading of the audio file.
 
@@ -99,6 +98,7 @@ def load_audio_from_file(
 
 def spectrogram_batchify(
     spectrograms: np.ndarray | torch.Tensor | list[np.ndarray | torch.Tensor],
+    n_mels: int,
 ) -> np.ndarray:
     """Send one or multiple spectrograms [height, weight] and return as [batch, height, weight]"""
     if isinstance(spectrograms, list):
@@ -116,24 +116,25 @@ def spectrogram_batchify(
     spectrograms = pad_sequence(spectrograms, batch_first=True)
 
     # Make sure it's [batch, height, width]
-    if spectrograms.shape[1] != config.n_mels:
+    if spectrograms.shape[1] != n_mels:
         spectrograms = torch.permute(spectrograms, (0, 2, 1))
-    if spectrograms.shape[1] != config.n_mels:
+    if spectrograms.shape[1] != n_mels:
         assert False, f"Check spectrogram dimensions {spectrograms.shape}"
     return spectrograms.numpy()
 
 
 def plot_spectrograms(
     spectrograms: np.ndarray | torch.Tensor | list[np.ndarray | torch.Tensor],
-    sr=config.sampling_rate,
+    sampling_rate: int,
+    hop_length: int,
+    n_fft: int,
+    n_mels: int,
     titles: list[str] | None = None,
     y_axis: Literal[None, "linear", "fft", "hz", "log", "mel"] = "mel",
-    hop_length=config.hop_length,
-    n_fft=config.n_fft,
     use_power_to_db=True,
 ):
     """Plot one or multiple spectrograms."""
-    spectrograms = spectrogram_batchify(spectrograms)
+    spectrograms = spectrogram_batchify(spectrograms, n_mels)
 
     # Prepare sizes, nrows, ncols
     batch_size = len(spectrograms)
@@ -156,7 +157,7 @@ def plot_spectrograms(
             spec,
             y_axis=y_axis,
             x_axis="time",
-            sr=sr,
+            sampling_rate=sampling_rate,
             hop_length=hop_length,
             n_fft=n_fft,
             norm=norm,
@@ -174,9 +175,9 @@ def plot_spectrograms(
 
 def audios_to_mel_spectrograms(
     audio: np.ndarray | torch.Tensor | list[np.ndarray | torch.Tensor],
-    sr=config.sampling_rate,
-    hop_length=config.hop_length,
-    n_fft=config.n_fft,
+    sampling_rate: int,
+    hop_length: int,
+    n_fft: int,
 ):
     """Convert audio(s) to mel spectrogram(s)"""
     if isinstance(audio, list):
@@ -190,7 +191,9 @@ def audios_to_mel_spectrograms(
     elif len(audio.shape) > 2:
         assert False, "Audio has to be 1D or 2D (batch)"
     spectrograms = [
-        librosa.feature.melspectrogram(y=a, sr=sr, hop_length=hop_length, n_fft=n_fft)
+        librosa.feature.melspectrogram(
+            y=a, sampling_rate=sampling_rate, hop_length=hop_length, n_fft=n_fft
+        )
         for a in audio
     ]
     batched_spectrograms = np.stack(spectrograms)
@@ -199,23 +202,34 @@ def audios_to_mel_spectrograms(
 
 def audio_melspectrogram_plot(
     audio: np.ndarray | torch.Tensor | list[np.ndarray | torch.Tensor],
-    sr=config.sampling_rate,
-    hop_length=config.hop_length,
-    n_fft=config.n_fft,
+    sampling_rate: int,
+    hop_length: int,
+    n_fft: int,
+    n_mels: int,
     titles: list[str] | None = None,
 ):
     """Plot spectrogram(s) from audio signal(s)"""
     spectrograms = audios_to_mel_spectrograms(
-        audio, sr, hop_length=hop_length, n_fft=n_fft
+        audio=audio,
+        sampling_rate=sampling_rate,
+        hop_length=hop_length,
+        n_fft=n_fft,
     )
-    plot_spectrograms(spectrograms, sr=sr, titles=titles)
+    plot_spectrograms(
+        spectrograms,
+        sampling_rate=sampling_rate,
+        hop_length=hop_length,
+        n_fft=n_fft,
+        n_mels=n_mels,
+        titles=titles,
+    )
 
 
-def librosa_to_pydub(waveform: np.ndarray, sr: int) -> pydub.AudioSegment:
+def librosa_to_pydub(waveform: np.ndarray, sampling_rate: int) -> pydub.AudioSegment:
     waveform_int = np.array(waveform * (1 << 15), dtype=np.int16)
     audio_segment = pydub.AudioSegment(
         data=waveform_int.tobytes(),
-        frame_rate=sr,
+        frame_rate=sampling_rate,
         sample_width=waveform_int.dtype.itemsize,
         channels=1,
     )
@@ -238,19 +252,19 @@ def play_with_ffplay_suppress(seg, max_seconds: float | None = None):
 
 def play_audio(
     audio: torch.Tensor | np.ndarray | Path | str,
-    sr: int = None,
+    sampling_rate: int = None,
     max_seconds: float | None = None,
 ):
     print("Playing audio...")
     if isinstance(audio, PurePath) or type(audio) is str:
-        waveform, sr = librosa.load(audio, sr=None)
+        waveform, sampling_rate = librosa.load(audio, sr=None)
     elif isinstance(audio, torch.Tensor):
-        assert sr is not None, "Provide sr argument"
+        assert sampling_rate is not None, "Provide sampling_rate argument"
         waveform = audio.numpy()
     elif type(audio) is np.ndarray:
-        assert sr is not None, "Provide sr argument"
+        assert sampling_rate is not None, "Provide sampling_rate argument"
         waveform = audio
-    audio_segment = librosa_to_pydub(waveform, sr)
+    audio_segment = librosa_to_pydub(waveform, sampling_rate)
     play_with_ffplay_suppress(audio_segment, max_seconds)
 
 
@@ -258,6 +272,7 @@ def example_audio_mel_audio():
     fname = "data/irmas/test/1992 - Blind Guardian - Somewhere Far Beyond - The Bard's Song (In The Forest)-10.wav"
     audio, original_sr = load_audio_from_file(
         fname,
+        target_sr=None,
         method="librosa",
         normalize=True,
     )
@@ -266,24 +281,24 @@ def example_audio_mel_audio():
     audio = librosa.resample(audio, orig_sr=original_sr, target_sr=target_sr)
     print_tensor(audio, "audio")
     spec = librosa.feature.melspectrogram(
-        y=audio, sr=target_sr, n_mels=128, n_fft=400, hop_length=160
+        y=audio, sampling_rate=target_sr, n_mels=128, n_fft=400, hop_length=160
     )
     print_tensor(spec, "spec")
 
     audio_reconstructed = librosa.feature.inverse.mel_to_audio(
-        spec, sr=16_000, n_fft=400, hop_length=160
+        spec, sampling_rate=16_000, n_fft=400, hop_length=160
     )
     print_tensor(audio_reconstructed, "audio_reconstructed")
 
-    play_audio(audio, sr=16_000, max_seconds=3)
-    play_audio(audio_reconstructed, sr=16_000, max_seconds=3)
+    play_audio(audio, sampling_rate=16_000, max_seconds=3)
+    play_audio(audio_reconstructed, sampling_rate=16_000, max_seconds=3)
 
 
 def ast_spec_to_audio(
     spectrogram: torch.Tensor,
-    n_fft=config.n_fft,
-    sampling_rate=config.sampling_rate,
-    hop_length=config.hop_length,
+    n_fft: int,
+    sampling_rate: int,
+    hop_length: int,
 ):
     # spectrogram = (spectrogram * 4.5689974 * 2) - 4.2677393
 
@@ -310,9 +325,9 @@ def ast_spec_to_audio(
 
 if __name__ == "__main__":
     fname = "data/irmas_sample/[gel][jaz_blu]0907__2.wav"
-    waveform, sr = librosa.load(fname, sr=22100)
-    # play_audio(waveform, sr, 2)
+    waveform, sampling_rate = librosa.load(fname, sr=22100)
+    # play_audio(waveform, sampling_rate, 2)
     waveform = torch.tensor(waveform).unsqueeze(0).unsqueeze(0)
     a = torch_audiomentations.TimeInversion(p=1)
-    b = a(waveform, sr).squeeze(0).squeeze(0).numpy()
-    play_audio(b, sr)
+    b = a(waveform, sampling_rate).squeeze(0).squeeze(0).numpy()
+    play_audio(b, sampling_rate)

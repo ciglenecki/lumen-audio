@@ -29,6 +29,8 @@ def parse_kwargs(kwargs_strs: list[str], list_sep=",", key_value_sep="="):
         list_sep: _description_..
         arg_sep: _description_..
     """
+    if isinstance(kwargs_strs, str):
+        kwargs_strs = [kwargs_strs]
 
     def parse_value(value: str):
         if isint(value):
@@ -42,7 +44,7 @@ def parse_kwargs(kwargs_strs: list[str], list_sep=",", key_value_sep="="):
         _kv = key_value.split(key_value_sep)
         assert (
             len(_kv) == 2
-        ), f"Exactly one {key_value_sep} should appear in {key_value}"
+        ), f"Exactly one `{key_value_sep}` should appear in {key_value}"
         key, value = _kv
         value = [parse_value(v) for v in value.split(list_sep)]
         value = value if len(value) > 1 else value[0]
@@ -267,26 +269,6 @@ def timeit(func):
         return result
 
     return timed
-
-
-class EnumStr(Enum):
-    @classmethod
-    def keys(cls):
-        return [elem.value for elem in list(cls)]
-
-    @classmethod
-    def from_string(cls, s, do_except=False):
-        try:
-            return cls(s)
-        except Exception:
-            if do_except:
-                raise ValueError(s)
-            else:
-                print(f"Skipping enum parsing {s}")
-
-    def __str__(self) -> str:
-        first = super().__str__()
-        return f"{first}: '{self.value}'"
 
 
 def to_yaml(data):

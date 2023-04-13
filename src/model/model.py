@@ -1,12 +1,13 @@
 import pytorch_lightning as pl
 import torch
 
+from src.config.config_defaults import ConfigDefault
 from src.enums.enums import ModelInputDataType, SupportedModels
 from src.model.fluffy import FluffyConfig
 from src.model.heads import get_head_constructor
 from src.model.model_ast import ASTModelWrapper
 from src.model.model_wav2vec import Wav2VecWrapper
-from src.model.model_wav2vec_cnn_only import Wav2VecCNNWrapper
+from src.model.model_wav2vec_cnn import Wav2VecCnnWrapper
 from src.utils.utils_exceptions import UnsupportedModel
 
 
@@ -18,8 +19,8 @@ def get_data_input_type(model_enum: SupportedModels) -> ModelInputDataType:
     elif model_enum in TORCHVISION_CONSTRUCTOR_DICT:
         return ModelInputDataType.IMAGE
     elif model_enum == SupportedModels.WAV2VEC:
-        return ModelInputDataType.IMAGE
-    elif model_enum == SupportedModels.WAV2VECCNN:
+        return ModelInputDataType.WAVEFORM
+    elif model_enum == SupportedModels.WAV2VEC_CNN:
         return ModelInputDataType.WAVEFORM
     raise UnsupportedModel(
         f"Each model should have it's own ModelInputDataType. Create a new `elif` for the model {model_enum}."
@@ -27,7 +28,7 @@ def get_data_input_type(model_enum: SupportedModels) -> ModelInputDataType:
 
 
 def get_model(
-    config, pl_args, loss_function=torch.nn.modules.loss
+    config: ConfigDefault, pl_args, loss_function=torch.nn.modules.loss
 ) -> tuple[pl.LightningModule, ModelInputDataType]:
     from src.model.model_torch import TORCHVISION_CONSTRUCTOR_DICT, TorchvisionModel
 
@@ -79,8 +80,8 @@ def get_model(
             **model_base_kwargs,
         )
         return model
-    elif model_enum == SupportedModels.WAV2VECCNN:
-        model = Wav2VecCNNWrapper(
+    elif model_enum == SupportedModels.WAV2VEC_CNN:
+        model = Wav2VecCnnWrapper(
             **model_base_kwargs,
         )
         return model

@@ -1,7 +1,8 @@
-from src.utils.utils_functions import EnumStr
+import sys
+from enum import Enum, EnumMeta
 
 
-class SupportedModels(EnumStr):
+class SupportedModels(Enum):
     AST = "ast"
     EFFICIENT_NET_V2_S = "efficient_net_v2_s"
     EFFICIENT_NET_V2_M = "efficient_net_v2_m"
@@ -10,15 +11,15 @@ class SupportedModels(EnumStr):
     RESNEXT101_32X8D = "resnext101_32x8d"
     RESNEXT101_64X4D = "resnext101_64x4d"
     WAV2VEC = "wav2vec"
-    WAV2VECCNN = "wav2vec_cnn"
+    WAV2VEC_CNN = "wav2vec_cnn"
 
 
-class SupportedHeads(EnumStr):
+class SupportedHeads(Enum):
     DEEP_HEAD = "deep_head"
     ATTENTION_HEAD = "attention_head"
 
 
-class SupportedAugmentations(EnumStr):
+class SupportedAugmentations(Enum):
     """List of supported spectrogram augmentations we use."""
 
     TIME_STRETCH = "time_stretch"
@@ -34,24 +35,24 @@ class SupportedAugmentations(EnumStr):
     SUM_TWO_SAMPLES = "sum_two_samples"
 
 
-class SupportedScheduler(EnumStr):
+class SupportedScheduler(Enum):
     ONECYCLE = "onecycle"
     PLATEAU = "plateau"
     AUTO_LR = "auto_lr"
     COSINEANNEALING = "cosine_annealing"
 
 
-class SupportedOptimizer(EnumStr):
+class SupportedOptimizer(Enum):
     ADAM = "adam"
     ADAMW = "adamw"
 
 
-class SupportedLossFunctions(EnumStr):
+class SupportedLossFunctions(Enum):
     CROSS_ENTROPY = "cross_entropy"
     CROSS_ENTROPY_POS_WEIGHT = "cross_entropy_pos_weight"
 
 
-class AudioTransforms(EnumStr):
+class AudioTransforms(Enum):
     """List of supported AudioTransforms we use."""
 
     AST = "ast"
@@ -59,26 +60,37 @@ class AudioTransforms(EnumStr):
     MEL_SPECTROGRAM_FIXED_REPEAT = "mel_spectrogram_fixed_repeat"
     WAV2VEC = "wav2vec"
     MFCC_FIXED_REPEAT = "mfcc_fixed_repeat"
-    WAV2VECCNN = "wav2veccnn"
+    WAV2VEC_CNN = "wav2vec_cnn"
 
 
-class SupportedDatasets(EnumStr):
+class SupportedDatasets(Enum):
     """List of SupportedDatasets we use."""
 
     IRMAS = "irmas"
     OPENMIC = "openmic"
 
 
-class MetricMode(EnumStr):
+class MetricMode(Enum):
     MIN = "min"
     MAX = "max"
 
 
-class OptimizeMetric(EnumStr):
+class OptimizeMetric(Enum):
     VAL_HAMMING = "val/hamming_distance"
     VAL_F1 = "val/f1"
 
 
-class ModelInputDataType(EnumStr):
+class ModelInputDataType(Enum):
+    """Does the model accept waveform or spectrogram as an input?"""
+
     WAVEFORM = "waveform"
     IMAGE = "image"
+
+
+# Get all enums from this file in one list.
+current_module = sys.modules[__name__]
+all_enums = [
+    getattr(current_module, attr)
+    for attr in dir(current_module)
+    if issubclass(getattr(current_module, attr).__class__, EnumMeta) and attr != "Enum"
+]

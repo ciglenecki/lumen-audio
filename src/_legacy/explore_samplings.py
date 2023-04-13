@@ -1,11 +1,12 @@
 """Checks if all audio files are indeed sampled at 44_100."""
 import wave
 
-import defaults as cd
+from src.config.config_defaults import get_default_config
 
+config = get_default_config()
 val_dict = {}
 
-for file_name in cd.PATH_IRMAS_VAL.rglob("*.wav"):
+for file_name in config.path_irmas_test.rglob("*.wav"):
     with wave.open(str(file_name), "rb") as wave_file:
         frame_rate = wave_file.getframerate()
         if frame_rate not in val_dict:
@@ -14,7 +15,7 @@ for file_name in cd.PATH_IRMAS_VAL.rglob("*.wav"):
 
 train_dict = {}
 
-for file_name in cd.PATH_IRMAS_TRAIN.rglob("*.wav"):
+for file_name in config.path_irmas_train.rglob("*.wav"):
     with wave.open(str(file_name), "rb") as wave_file:
         frame_rate = wave_file.getframerate()
         if frame_rate not in train_dict:
