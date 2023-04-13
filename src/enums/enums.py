@@ -31,7 +31,8 @@ class SupportedAugmentations(Enum):
     BANDPASS_FILTER = "bandpass"
     PITCH = "pitch"
     TIMEINV = "timeinv"
-    CONCAT_TWO = "concat_two"
+    CONCAT_N_SAMPLES = "concat_n"
+    SUM_TWO_SAMPLES = "sum_two_samples"
 
 
 class SupportedScheduler(Enum):

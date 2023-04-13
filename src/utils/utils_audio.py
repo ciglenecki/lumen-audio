@@ -150,7 +150,7 @@ def plot_spectrograms(
     for i, spec in enumerate(spectrograms):
         title = titles[i] if titles is not None else ""
         ax = plt.subplot(n_rows, n_cols, i + 1)
-        if use_power_to_db:
+        if use_power_to_db and y_axis is not None:
             spec = librosa.power_to_db(spec, ref=np.max)
         img = librosa.display.specshow(
             spec,
@@ -285,6 +285,8 @@ def ast_spec_to_audio(
     sampling_rate=config.sampling_rate,
     hop_length=config.hop_length,
 ):
+    # spectrogram = (spectrogram * 4.5689974 * 2) - 4.2677393
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     n_fft = n_fft
     hop = hop_length

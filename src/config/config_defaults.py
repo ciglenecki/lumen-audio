@@ -138,9 +138,10 @@ IRMAS_TRAIN_CLASS_COUNT = {
 }
 
 
-_augs = list(SupportedAugmentations)
+_augs = set(SupportedAugmentations)
 _augs.remove(SupportedAugmentations.RANDOM_ERASE)
-_augs.remove(SupportedAugmentations.CONCAT_TWO)
+_augs.remove(SupportedAugmentations.CONCAT_N_SAMPLES)
+_augs.remove(SupportedAugmentations.SUM_TWO_SAMPLES)
 
 
 def create(arg):
@@ -206,7 +207,7 @@ class ConfigDefault:
     dataset_fraction: float = create(1.0)
     """Reduce each dataset split (train, val, test) by a fraction."""
 
-    augmentations: SupportedAugmentations = create(_augs)
+    augmentations: set[SupportedAugmentations] = create(_augs)
     """Transformation which will be performed on audio and labels"""
 
     aug_kwargs: dict | str = create(
@@ -217,6 +218,7 @@ class ConfigDefault:
             time_mask_param=30,
             hide_random_pixels_p=0.25,
             std_noise=0.01,
+            concat_n_samples=3,
         )
     )
     """Arguments are split by space, mutiple values are sep'ed by comma (,). E.g. stretch_factors=0.8,1.2 freq_mask_param=30 time_mask_param=30 hide_random_pixels_p=0.5"""
@@ -393,6 +395,8 @@ class ConfigDefault:
             self.n_fft = 400
             self.hop_length = 160
             self.n_mels = 128
+            self.augmentations.add(SupportedAugmentations.CONCAT_N_SAMPLES)
+            self.augmentations.add(SupportedAugmentations.SUM_TWO_SAMPLES)
 
     def _validate_train_args(self):
         """This function validates arguments before training."""

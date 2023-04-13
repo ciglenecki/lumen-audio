@@ -12,7 +12,12 @@ import src.config.config_defaults as config_defaults
 from src.config.config_train import config
 from src.model.heads import DeepHead
 from src.model.model_base import ModelBase
-from src.utils.utils_audio import load_audio_from_file, play_audio
+from src.utils.utils_audio import (
+    ast_spec_to_audio,
+    load_audio_from_file,
+    play_audio,
+    plot_spectrograms,
+)
 
 
 class ASTModelWrapper(ModelBase):
@@ -59,7 +64,10 @@ class ASTModelWrapper(ModelBase):
 
     def _step(self, batch, batch_idx, type: str):
         spectrogram, y, file_indices = batch
-
+        # plot_spectrograms(spectrogram, y_axis=None)
+        # play_audio(
+        #     ast_spec_to_audio(spectrogram[0].unsqueeze(0)), sr=config.sampling_rate
+        # )
         loss, logits_pred = self.forward(spectrogram, labels=y)
         y_pred_prob = torch.sigmoid(logits_pred)
         y_pred = (y_pred_prob >= 0.5).float()

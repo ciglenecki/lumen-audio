@@ -99,6 +99,12 @@ if __name__ == "__main__":
         image_dim=config.image_dim,
     )
 
+    concat_n_samples = (
+        aug_kwargs["concat_n_samples"]
+        if SupportedAugmentations.CONCAT_N_SAMPLES in config.augmentations
+        else None
+    )
+
     datamodule = IRMASDataModule(
         batch_size=batch_size,
         num_workers=config.num_workers,
@@ -109,7 +115,8 @@ if __name__ == "__main__":
         collate_fn=collate_fn,
         normalize_audio=normalize_audio,
         train_only_dataset=config.train_only_dataset,
-        concat_two_samples=SupportedAugmentations.CONCAT_TWO in config.augmentations,
+        concat_n_samples=concat_n_samples,
+        sum_two_samples=SupportedAugmentations.SUM_TWO_SAMPLES in config.augmentations,
         use_weighted_train_sampler=use_weighted_train_sampler,
     )
 
