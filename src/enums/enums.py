@@ -1,4 +1,5 @@
-from enum import Enum
+import sys
+from enum import Enum, EnumMeta
 
 
 class SupportedModels(Enum):
@@ -81,3 +82,13 @@ class OptimizeMetric(Enum):
 class ModelInputDataType(Enum):
     WAVEFORM = "waveform"
     IMAGE = "image"
+
+
+current_module = sys.modules[__name__]
+
+
+all_enums = [
+    getattr(current_module, attr)
+    for attr in dir(current_module)
+    if issubclass(getattr(current_module, attr).__class__, EnumMeta) and attr != "Enum"
+]

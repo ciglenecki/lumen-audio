@@ -1,4 +1,7 @@
-"""Default global config. Important: 0 dependencies except to enums!"""
+"""Default global config.
+
+Important: 0 dependencies except to enums!
+"""
 
 from __future__ import annotations
 
@@ -171,7 +174,6 @@ class ConfigDefault:
     """Number of TQDM updates in one epoch."""
 
     batch_size: int = create(3)
-    """None"""
 
     check_on_train_epoch_end: bool = create(False)
     """Whether to run early stopping at the end of the training epoch."""
@@ -201,13 +203,13 @@ class ConfigDefault:
     """If true, the batch norm will be trained even if module is frozen."""
 
     head: SupportedHeads = create(SupportedHeads.DEEP_HEAD)
-    """classifier head"""
+    """Type of classification head which will be used for classification. This is almost always the last layer."""
 
     head_after: Optional[str] = create(None)
     """Name of the submodule after which the all submodules are considered as head, e.g. classifier.dense"""
 
     hop_length: int = create(200)
-    """None"""
+    """Hop length which will be used during STFT cacualtion"""
 
     image_dim: tuple[int, int] = create((384, 384))
     """The dimension to resize the image to."""
@@ -241,19 +243,18 @@ class ConfigDefault:
 
     model: SupportedModels = create(None)
     """Models used for training."""
-    """Models used for training."""
 
     n_fft: int = create(400)
-    """None"""
+    """Length of the signal you want to calculate the Fourier transform of"""
 
     n_mels: int = create(128)
-    """None"""
+    """Number of mel bins you want to caculate"""
 
     n_mfcc: int = create(20)
-    """None"""
+    """Number of Mel-frequency cepstrum (MFCC) coefficients"""
 
     normalize_audio: bool = create(True)
-    """Normalize audio to [-1, 1]"""
+    """Do normalize audio"""
 
     num_labels: int = create(DEFAULT_NUM_LABELS)
     """Total number of possible lables"""
@@ -262,7 +263,6 @@ class ConfigDefault:
     """Number of workers"""
 
     optimizer: str = create(SupportedOptimizer.ADAMW)
-    """None"""
 
     pretrained: bool = create(True)
     """Use a pretrained model loaded from the web."""
@@ -274,18 +274,17 @@ class ConfigDefault:
     """For testing bugs. Simulates --limit_train_batches 2 --limit_val_batches 2 --limit_test_batches 2"""
 
     sampling_rate: int = create(16_000)
-    """None"""
+    """Audio sampling rate"""
 
     save_on_train_epoch_end: bool = create(False)
     """Whether to run checkpointing at the end of the training epoch."""
 
     scheduler: SupportedScheduler = create(SupportedScheduler.ONECYCLE)
-    """None"""
 
     skip_validation: bool = create(False)
     """Skips validation part during training."""
 
-    train_dirs: Optional[list[str]] = create(None)
+    train_dirs: list[str] | None = create(None)
     """Dataset root directories that will be used for training in the following format: --train-dirs irmas:/path/to openmic:/path/to"""
 
     train_only_dataset: bool = create(False)
@@ -303,7 +302,7 @@ class ConfigDefault:
     use_weighted_train_sampler: bool = create(False)
     """Use weighted train sampler instead of a random one."""
 
-    val_dirs: Optional[list[str]] = create(None)
+    val_dirs: list[str] | None = create(None)
     """Dataset root directories that will be used for validation in the following format: --val-dirs irmas:/path/to openmic:/path/to"""
 
     weight_decay: float = create(1e-5)
@@ -312,7 +311,11 @@ class ConfigDefault:
     path_workdir: Path = create(
         Path(pyrootutils.find_root(search_from=__file__, indicator=".project-root"))
     )
+    """Path to the root of the project."""
+
     path_data: Optional[Path] = create(None)
+    """Path to the data directory."""
+
     path_data: Optional[Path] = create(None)
     path_irmas: Optional[Path] = create(None)
     path_irmas_train: Optional[Path] = create(None)

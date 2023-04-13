@@ -1,5 +1,5 @@
 class InvalidArgument(Exception):
-    """Invalid argument"""
+    """Invalid argument."""
 
 
 class InvalidDataException(Exception):

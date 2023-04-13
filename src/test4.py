@@ -15,26 +15,29 @@ import torch
 from simple_parsing import DashVariant
 
 from src.default_args import ConfigDefault
-from src.enums.enums import SupportedAugmentations
-from src.utils.utils_exceptions import InvalidArgument
-
-a = ConfigDefault()
+from src.enums.enums import all_enums
 
 
-class SortingHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
+class SortingHelpFormatter(
+    argparse.ArgumentDefaultsHelpFormatter, argparse.RawTextHelpFormatter
+):
     """Alphabetically sort -h."""
 
     def add_arguments(self, actions):
         actions = sorted(actions, key=attrgetter("option_strings"))
         super().add_arguments(actions)
 
-    def _get_help_string(self, action) -> str | None:
-        string = super()._get_help_string(action)
-        # string =
+
+def get_epipolog():
+    epilog = "==== Enums ====\n"
+    for enum_class in all_enums:
+        enums = list(enum_class)
+        epilog += enum_class.__name__ + ": "
+        epilog += ", ".join([e.name for e in enums]) + "\n\n\n"
+    return epilog
 
 
 user_dest = "user_args"
-# SimpleDataParser creates a group with a specific group format.
 user_group_name = f"{ConfigDefault.__name__} ['{user_dest}']"
 pl_group_name = "pl.Trainer"
 
@@ -43,6 +46,7 @@ def get_config() -> ConfigDefault:
     parser = simple_parsing.ArgumentParser(
         formatter_class=SortingHelpFormatter,
         add_option_string_dash_variants=DashVariant.DASH,
+        epilog=get_epipolog(),
     )
 
     parser.add_arguments(ConfigDefault, dest=user_dest)
