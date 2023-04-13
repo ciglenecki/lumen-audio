@@ -11,7 +11,7 @@ class SupportedModels(Enum):
     RESNEXT101_32X8D = "resnext101_32x8d"
     RESNEXT101_64X4D = "resnext101_64x4d"
     WAV2VEC = "wav2vec"
-    WAV2VECCNN = "wav2vec_cnn"
+    WAV2VEC_CNN = "wav2vec_cnn"
 
 
 class SupportedHeads(Enum):
@@ -60,7 +60,7 @@ class AudioTransforms(Enum):
     MEL_SPECTROGRAM_FIXED_REPEAT = "mel_spectrogram_fixed_repeat"
     WAV2VEC = "wav2vec"
     MFCC_FIXED_REPEAT = "mfcc_fixed_repeat"
-    WAV2VECCNN = "wav2veccnn"
+    WAV2VEC_CNN = "wav2vec_cnn"
 
 
 class SupportedDatasets(Enum):
@@ -81,6 +81,8 @@ class OptimizeMetric(Enum):
 
 
 class ModelInputDataType(Enum):
+    """Does the model accept waveform or spectrogram as an input?"""
+
     WAVEFORM = "waveform"
     IMAGE = "image"
 

@@ -14,11 +14,9 @@ from torch.utils.data import DataLoader, SubsetRandomSampler, WeightedRandomSamp
 from tqdm import tqdm
 
 import src.config.config_defaults as config_defaults
-from src.config.config_defaults import config
 from src.data.dataset_irmas import IRMASDatasetTest, IRMASDatasetTrain
 from src.enums.enums import SupportedDatasets
 from src.features.audio_transform_base import AudioTransformBase
-from src.features.augmentations import SupportedAugmentations
 from src.utils.utils_functions import split_by_ratio
 
 
@@ -49,16 +47,14 @@ class IRMASDataModule(pl.LightningDataModule):
         drop_last_sample: bool,
         train_audio_transform: AudioTransformBase,
         val_audio_transform: AudioTransformBase,
-        collate_fn: Callable | None = None,
-        train_dirs: list[tuple[SupportedDatasets, Path]] = config.train_dirs,
-        val_dirs: list[tuple[SupportedDatasets, Path]] = config.val_dirs,
-        test_dirs: list[tuple[SupportedDatasets, Path]] = [],
-        train_only_dataset: bool = config.train_only_dataset,
-        normalize_audio: bool = config.normalize_audio,
-        concat_n_samples: int | None = None,
-        sum_two_samples: bool = SupportedAugmentations.SUM_TWO_SAMPLES
-        in config.augmentations,
-        use_weighted_train_sampler=config.use_weighted_train_sampler,
+        collate_fn: Callable | None,
+        train_dirs: list[tuple[SupportedDatasets, Path]],
+        val_dirs: list[tuple[SupportedDatasets, Path]],
+        train_only_dataset: bool,
+        normalize_audio: bool,
+        concat_n_samples: int | None,
+        sum_two_samples: bool,
+        use_weighted_train_sampler,
     ):
         super().__init__()
         self.batch_size = batch_size
@@ -70,7 +66,6 @@ class IRMASDataModule(pl.LightningDataModule):
         self.prepare_data_per_node = False
         self.train_dirs = train_dirs
         self.val_dirs = val_dirs
-        self.test_dirs = test_dirs
         self.train_only_dataset = train_only_dataset
         self.normalize_audio = normalize_audio
         self.concat_n_samples = concat_n_samples

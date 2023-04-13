@@ -3,7 +3,6 @@ import numpy as np
 import torch
 import torchvision.transforms.functional as F
 
-from src.config.config_defaults import config
 from src.features.audio_transform_base import AudioTransformBase
 
 
@@ -12,9 +11,9 @@ class MelSpectrogramOurs(AudioTransformBase):
 
     def __init__(
         self,
-        n_fft: int = config.n_fft,
-        hop_length: int = config.hop_length,
-        n_mels: int = config.n_mels,
+        n_fft: int,
+        hop_length: int,
+        n_mels: int,
         *args,
         **kwargs,
     ):

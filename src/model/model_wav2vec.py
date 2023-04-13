@@ -80,7 +80,7 @@ class Wav2VecWrapper(ModelBase):
     def _step(self, batch, batch_idx, type: str, optimizer_idx=0):
         audio, y, file_indices = batch
 
-        logits_pred = self.forward(audio, labels=y)
+        logits_pred = self.forward(audio)
         y_pred_prob = torch.sigmoid(logits_pred)
         y_pred = y_pred_prob >= 0.5
         loss = self.loss_function(logits_pred, y)
@@ -89,14 +89,14 @@ class Wav2VecWrapper(ModelBase):
             loss=loss, y_pred=y_pred, y_true=y, type=type
         )
 
-    def training_step(self, batch, batch_idx, optimizer_idx):
-        return self._step(batch, batch_idx, type="train", optimizer_idx=optimizer_idx)
+    def training_step(self, batch, batch_idx):
+        return self._step(batch, batch_idx, type="train")
 
-    def validation_step(self, batch, batch_idx, optimizer_idx):
-        return self._step(batch, batch_idx, type="val", optimizer_idx=optimizer_idx)
+    def validation_step(self, batch, batch_idx):
+        return self._step(batch, batch_idx, type="val")
 
-    def test_step(self, batch, batch_idx, optimizer_idx):
-        return self._step(batch, batch_idx, type="test", optimizer_idx=optimizer_idx)
+    def test_step(self, batch, batch_idx):
+        return self._step(batch, batch_idx, type="test")
 
     def predict_step(
         self, batch: torch.Tensor, batch_idx: int, dataloader_idx: int = 0

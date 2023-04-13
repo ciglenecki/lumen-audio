@@ -280,7 +280,7 @@ class ConfigDefault:
 
     # ======================== MODEL ===========================
 
-    model: SupportedModels | None = create(None)
+    model: SupportedModels = create(None)
     """Models used for training."""
 
     finetune_head: bool = create(True)
@@ -378,7 +378,7 @@ class ConfigDefault:
         if self.pretrained and self.pretrained_tag == default_pretrain_tag:
             if self.model == SupportedModels.AST:
                 self.pretrained_tag = DEFAULT_AST_PRETRAINED_TAG
-            elif self.model in [SupportedModels.WAV2VECCNN, SupportedModels.WAV2VEC]:
+            elif self.model in [SupportedModels.WAV2VEC_CNN, SupportedModels.WAV2VEC]:
                 self.pretrained_tag = DEFAULT_WAV2VEC_PRETRAINED_TAG
             elif self.model in [
                 SupportedModels.EFFICIENT_NET_V2_S,
@@ -439,7 +439,7 @@ class ConfigDefault:
                 f"You have to pass the --lr-onecycle-max if you use the {self.scheduler}",
             )
 
-        if self.model != SupportedModels.WAV2VECCNN and self.use_multiple_optimizers:
+        if self.model != SupportedModels.WAV2VEC_CNN and self.use_multiple_optimizers:
             raise InvalidArgument(
                 "You can't use mutliple optimizers if you are not using Fluffy!",
             )
@@ -544,4 +544,5 @@ def get_default_value_for_field(field_str: str, cls=ConfigDefault):
     return cls.__dataclass_fields__[field_str].default_factory()
 
 
-config = ConfigDefault()
+def get_default_config():
+    return ConfigDefault()

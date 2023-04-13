@@ -59,8 +59,8 @@ class AudioTransformBase(ABC):
         """
         audio, _ = load_audio_from_file(
             audio_file_path,
+            target_sr=self.sampling_rate,
             method=method,
             normalize=normalize,
-            target_sr=self.sampling_rate,
         )
         return self.process(audio)

@@ -15,7 +15,7 @@ from src.model.model_base import ModelBase
 from src.model.optimizers import our_configure_optimizers
 
 
-class Wav2VecCNNWrapper(ModelBase):
+class Wav2VecCnnWrapper(ModelBase):
     loggers: list[TensorBoardLogger]
 
     def __init__(
@@ -23,7 +23,6 @@ class Wav2VecCNNWrapper(ModelBase):
         time_dim_pooling_mode="mean",
         num_layers=2,
         hidden_size=64,
-        loss_function=nn.BCEWithLogitsLoss(),
         *args,
         **kwargs,
     ):
@@ -36,8 +35,6 @@ class Wav2VecCNNWrapper(ModelBase):
                 else time_dim_pooling_mode
             )
             self.automatic_optimization = not self.fluffy_config.use_multiple_optimizers
-
-        self.loss_function = loss_function
 
         self.hamming_distance = torchmetrics.HammingDistance(
             task="multilabel", num_labels=self.num_labels

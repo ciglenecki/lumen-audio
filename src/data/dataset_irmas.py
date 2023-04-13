@@ -14,7 +14,6 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 
 import src.config.config_defaults as config_defaults
-from src.config.config_defaults import config
 from src.features.audio_to_ast import AudioTransformAST
 from src.features.audio_transform_base import AudioTransformBase
 from src.features.augmentations import SupportedAugmentations
@@ -31,6 +30,8 @@ from src.utils.utils_exceptions import InvalidDataException
 # '*.(wav|mp3|flac)'
 # glob_expression = f"*\.({'|'.join(defaults.DEFAULT_AUDIO_EXTENSIONS)})"
 glob_expression = "*.wav"
+
+config = config_defaults.get_default_config()
 
 
 class IRMASDatasetTrain(Dataset):
@@ -135,9 +136,9 @@ class IRMASDatasetTrain(Dataset):
         audio_path, labels = self.dataset[item_idx]
         audio, _ = load_audio_from_file(
             audio_path,
+            target_sr=self.sampling_rate,
             method="librosa",
             normalize=self.normalize_audio,
-            target_sr=self.sampling_rate,
         )
         return audio, labels, audio_path
 
@@ -367,9 +368,9 @@ class IRMASDatasetTest(Dataset):
 
         audio, _ = load_audio_from_file(
             audio_path,
+            target_sr=self.sampling_rate,
             method="librosa",
             normalize=self.normalize_audio,
-            target_sr=self.sampling_rate,
         )
 
         if self.audio_transform is None:

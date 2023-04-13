@@ -2,7 +2,6 @@ import numpy as np
 import torch
 from transformers import ASTFeatureExtractor
 
-from src.config.config_defaults import config
 from src.features.audio_transform_base import AudioTransformBase
 
 
@@ -16,12 +15,15 @@ class AudioTransformAST(AudioTransformBase):
 
     def __init__(
         self,
-        pretrained_tag=config.pretrained_tag,
+        pretrained_tag,
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        self.feature_extractor = ASTFeatureExtractor.from_pretrained(pretrained_tag)
+        if pretrained_tag is None:
+            self.feature_extractor = ASTFeatureExtractor()
+        else:
+            self.feature_extractor = ASTFeatureExtractor.from_pretrained(pretrained_tag)
 
     def process(
         self, audio: torch.Tensor | np.ndarray

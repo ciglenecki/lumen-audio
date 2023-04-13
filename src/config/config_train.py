@@ -86,6 +86,3 @@ def get_config() -> tuple[ConfigDefault, Namespace]:
         pl_args.limit_val_batches = 0
 
     return config, pl_args
-
-
-config, pl_args = get_config()

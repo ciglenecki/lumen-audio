@@ -9,8 +9,6 @@ from transformers import ASTConfig, ASTFeatureExtractor, ASTForAudioClassificati
 from transformers.modeling_outputs import SequenceClassifierOutput
 
 import src.config.config_defaults as config_defaults
-from src.config.config_defaults import config
-from src.model.heads import DeepHead
 from src.model.model_base import ModelBase
 from src.utils.utils_audio import (
     ast_spec_to_audio,
@@ -147,7 +145,9 @@ if __name__ == "__main__":
     audio_torch = resampler(audio_torch)
     audio_torch = audio_torch.mean(dim=0, keepdim=False)
 
-    audio_lib, org_sample_rate = load_audio_from_file(fname, method="librosa")
+    audio_lib, org_sample_rate = load_audio_from_file(
+        fname, target_sr=target_sr, method="librosa"
+    )
     audio_lib = librosa.resample(
         y=audio_lib, orig_sr=org_sample_rate, target_sr=target_sr
     )
