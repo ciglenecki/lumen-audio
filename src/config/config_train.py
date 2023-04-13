@@ -19,7 +19,7 @@ from src.enums.enums import all_enums
 
 
 class SortingHelpFormatter(
-    argparse.ArgumentDefaultsHelpFormatter, argparse.RawTextHelpFormatter
+    simple_parsing.SimpleHelpFormatter, argparse.RawTextHelpFormatter
 ):
     """Alphabetically sort -h."""
 
