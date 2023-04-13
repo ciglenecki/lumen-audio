@@ -226,7 +226,8 @@ class ConfigDefault:
             std_noise=0.01,
             concat_n_samples=3,
         )
-    )  # Arguments are split by space, mutiple values are sep'ed by comma (,). E.g. stretch_factors=0.8,1.2 freq_mask_param=30 time_mask_param=30 hide_random_pixels_p=0.5
+    )
+    """Arguments are split by space, mutiple values are sep'ed by comma (,). E.g. stretch_factors=0.8,1.2 freq_mask_param=30 time_mask_param=30 hide_random_pixels_p=0.5"""
 
     # ======================== TRAIN ===========================
 
