@@ -329,6 +329,7 @@ class ConfigDefault:
 
     def __post_init__(self):
         """This function dynamically changes some of the arguments based on other arguments."""
+
         self.path_data: Path = Path(self.path_workdir, "data").relative_to(
             self.path_workdir
         )
@@ -347,14 +348,15 @@ class ConfigDefault:
         self.output_dir: Path = self.path_models
         """Output directory of the model and report file."""
 
+        # We can't put where other default values live because we can't reference `self.path_irmas_test` until the user sets irmas directory.
         if self.train_dirs is None:
-            self.train_dirs = [f"irmas:{str(self.path_irmas_test)}"]
-
+            self.train_dirs = [f"irmas:{str(self.path_irmas_train)}"]
         if self.val_dirs is None:
             self.val_dirs = [f"irmas:{str(self.path_irmas_test)}"]
 
-        self.train_dirs = [self.parse_dataset_enum_dirs(d) for d in self.train_dirs]
-        self.val_dirs = [self.parse_dataset_enum_dirs(d) for d in self.val_dirs]
+        # Parse strings to dataset type and path
+        self.train_dirs = [self.dir_to_enum_and_path(d) for d in self.train_dirs]
+        self.val_dirs = [self.dir_to_enum_and_path(d) for d in self.val_dirs]
 
         # Dynamically set pretrained tag
         default_pretrain_tag = get_default_value_for_field("pretrained_tag", self)
@@ -385,6 +387,7 @@ class ConfigDefault:
 
     def _validate_train_args(self):
         """This function validates arguments before training."""
+
         if self.model is None:
             raise InvalidArgument(
                 f"--model is required for training {list(SupportedModels)}"
@@ -413,7 +416,7 @@ class ConfigDefault:
                 "You can't use mutliple optimizers if you are not using Fluffy!",
             )
 
-    def parse_dataset_enum_dirs(
+    def dir_to_enum_and_path(
         self,
         string: str,
     ) -> tuple[SupportedDatasets, Path]:

@@ -84,9 +84,8 @@ class ModelInputDataType(Enum):
     IMAGE = "image"
 
 
+# Get all enums from this file in one list.
 current_module = sys.modules[__name__]
-
-
 all_enums = [
     getattr(current_module, attr)
     for attr in dir(current_module)
