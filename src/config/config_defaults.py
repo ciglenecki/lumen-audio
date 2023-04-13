@@ -150,165 +150,6 @@ def create(arg):
 
 @dataclass
 class ConfigDefault:
-    audio_transform: AudioTransforms = create(None)
-    """Transformation which will be performed on audio and labels"""
-
-    aug_kwargs: dict | str = create(
-        dict(
-            stretch_factors=[0.6, 1.4],
-            time_inversion_p=0.5,
-            freq_mask_param=30,
-            time_mask_param=30,
-            hide_random_pixels_p=0.25,
-            std_noise=0.01,
-        )
-    )
-    """Arguments are split by space, mutiple values are sep'ed by comma (,). E.g. stretch_factors=0.8,1.2 freq_mask_param=30 time_mask_param=30 hide_random_pixels_p=0.5"""
-
-    augmentations: SupportedAugmentations = create(_augs)
-    """Transformation which will be performed on audio and labels"""
-
-    backbone_after: str | None = create(None)
-    """Name of the submodule after which the all submodules are considered as backbone, e.g. layer.11.dense"""
-
-    bar_update: int = create(30)
-    """Number of TQDM updates in one epoch."""
-
-    batch_size: int = create(3)
-
-    check_on_train_epoch_end: bool = create(False)
-    """Whether to run early stopping at the end of the training epoch."""
-
-    ckpt: str | None = create(None)
-    """.ckpt file, automatically restores model, epoch, step, LR schedulers, etc..."""
-
-    dataset_fraction: float = create(1.0)
-    """Reduce each dataset split (train, val, test) by a fraction."""
-
-    drop_last: bool = create(True)
-    """Drop last sample if the size of the sample is smaller than batch size"""
-
-    early_stopping_metric_patience: int = create(10)
-    """Number of checks with no improvement after which training will be stopped. Under the default configuration, one check happens after every training epoch"""
-
-    epochs: int = create(40)
-    """Number epochs. Works only if learning rate scheduler has fixed number of steps (onecycle, cosine...). It won't have an effect on 'reduce on palteau' lr scheduler."""
-
-    finetune_head: bool = create(True)
-    """Performs head only finetuning for --finetune-head-epochs epochs with starting lr of --lr-warmup which eventually becomes --lr."""
-
-    finetune_head_epochs: int = create(5)
-    """Epoch at which the backbone will be unfrozen."""
-
-    freeze_train_bn: bool = create(True)
-    """If true, the batch norm will be trained even if module is frozen."""
-
-    head: SupportedHeads = create(SupportedHeads.DEEP_HEAD)
-    """Type of classification head which will be used for classification. This is almost always the last layer."""
-
-    head_after: str | None = create(None)
-    """Name of the submodule after which the all submodules are considered as head, e.g. classifier.dense"""
-
-    hop_length: int = create(200)
-    """Hop length which will be used during STFT cacualtion"""
-
-    image_dim: tuple[int, int] = create((384, 384))
-    """The dimension to resize the image to."""
-
-    log_per_instrument_metrics: bool = create(True)
-    """Along with aggregated metrics, also log per instrument metrics."""
-
-    loss_function: SupportedLossFunctions = create(SupportedLossFunctions.CROSS_ENTROPY)
-    """Loss function"""
-
-    loss_function_kwargs: dict = create({})
-    """Loss function kwargs"""
-
-    lr: float = create(0.5)
-    """Learning rate"""
-
-    lr_onecycle_max: float = create(5e-4)
-    """Maximum lr OneCycle scheduler reaches"""
-
-    lr_warmup: float = create(1e-4)
-    """warmup learning rate"""
-
-    max_audio_seconds: float = create(3)
-    """Maximum number of seconds of audio which will be processed at one time."""
-
-    metric: OptimizeMetric = create(OptimizeMetric.VAL_F1)
-    """Metric which the model will optimize for."""
-
-    metric_mode: MetricMode = create(MetricMode.MAX)
-    """Maximize or minimize the --metric."""
-
-    model: SupportedModels = create(None)
-    """Models used for training."""
-
-    n_fft: int = create(400)
-    """Length of the signal you want to calculate the Fourier transform of"""
-
-    n_mels: int = create(128)
-    """Number of mel bins you want to caculate"""
-
-    n_mfcc: int = create(20)
-    """Number of Mel-frequency cepstrum (MFCC) coefficients"""
-
-    normalize_audio: bool = create(True)
-    """Do normalize audio"""
-
-    num_labels: int = create(DEFAULT_NUM_LABELS)
-    """Total number of possible lables"""
-
-    num_workers: int = create(4)
-    """Number of workers"""
-
-    optimizer: str = create(SupportedOptimizer.ADAMW)
-
-    pretrained: bool = create(True)
-    """Use a pretrained model loaded from the web."""
-
-    pretrained_tag: str = create("DEFAULT")
-    """The string that denotes the pretrained weights used."""
-
-    quick: bool = create(False)
-    """For testing bugs. Simulates --limit_train_batches 2 --limit_val_batches 2 --limit_test_batches 2"""
-
-    sampling_rate: int = create(16_000)
-    """Audio sampling rate"""
-
-    save_on_train_epoch_end: bool = create(False)
-    """Whether to run checkpointing at the end of the training epoch."""
-
-    scheduler: SupportedScheduler = create(SupportedScheduler.ONECYCLE)
-
-    skip_validation: bool = create(False)
-    """Skips validation part during training."""
-
-    train_dirs: list[str] | None = create(None)
-    """Dataset root directories that will be used for training in the following format: --train-dirs irmas:/path/to openmic:/path/to"""
-
-    train_only_dataset: bool = create(False)
-    """Use only the train portion of the dataset and split it 0.8 0.2"""
-
-    train_override_csvs: Path | None = create(None)
-    """CSV files with columns 'filename, sax, gac, org, ..., cla' where filename is path and each instrument is either 0 or 1"""
-
-    use_fluffy: bool = create(False)
-    """Use multiple optimizers for Fluffy."""
-
-    use_multiple_optimizers: bool = create(False)
-    """Use multiple optimizers for Fluffy. Each head will have it's own optimizer."""
-
-    use_weighted_train_sampler: bool = create(False)
-    """Use weighted train sampler instead of a random one."""
-
-    val_dirs: list[str] | None = create(None)
-    """Dataset root directories that will be used for validation in the following format: --val-dirs irmas:/path/to openmic:/path/to"""
-
-    weight_decay: float = create(1e-5)
-    """Maximum lr OneCycle scheduler reaches"""
-
     path_workdir: Path = create(
         Path(pyrootutils.find_root(search_from=__file__, indicator=".project-root"))
     )
@@ -326,6 +167,174 @@ class ConfigDefault:
     path_openmic: Path | None = create(None)
     path_models: Path | None = create(None)
     path_models_quick: Path | None = create(None)
+
+    sampling_rate: int = create(16_000)
+    """Audio sampling rate"""
+
+    n_fft: int = create(400)
+    """Length of the signal you want to calculate the Fourier transform of"""
+
+    n_mels: int = create(128)
+    """Number of mel bins you want to caculate"""
+
+    n_mfcc: int = create(20)
+    """Number of Mel-frequency cepstrum (MFCC) coefficients"""
+
+    image_dim: tuple[int, int] = create((384, 384))
+    """The dimension to resize the image to."""
+
+    normalize_audio: bool = create(True)
+    """Do normalize audio"""
+
+    max_audio_seconds: float = create(3)
+    """Maximum number of seconds of audio which will be processed at one time."""
+
+    hop_length: int = create(200)
+    """Hop length which will be used during STFT cacualtion"""
+
+    # ======================== DATASET ===========================
+
+    train_dirs: list[str] | None = create(None)
+    """Dataset root directories that will be used for training in the following format: --train-dirs irmas:/path/to openmic:/path/to"""
+
+    val_dirs: list[str] | None = create(None)
+    """Dataset root directories that will be used for validation in the following format: --val-dirs irmas:/path/to openmic:/path/to"""
+
+    train_only_dataset: bool = create(False)
+    """Use only the train portion of the dataset and split it 0.8 0.2"""
+
+    dataset_fraction: float = create(1.0)
+    """Reduce each dataset split (train, val, test) by a fraction."""
+
+    augmentations: SupportedAugmentations = create(_augs)
+    """Transformation which will be performed on audio and labels"""
+
+    aug_kwargs: dict | str = create(
+        dict(
+            stretch_factors=[0.6, 1.4],
+            time_inversion_p=0.5,
+            freq_mask_param=30,
+            time_mask_param=30,
+            hide_random_pixels_p=0.25,
+            std_noise=0.01,
+        )
+    )
+    """Arguments are split by space, mutiple values are sep'ed by comma (,). E.g. stretch_factors=0.8,1.2 freq_mask_param=30 time_mask_param=30 hide_random_pixels_p=0.5"""
+
+    num_labels: int = create(DEFAULT_NUM_LABELS)
+    """Total number of possible lables"""
+
+    train_override_csvs: Path | None = create(None)
+    """CSV files with columns 'filename, sax, gac, org, ..., cla' where filename is path and each instrument is either 0 or 1"""
+
+    # ======================== TRAIN ===========================
+
+    epochs: int = create(40)
+    """Number epochs. Works only if learning rate scheduler has fixed number of steps (onecycle, cosine...). It won't have an effect on 'reduce on palteau' lr scheduler."""
+
+    finetune_head_epochs: int = create(5)
+    """Epoch at which the backbone will be unfrozen."""
+
+    early_stopping_metric_patience: int = create(10)
+    """Number of checks with no improvement after which training will be stopped. Under the default configuration, one check happens after every training epoch"""
+
+    batch_size: int = create(3)
+
+    num_workers: int = create(4)
+    """Number of workers"""
+
+    use_weighted_train_sampler: bool = create(False)
+    """Use weighted train sampler instead of a random one."""
+
+    weight_decay: float = create(1e-5)
+    """Maximum lr OneCycle scheduler reaches"""
+
+    audio_transform: AudioTransforms = create(None)
+    """Transformation which will be performed on audio and labels"""
+
+    freeze_train_bn: bool = create(True)
+    """If true, the batch norm will be trained even if module is frozen."""
+
+    metric: OptimizeMetric = create(OptimizeMetric.VAL_F1)
+    """Metric which the model will optimize for."""
+
+    metric_mode: MetricMode = create(MetricMode.MAX)
+    """Maximize or minimize the --metric."""
+
+    quick: bool = create(False)
+    """For testing bugs. Simulates --limit_train_batches 2 --limit_val_batches 2 --limit_test_batches 2"""
+
+    save_on_train_epoch_end: bool = create(False)
+    """Whether to run checkpointing at the end of the training epoch."""
+
+    skip_validation: bool = create(False)
+    """Skips validation part during training."""
+
+    drop_last: bool = create(True)
+    """Drop last sample if the size of the sample is smaller than batch size"""
+
+    check_on_train_epoch_end: bool = create(False)
+    """Whether to run early stopping at the end of the training epoch."""
+
+    # ======================== OPTIM ===========================
+
+    lr: float = create(0.5)
+    """Learning rate"""
+
+    lr_onecycle_max: float = create(5e-4)
+    """Maximum lr OneCycle scheduler reaches"""
+
+    lr_warmup: float = create(1e-4)
+    """warmup learning rate"""
+
+    loss_function: SupportedLossFunctions = create(SupportedLossFunctions.CROSS_ENTROPY)
+    """Loss function"""
+
+    loss_function_kwargs: dict = create({})
+    """Loss function kwargs"""
+
+    use_multiple_optimizers: bool = create(False)
+    """Use multiple optimizers for Fluffy. Each head will have it's own optimizer."""
+
+    optimizer: str = create(SupportedOptimizer.ADAMW)
+
+    scheduler: SupportedScheduler = create(SupportedScheduler.ONECYCLE)
+
+    # ======================== MODEL ===========================
+
+    model: SupportedModels = create(None)
+    """Models used for training."""
+
+    pretrained: bool = create(True)
+    """Use a pretrained model loaded from the web."""
+
+    pretrained_tag: str = create("DEFAULT")
+    """The string that denotes the pretrained weights used."""
+
+    head: SupportedHeads = create(SupportedHeads.DEEP_HEAD)
+    """Type of classification head which will be used for classification. This is almost always the last layer."""
+
+    use_fluffy: bool = create(False)
+    """Use multiple optimizers for Fluffy."""
+
+    finetune_head: bool = create(True)
+    """Performs head only finetuning for --finetune-head-epochs epochs with starting lr of --lr-warmup which eventually becomes --lr."""
+
+    backbone_after: str | None = create(None)
+    """Name of the submodule after which the all submodules are considered as backbone, e.g. layer.11.dense"""
+
+    head_after: str | None = create(None)
+    """Name of the submodule after which the all submodules are considered as head, e.g. classifier.dense"""
+
+    ckpt: str | None = create(None)
+    """.ckpt file, automatically restores model, epoch, step, LR schedulers, etc..."""
+
+    # ======================== LOGS ===========================
+    log_per_instrument_metrics: bool = create(True)
+    """Along with aggregated metrics, also log per instrument metrics."""
+
+    bar_update: int = create(30)
+    """Number of TQDM updates in one epoch."""
 
     def __post_init__(self):
         """This function dynamically changes some of the arguments based on other arguments."""
