@@ -53,7 +53,8 @@ DEFAULT_AST_N_MELS = 128
 
 _augs = list(SupportedAugmentations)
 _augs.remove(SupportedAugmentations.RANDOM_ERASE)
-_augs.remove(SupportedAugmentations.CONCAT_TWO)
+_augs.remove(SupportedAugmentations.CONCAT_N_SAMPLES)
+_augs.remove(SupportedAugmentations.SUM_TWO_SAMPLES)
 DEFAULT_AUGMENTATIONS = _augs  # all excepted removed ones
 
 DEFAULT_AUGMENTATION_KWARSG = dict(
@@ -63,6 +64,7 @@ DEFAULT_AUGMENTATION_KWARSG = dict(
     time_mask_param=30,
     hide_random_pixels_p=0.25,
     std_noise=0.01,
+    concat_n_samples=3,
 )
 
 # DATASET
