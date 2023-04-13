@@ -9,7 +9,7 @@ from transformers import ASTConfig, ASTFeatureExtractor, ASTForAudioClassificati
 from transformers.modeling_outputs import SequenceClassifierOutput
 
 import src.config.config_defaults as config_defaults
-from src.config.config_train import config
+from src.config.config_defaults import config
 from src.model.heads import DeepHead
 from src.model.model_base import ModelBase
 from src.utils.utils_audio import (

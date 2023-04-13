@@ -4,7 +4,7 @@ import torch
 import torchvision.transforms.functional as F
 
 import src.config.config_defaults as config_defaults
-from src.config.config_train import config
+from src.config.config_defaults import config
 from src.features.audio_transform_base import AudioTransformBase
 
 

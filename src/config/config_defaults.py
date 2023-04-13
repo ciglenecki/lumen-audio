@@ -144,9 +144,9 @@ _augs.remove(SupportedAugmentations.CONCAT_N_SAMPLES)
 _augs.remove(SupportedAugmentations.SUM_TWO_SAMPLES)
 
 
-def create(arg):
+def create(arg, **kwargs):
     """We need this useless helper function since you can't type augmentations: SupportedAugmentations = {} in ConfigDefault."""
-    return field(default_factory=lambda: arg)
+    return field(default_factory=lambda: arg, **kwargs)
 
 
 @dataclass
@@ -231,7 +231,7 @@ class ConfigDefault:
 
     # ======================== TRAIN ===========================
 
-    audio_transform: AudioTransforms = create(None)
+    audio_transform: AudioTransforms | None = create(None)
     """Transformation which will be performed on audio and labels"""
 
     batch_size: int = create(3)
@@ -280,7 +280,7 @@ class ConfigDefault:
 
     # ======================== MODEL ===========================
 
-    model: SupportedModels = create(None)
+    model: SupportedModels | None = create(None)
     """Models used for training."""
 
     finetune_head: bool = create(True)
@@ -418,7 +418,9 @@ class ConfigDefault:
 
         # aug_kwargs can be either a dictionary or a string which will be parsed as kwargs dict
         if isinstance(self.aug_kwargs, str):
-            self.aug_kwargs = self.parse_kwargs(self.aug_kwargs)
+            override_kwargs = self.parse_kwargs(self.aug_kwargs)
+            self.aug_kwargs = get_default_value_for_field("aug_kwargs", self)
+            self.aug_kwargs.update(override_kwargs)
 
         if (
             self.scheduler == SupportedScheduler.ONECYCLE
@@ -531,3 +533,6 @@ class ConfigDefault:
 
 def get_default_value_for_field(field_str: str, cls=ConfigDefault):
     return cls.__dataclass_fields__[field_str].default_factory()
+
+
+config = ConfigDefault()

@@ -9,7 +9,7 @@ from pytorch_lightning.callbacks import BaseFinetuning
 from pytorch_lightning.loggers import TensorBoardLogger
 
 import src.config.config_defaults as config_defaults
-from src.config.config_train import config
+from src.config.config_defaults import config
 from src.enums.enums import MetricMode, OptimizeMetric, SupportedModels
 from src.model.fluffy import FluffyConfig
 from src.model.optimizers import (

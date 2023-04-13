@@ -9,6 +9,7 @@ ipykernel==6.22.0
 ConfigArgParse==1.5.3
 torch_audiomentations
 pydub
+pytest
 
 # ----------- torch -------- #
 torchvision==0.15.1
