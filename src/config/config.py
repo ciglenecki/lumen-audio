@@ -37,18 +37,19 @@ def get_epipolog():
     return epilog
 
 
-user_dest = "user_args"
-user_group_name = f"{ConfigDefault.__name__} ['{user_dest}']"
-pl_group_name = "pl.Trainer"
-
-
 def get_config() -> ConfigDefault:
+    user_dest = "user_args"
+    user_group_name = f"{ConfigDefault.__name__} ['{user_dest}']"
+    pl_group_name = "pl.Trainer"
+
+    # Create a parser
     parser = simple_parsing.ArgumentParser(
         formatter_class=SortingHelpFormatter,
         add_option_string_dash_variants=DashVariant.DASH,
         epilog=get_epipolog(),
     )
 
+    # Add PyTorch Lightning args to CLI
     parser.add_arguments(ConfigDefault, dest=user_dest)
     lightning_parser = pl.Trainer.add_argparse_args(parser)
     lightning_parser.set_defaults(
@@ -56,24 +57,14 @@ def get_config() -> ConfigDefault:
         devices=-1,  # use all devices
     )
 
+    # Parse and split in two: config and pytorch lightning args
     args = parser.parse_args()
     args_dict = vars(args)
-
-    """
-    args_dict = {
-        "accelerator": "gpu",
-        "devices": -1,
-        "user_dest": ConfigDefault(
-            n_fft=400,
-            ...
-        )
-        ...
-    }
-    """
     config: ConfigDefault = args_dict.pop(user_dest)
     config._validate_train_args()
     pl_args = Namespace(**args_dict)
 
+    # Dynamically set some PyTorch lightning arguments
     if config.quick:
         pl_args.limit_train_batches = 2
         pl_args.limit_val_batches = 2

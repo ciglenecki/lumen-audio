@@ -144,6 +144,7 @@ _augs.remove(SupportedAugmentations.CONCAT_TWO)
 
 
 def create(arg):
+    """We need this useless helper function since you can't type augmentations: SupportedAugmentations = {} in ConfigDefault."""
     return field(default_factory=lambda: arg)
 
 
@@ -326,36 +327,8 @@ class ConfigDefault:
     path_models: Optional[Path] = create(None)
     path_models_quick: Optional[Path] = create(None)
 
-    def _validate_train_args(self):
-        if self.model is None:
-            raise InvalidArgument(
-                f"--model is required for training {list(SupportedModels)}"
-            )
-        if self.audio_transform is None:
-            raise InvalidArgument(
-                f"--audio-transform is required for training {list(AudioTransforms)}"
-            )
-        if self.metric and not self.metric_mode:
-            raise InvalidArgument("Can't pass --metric without passing --metric-mode")
-
-        # aug_kwargs can be either a dictionary or a string which will be parsed as kwargs dict
-        if isinstance(self.aug_kwargs, str):
-            self.aug_kwargs = self.parse_kwargs(self.aug_kwargs)
-
-        if (
-            self.scheduler == SupportedScheduler.ONECYCLE
-            and self.lr_onecycle_max is None
-        ):
-            raise InvalidArgument(
-                f"You have to pass the --lr-onecycle-max if you use the {self.scheduler}",
-            )
-
-        if self.model != SupportedModels.WAV2VECCNN and self.use_multiple_optimizers:
-            raise InvalidArgument(
-                "You can't use mutliple optimizers if you are not using Fluffy!",
-            )
-
     def __post_init__(self):
+        """This function dynamically changes some of the arguments based on other arguments."""
         self.path_data: Path = Path(self.path_workdir, "data").relative_to(
             self.path_workdir
         )
@@ -409,6 +382,36 @@ class ConfigDefault:
             self.n_fft = 400
             self.hop_length = 160
             self.n_mels = 128
+
+    def _validate_train_args(self):
+        """This function validates arguments before training."""
+        if self.model is None:
+            raise InvalidArgument(
+                f"--model is required for training {list(SupportedModels)}"
+            )
+        if self.audio_transform is None:
+            raise InvalidArgument(
+                f"--audio-transform is required for training {list(AudioTransforms)}"
+            )
+        if self.metric and not self.metric_mode:
+            raise InvalidArgument("Can't pass --metric without passing --metric-mode")
+
+        # aug_kwargs can be either a dictionary or a string which will be parsed as kwargs dict
+        if isinstance(self.aug_kwargs, str):
+            self.aug_kwargs = self.parse_kwargs(self.aug_kwargs)
+
+        if (
+            self.scheduler == SupportedScheduler.ONECYCLE
+            and self.lr_onecycle_max is None
+        ):
+            raise InvalidArgument(
+                f"You have to pass the --lr-onecycle-max if you use the {self.scheduler}",
+            )
+
+        if self.model != SupportedModels.WAV2VECCNN and self.use_multiple_optimizers:
+            raise InvalidArgument(
+                "You can't use mutliple optimizers if you are not using Fluffy!",
+            )
 
     def parse_dataset_enum_dirs(
         self,
