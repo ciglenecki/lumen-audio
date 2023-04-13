@@ -29,6 +29,7 @@ class SortingHelpFormatter(
 
 
 def get_epipolog():
+    """Prints all enums as strings."""
     epilog = "==== Enums ====\n"
     for enum_class in all_enums:
         enums = list(enum_class)
