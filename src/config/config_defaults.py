@@ -5,10 +5,9 @@ Important: 0 dependencies except to enums!
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field, fields
+from dataclasses import asdict, dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Optional
 
 import pyrootutils
 import yaml
@@ -195,6 +194,9 @@ class ConfigDefault:
     n_fft: int = create(400)
     """Length of the signal you want to calculate the Fourier transform of"""
 
+    hop_length: int = create(200)
+    """Hop length which will be used during STFT cacualtion"""
+
     n_mels: int = create(128)
     """Number of mel bins you want to caculate"""
 
@@ -209,9 +211,6 @@ class ConfigDefault:
 
     max_audio_seconds: float = create(3)
     """Maximum number of seconds of audio which will be processed at one time."""
-
-    hop_length: int = create(200)
-    """Hop length which will be used during STFT cacualtion"""
 
     augmentations: set[SupportedAugmentations] = create(_augs)
     """Transformation which will be performed on audio and labels"""
@@ -234,7 +233,7 @@ class ConfigDefault:
     audio_transform: AudioTransforms | None = create(None)
     """Transformation which will be performed on audio and labels"""
 
-    batch_size: int = create(3)
+    batch_size: int = create(4)
 
     epochs: int = create(40)
     """Number epochs. Works only if learning rate scheduler has fixed number of steps (onecycle, cosine...). It won't have an effect on 'reduce on palteau' lr scheduler."""
@@ -257,10 +256,10 @@ class ConfigDefault:
     use_weighted_train_sampler: bool = create(False)
     """Use weighted train sampler instead of a random one."""
 
-    weight_decay: float = create(1e-5)
+    weight_decay: float | None = create(None)
     """Maximum lr OneCycle scheduler reaches"""
 
-    freeze_train_bn: bool = create(True)
+    freeze_train_bn: bool = create(False)
     """If true, the batch norm will be trained even if module is frozen."""
 
     quick: bool = create(False)
@@ -402,6 +401,11 @@ class ConfigDefault:
             self.augmentations.remove(SupportedAugmentations.TIME_STRETCH)
             self.augmentations.add(SupportedAugmentations.CONCAT_N_SAMPLES)
             self.augmentations.add(SupportedAugmentations.SUM_TWO_SAMPLES)
+
+        if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAM:
+            self.weight_decay = 0
+        if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAMW:
+            self.weight_decay = 1e-2
 
     def _validate_train_args(self):
         """This function validates arguments before training."""
