@@ -1,5 +1,5 @@
 default_language_version:
-  python: python3
+  python: python3.10
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -16,7 +16,6 @@ repos:
       - id: check-toml
       - id: check-case-conflict
       - id: check-added-large-files
-
   # python code formatting
   - repo: https://github.com/psf/black
     rev: 22.6.0

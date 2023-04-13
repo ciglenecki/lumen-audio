@@ -144,9 +144,9 @@ _augs.remove(SupportedAugmentations.CONCAT_N_SAMPLES)
 _augs.remove(SupportedAugmentations.SUM_TWO_SAMPLES)
 
 
-def create(arg):
+def create(arg, **kwargs):
     """We need this useless helper function since you can't type augmentations: SupportedAugmentations = {} in ConfigDefault."""
-    return field(default_factory=lambda: arg)
+    return field(default_factory=lambda: arg, **kwargs)
 
 
 @dataclass
@@ -226,12 +226,11 @@ class ConfigDefault:
             std_noise=0.01,
             concat_n_samples=3,
         )
-    )
-    """Arguments are split by space, mutiple values are sep'ed by comma (,). E.g. stretch_factors=0.8,1.2 freq_mask_param=30 time_mask_param=30 hide_random_pixels_p=0.5"""
+    )  # Arguments are split by space, mutiple values are sep'ed by comma (,). E.g. stretch_factors=0.8,1.2 freq_mask_param=30 time_mask_param=30 hide_random_pixels_p=0.5
 
     # ======================== TRAIN ===========================
 
-    audio_transform: AudioTransforms = create(None)
+    audio_transform: AudioTransforms | None = create(None)
     """Transformation which will be performed on audio and labels"""
 
     batch_size: int = create(3)
@@ -280,7 +279,7 @@ class ConfigDefault:
 
     # ======================== MODEL ===========================
 
-    model: SupportedModels = create(None)
+    model: SupportedModels | None = create(None)
     """Models used for training."""
 
     finetune_head: bool = create(True)
@@ -310,13 +309,14 @@ class ConfigDefault:
     # ======================== OPTIM ===========================
 
     optimizer: str = create(SupportedOptimizer.ADAMW)
+    """Optimizer"""
 
     scheduler: SupportedScheduler = create(SupportedScheduler.ONECYCLE)
 
     loss_function: SupportedLossFunctions = create(SupportedLossFunctions.CROSS_ENTROPY)
     """Loss function"""
 
-    loss_function_kwargs: dict = create({})
+    loss_function_kwargs: dict | dict = create({})
     """Loss function kwargs"""
 
     lr: float = create(1e-4)
@@ -418,7 +418,17 @@ class ConfigDefault:
 
         # aug_kwargs can be either a dictionary or a string which will be parsed as kwargs dict
         if isinstance(self.aug_kwargs, str):
-            self.aug_kwargs = self.parse_kwargs(self.aug_kwargs)
+            override_kwargs = self.parse_kwargs(self.aug_kwargs)
+            self.aug_kwargs = get_default_value_for_field("aug_kwargs", self)
+            self.aug_kwargs.update(override_kwargs)
+
+        # loss_function_kwargs can be either a dictionary or a string which will be parsed as kwargs dict
+        if isinstance(self.loss_function_kwargs, str):
+            override_kwargs = self.parse_kwargs(self.loss_function_kwargs)
+            self.loss_function_kwargs = get_default_value_for_field(
+                "loss_function_kwargs", self
+            )
+            self.loss_function_kwargs.update(override_kwargs)
 
         if (
             self.scheduler == SupportedScheduler.ONECYCLE
@@ -531,3 +541,6 @@ class ConfigDefault:
 
 def get_default_value_for_field(field_str: str, cls=ConfigDefault):
     return cls.__dataclass_fields__[field_str].default_factory()
+
+
+config = ConfigDefault()

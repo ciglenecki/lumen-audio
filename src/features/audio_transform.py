@@ -1,4 +1,4 @@
-from src.config.config_train import config
+from src.config.config_defaults import config
 from src.enums.enums import AudioTransforms
 from src.features.audio_to_ast import AudioTransformAST
 from src.features.audio_to_mfcc import MFCCFixedRepeat

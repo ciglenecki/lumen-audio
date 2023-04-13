@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from transformers import Wav2Vec2FeatureExtractor
 
-from src.config.config_train import config
+from src.config.config_defaults import config
 from src.features.audio_transform_base import AudioTransformBase
 
 

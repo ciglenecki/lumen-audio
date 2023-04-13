@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader, SubsetRandomSampler, WeightedRandomSamp
 from tqdm import tqdm
 
 import src.config.config_defaults as config_defaults
-from src.config.config_train import config
+from src.config.config_defaults import config
 from src.data.dataset_irmas import IRMASDatasetTest, IRMASDatasetTrain
 from src.enums.enums import SupportedDatasets
 from src.features.audio_transform_base import AudioTransformBase
