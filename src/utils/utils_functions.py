@@ -181,6 +181,7 @@ class SocketConcatenator:
 
     def __init__(self, *files):
         self.files = files
+        self.encoding = sys.stdout.encoding
 
     def write(self, obj):
         for f in self.files:
