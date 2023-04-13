@@ -37,14 +37,14 @@ class IRMASDatasetTrain(Dataset):
 
     def __init__(
         self,
-        dataset_dir: Path = config_defaults.path_irmas_train,
+        dataset_dir: Path = config.path_irmas_train,
         audio_transform: AudioTransformBase | None = None,
         num_classes=config_defaults.DEFAULT_NUM_LABELS,
-        sampling_rate=config_defaults.sampling_rate,
-        normalize_audio=config_defaults.normalize_audio,
+        sampling_rate=config.sampling_rate,
+        normalize_audio=config.normalize_audio,
         concat_two_samples: bool = SupportedAugmentations.CONCAT_TWO
-        in config_defaults.augmentations,
-        train_override_csvs: list[Path] | None = config_defaults.train_override_csvs,
+        in config.augmentations,
+        train_override_csvs: list[Path] | None = config.train_override_csvs,
     ):
         """_summary_
 
@@ -205,8 +205,8 @@ class IRMASDatasetTest(Dataset):
         dataset_dir: Path,
         audio_transform: AudioTransformBase | None = None,
         num_classes=config_defaults.DEFAULT_NUM_LABELS,
-        sampling_rate=config_defaults.sampling_rate,
-        normalize_audio=config_defaults.normalize_audio,
+        sampling_rate=config.sampling_rate,
+        normalize_audio=config.normalize_audio,
     ):
         self.num_classes = num_classes
         self.audio_transform = audio_transform

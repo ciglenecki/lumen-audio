@@ -1,9 +1,13 @@
 import argparse
 import os
 import shutil
+from test import a
 
 import numpy as np
 import pandas as pd
+
+a()
+exit(1)
 
 
 def parse():

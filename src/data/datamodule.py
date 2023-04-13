@@ -50,14 +50,14 @@ class IRMASDataModule(pl.LightningDataModule):
         train_audio_transform: AudioTransformBase,
         val_audio_transform: AudioTransformBase,
         collate_fn: Callable | None = None,
-        train_dirs: list[tuple[SupportedDatasets, Path]] = config_defaults.train_dirs,
-        val_dirs: list[tuple[SupportedDatasets, Path]] = config_defaults.val_dirs,
-        test_dirs: list[tuple[SupportedDatasets, Path]] = config_defaults.val_dirs,
-        train_only_dataset: bool = config_defaults.train_only_dataset,
-        normalize_audio: bool = config_defaults.normalize_audio,
+        train_dirs: list[tuple[SupportedDatasets, Path]] = config.train_dirs,
+        val_dirs: list[tuple[SupportedDatasets, Path]] = config.val_dirs,
+        test_dirs: list[tuple[SupportedDatasets, Path]] = [],
+        train_only_dataset: bool = config.train_only_dataset,
+        normalize_audio: bool = config.normalize_audio,
         concat_two_samples: bool = SupportedAugmentations.CONCAT_TWO
-        in config_defaults.augmentations,
-        use_weighted_train_sampler=config_defaults.use_weighted_train_sampler,
+        in config.augmentations,
+        use_weighted_train_sampler=config.use_weighted_train_sampler,
     ):
         super().__init__()
         self.batch_size = batch_size

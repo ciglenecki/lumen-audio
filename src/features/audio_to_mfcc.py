@@ -14,9 +14,9 @@ class MFCC(AudioTransformBase):
     def __init__(
         self,
         n_mfcc: int,
-        n_fft: int = config_defaults.n_fft,
-        hop_length: int = config_defaults.hop_length,
-        n_mels: int = config_defaults.n_mels,
+        n_fft: int = config.n_fft,
+        hop_length: int = config.hop_length,
+        n_mels: int = config.n_mels,
         *args,
         **kwargs,
     ):

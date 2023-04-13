@@ -42,9 +42,7 @@ def our_configure_optimizers(
     optimizers = []
     schedulers = []
 
-    print(
-        f"WARNING: you are using n={len(list_of_module_params)} optimziers.\nPress enter to continue:"
-    )
+    print(f"WARNING: you are using n={len(list_of_module_params)} optimziers.")
 
     for parameters in list_of_module_params:
         if optimizer_type is SupportedOptimizer.ADAMW:

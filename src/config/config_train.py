@@ -37,7 +37,7 @@ def get_epipolog():
     return epilog
 
 
-def get_config() -> ConfigDefault:
+def get_config() -> tuple[ConfigDefault, Namespace]:
     user_dest = "user_args"
     user_group_name = f"{ConfigDefault.__name__} ['{user_dest}']"
     pl_group_name = "pl.Trainer"
