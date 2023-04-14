@@ -400,11 +400,12 @@ class ConfigDefault(Serializable):
             self.n_fft = 400
             self.hop_length = 160
             self.n_mels = 128
-            _augmentations_set = set(self.augmentations)
-            _augmentations_set.discard(SupportedAugmentations.TIME_STRETCH)
-            _augmentations_set.add(SupportedAugmentations.CONCAT_N_SAMPLES)
-            _augmentations_set.add(SupportedAugmentations.SUM_TWO_SAMPLES)
-            self.augmentations = list(_augmentations_set)
+            if self.augmentations == get_default_value_for_field("augmentations", self):
+                _augmentations_set = set(self.augmentations)
+                _augmentations_set.discard(SupportedAugmentations.TIME_STRETCH)
+                _augmentations_set.add(SupportedAugmentations.CONCAT_N_SAMPLES)
+                _augmentations_set.add(SupportedAugmentations.SUM_TWO_SAMPLES)
+                self.augmentations = list(_augmentations_set)
 
         if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAM:
             self.weight_decay = 0
