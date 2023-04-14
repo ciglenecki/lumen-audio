@@ -15,8 +15,8 @@ from src.utils.utils_exceptions import UnsupportedAudioTransforms
 def get_audio_transform(
     config: ConfigDefault,
     audio_transform_enum: AudioTransforms,
-    spectrogram_augmentation: SpectrogramAugmentation | None,
-    waveform_augmentation: WaveformAugmentation | None,
+    spectrogram_augmentation: SpectrogramAugmentation | None = None,
+    waveform_augmentation: WaveformAugmentation | None = None,
 ) -> AudioTransformBase:
     base_kwargs = dict(
         sampling_rate=config.sampling_rate,

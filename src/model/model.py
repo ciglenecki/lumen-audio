@@ -28,7 +28,7 @@ def get_data_input_type(model_enum: SupportedModels) -> ModelInputDataType:
 
 
 def get_model(
-    config: ConfigDefault, pl_args, loss_function=torch.nn.modules.loss
+    config: ConfigDefault, loss_function: torch.nn.modules.loss  # maknut pl_args argument, ako ce nekome trebat nek doda
 ) -> tuple[pl.LightningModule, ModelInputDataType]:
     from src.model.model_torch import TORCHVISION_CONSTRUCTOR_DICT, TorchvisionModel
 

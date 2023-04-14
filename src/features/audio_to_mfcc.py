@@ -29,7 +29,9 @@ class MFCC(AudioTransformBase):
         self,
         audio: torch.Tensor | np.ndarray,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        audio = self.waveform_augmentation(audio)
+        if self.waveform_augmentation is not None:
+            audio = self.waveform_augmentation(audio)
+        
         spectrogram = librosa.feature.mfcc(
             y=audio,
             sr=self.sampling_rate,
@@ -38,7 +40,10 @@ class MFCC(AudioTransformBase):
             hop_length=self.hop_length,
             n_mels=self.n_mels,
         )
-        spectrogram = self.spectrogram_augmentation(spectrogram)
+        
+        if self.spectrogram_augmentation is not None:
+            spectrogram = self.spectrogram_augmentation(spectrogram)
+    
         return spectrogram
 
 

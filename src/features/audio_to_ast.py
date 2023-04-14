@@ -28,7 +28,8 @@ class AudioTransformAST(AudioTransformBase):
     def process(
         self, audio: torch.Tensor | np.ndarray
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        audio = self.waveform_augmentation(audio)
+        if self.waveform_augmentation is not None:
+            audio = self.waveform_augmentation(audio)
 
         spectrogram = self.feature_extractor(
             audio,
@@ -36,7 +37,8 @@ class AudioTransformAST(AudioTransformBase):
             return_tensors="pt",
         )["input_values"]
 
-        spectrogram = self.spectrogram_augmentation(spectrogram)  # [Batch, 1024, 128]
+        if self.spectrogram_augmentation is not None:
+            spectrogram = self.spectrogram_augmentation(spectrogram)  # [Batch, 1024, 128]
 
         # TODO: chunking
         spectrogram_chunks = spectrogram
