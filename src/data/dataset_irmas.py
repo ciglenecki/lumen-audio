@@ -187,7 +187,7 @@ class IRMASDatasetTrain(Dataset):
         self,
         audios: list[np.ndarray],
         labels: list[np.ndarray],
-        concat_n_samples: int | None,
+        use_concat: bool,
         sum_two_samples: bool,
     ) -> tuple[np.ndarray, np.ndarray]:
         """Performs concaternation and summation of multiple audios and multiple labels.
@@ -198,7 +198,7 @@ class IRMASDatasetTrain(Dataset):
 
         Example 1:
 
-            concat_n_samples: 3
+            use_concat: True
             sum_two_samples: False
 
             audios: __x__, __a__, __b__
@@ -206,7 +206,7 @@ class IRMASDatasetTrain(Dataset):
 
         Example 2:
 
-            concat_n_samples: None | 0 | 1
+            use_concat: False
             sum_two_samples: True
 
             audios: __x__, __a__
@@ -214,7 +214,7 @@ class IRMASDatasetTrain(Dataset):
 
         Example 1:
 
-            concat_n_samples: 3
+            use_concat: 3
             sum_two_samples: True
 
             audios: __x__, __a__, __b__, ..., __e__
@@ -228,31 +228,26 @@ class IRMASDatasetTrain(Dataset):
 
         n = len(audios)
 
+        if use_concat and not sum_two_samples:
+            audios = np.concatenate(audios)
+
         # If we want to sum two samples, create two concatenated audios
         # Otherwise use just one long big audio
-        if concat_n_samples is not None and concat_n_samples > 1:
-            if sum_two_samples:
-                n_half = n // 2
-                top_audio = np.concatenate(audios[:n_half], axis=0)
-                bottom_audio = np.concatenate(audios[n_half:], axis=0)
-                audios = [top_audio, bottom_audio]
-            else:
-                audios = [np.concatenate(audios)]
+        if use_concat and sum_two_samples:
+            n_half = n // 2
+            top_audio = np.concatenate(audios[:n_half], axis=0)
+            bottom_audio = np.concatenate(audios[n_half:], axis=0)
+            audios = [top_audio, bottom_audio]
 
         # If at this point we have more than one audio we want to sum them
         # For summing, audios have to have equal size
         # Pad every audio with 0 to the maximum length
-        if len(audios) > 1:
+        if sum_two_samples:
             max_len = max(len(a) for a in audios)
             for i, audio in enumerate(audios):
                 if len(audio) != max_len:
                     audios[i] = self._pad_with_zeros(audio, max_len)
-
-        # Now that they are equal in size we can create numpy array
-        audios = np.array(audios)
-
-        # Sum audios
-        if sum_two_samples:
+            # Now that they are equal in size we can create numpy array
             audios = np.mean(audios, axis=0)
 
         labels = np.logical_or.reduce(labels).astype(labels[0].dtype)
@@ -277,8 +272,8 @@ class IRMASDatasetTrain(Dataset):
         audio, labels = self.concat_and_sum(
             multiple_audios,
             multiple_labels,
-            self.concat_n_samples,
-            self.sum_two_samples,
+            use_concat=self.concat_n_samples is not None and self.concat_n_samples > 1,
+            sum_two_samples=self.sum_two_samples,
         )
 
         return audio, labels
@@ -290,7 +285,6 @@ class IRMASDatasetTrain(Dataset):
             self.concat_n_samples is not None and self.concat_n_samples > 1
         ) or self.sum_two_samples:
             audio, labels = self.concat_and_sum_random_negative_samples(audio, labels)
-
         if self.audio_transform is None:
             return audio, labels
 
@@ -406,7 +400,7 @@ def test_sum_and_concat():
     audios = [audio_1, audio_2, audio_3, audio_4]
     labels = [label_1, label_2, label_3, label_4]
     final_audio, final_labels = dataset.concat_and_sum(
-        audios, labels, concat_n_samples=2, sum_two_samples=True
+        audios, labels, use_concat=True, sum_two_samples=True
     )
 
     top = np.concatenate([audio_1, audio_2])
@@ -422,6 +416,8 @@ def test_sum_and_concat():
     test_audio = np.mean([top, bottom], axis=0)
     test_labels = np.logical_or.reduce(labels).astype(labels[0].dtype)
     print(test_audio.shape, final_audio.shape)
+    assert len(test_audio.shape) == 1
+    assert len(final_audio.shape) == 1
     assert np.all(np.isclose(test_audio, final_audio))
     assert np.all(np.isclose(test_labels, final_labels))
 
@@ -439,7 +435,7 @@ def test_simple_sum():
     audios = [audio_1, audio_2]
     labels = [label_1, label_2]
     final_audio, final_labels = dataset.concat_and_sum(
-        audios, labels, concat_n_samples=None, sum_two_samples=True
+        audios, labels, use_concat=False, sum_two_samples=True
     )
 
     max_len = np.max([len(audio_1), len(audio_2)])
@@ -452,7 +448,8 @@ def test_simple_sum():
         bottom = np.pad(audio_2, pad_width, mode="constant", constant_values=0)
     test_audio = np.mean([audio_1, audio_2], axis=0)
     test_labels = np.logical_or.reduce(labels).astype(labels[0].dtype)
-
+    assert len(test_audio.shape) == 1
+    assert len(final_audio.shape) == 1
     assert np.all(np.isclose(test_audio, final_audio))
     assert np.all(np.isclose(test_labels, final_labels))
 
@@ -470,12 +467,13 @@ def test_simple_concat():
     audios = [audio_1, audio_2]
     labels = [label_1, label_2]
     final_audio, final_labels = dataset.concat_and_sum(
-        audios, labels, concat_n_samples=2, sum_two_samples=False
+        audios, labels, use_concat=True, sum_two_samples=False
     )
 
     test_audio = np.concatenate([audio_1, audio_2])
     test_labels = np.logical_or.reduce(labels).astype(labels[0].dtype)
-
+    assert len(test_audio.shape) == 1
+    assert len(final_audio.shape) == 1
     assert np.all(np.isclose(test_audio, final_audio))
     assert np.all(np.isclose(test_labels, final_labels))
 
