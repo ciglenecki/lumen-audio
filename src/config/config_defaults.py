@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pyrootutils
 import yaml
+from simple_parsing.helpers import Serializable
 
 from src.enums.enums import (
     AudioTransforms,
@@ -137,10 +138,11 @@ IRMAS_TRAIN_CLASS_COUNT = {
 }
 
 
-_augs = set(SupportedAugmentations)
-_augs.remove(SupportedAugmentations.RANDOM_ERASE)
-_augs.remove(SupportedAugmentations.CONCAT_N_SAMPLES)
-_augs.remove(SupportedAugmentations.SUM_TWO_SAMPLES)
+_default_augmentations_set = set(SupportedAugmentations)
+_default_augmentations_set.discard(SupportedAugmentations.RANDOM_ERASE)
+_default_augmentations_set.discard(SupportedAugmentations.CONCAT_N_SAMPLES)
+_default_augmentations_set.discard(SupportedAugmentations.SUM_TWO_SAMPLES)
+_default_augmentations_list = list(_default_augmentations_set)
 
 
 def create(arg, **kwargs):
@@ -149,7 +151,7 @@ def create(arg, **kwargs):
 
 
 @dataclass
-class ConfigDefault:
+class ConfigDefault(Serializable):
     path_workdir: Path = create(
         Path(pyrootutils.find_root(search_from=__file__, indicator=".project-root"))
     )
@@ -212,7 +214,7 @@ class ConfigDefault:
     max_audio_seconds: float = create(3)
     """Maximum number of seconds of audio which will be processed at one time."""
 
-    augmentations: set[SupportedAugmentations] = create(_augs)
+    augmentations: list[SupportedAugmentations] = create(_default_augmentations_list)
     """Transformation which will be performed on audio and labels"""
 
     aug_kwargs: dict | str = create(
@@ -398,9 +400,11 @@ class ConfigDefault:
             self.n_fft = 400
             self.hop_length = 160
             self.n_mels = 128
-            self.augmentations.remove(SupportedAugmentations.TIME_STRETCH)
-            self.augmentations.add(SupportedAugmentations.CONCAT_N_SAMPLES)
-            self.augmentations.add(SupportedAugmentations.SUM_TWO_SAMPLES)
+            _augmentations_set = set(self.augmentations)
+            _augmentations_set.discard(SupportedAugmentations.TIME_STRETCH)
+            _augmentations_set.add(SupportedAugmentations.CONCAT_N_SAMPLES)
+            _augmentations_set.add(SupportedAugmentations.SUM_TWO_SAMPLES)
+            self.augmentations = list(_augmentations_set)
 
         if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAM:
             self.weight_decay = 0
@@ -521,27 +525,7 @@ class ConfigDefault:
         return kwargs
 
     def __str__(self):
-        """If this casuses error at any point feel free to remove it."""
-
-        def conv_value(value):
-            if isinstance(value, set):
-                value = list(value)
-            if isinstance(value, Enum):
-                value = value.name
-            if isinstance(value, Path):
-                value = str(value)
-            return value
-
-        str_dict = {}
-        for key, value in asdict(self).items():
-            if isinstance(value, set) or isinstance(value, list):
-                value = [conv_value(v) for v in value]
-            else:
-                value = conv_value(value)
-            str_dict[key] = value
-        return yaml.dump(
-            str_dict, allow_unicode=True, default_flow_style=False, sort_keys=False
-        )
+        return self.dumps_yaml(allow_unicode=True, default_flow_style=False)
 
 
 def get_default_value_for_field(field_str: str, cls=ConfigDefault):
@@ -550,3 +534,6 @@ def get_default_value_for_field(field_str: str, cls=ConfigDefault):
 
 def get_default_config():
     return ConfigDefault()
+
+
+default_config = get_default_config()

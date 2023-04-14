@@ -183,7 +183,7 @@ class SocketConcatenator:
 
     def __init__(self, *files):
         self.files = files
-        self.encoding = sys.stdout.encoding
+        self.encoding = "utf-8"
 
     def write(self, obj):
         for f in self.files:
@@ -198,7 +198,7 @@ class SocketConcatenator:
 def stdout_to_file(file: Path):
     """Pipes standard input to standard input and to a new file."""
     print("Standard output piped to file:")
-    f = open(Path(file), "w")
+    f = open(Path(file), "w", encoding="utf-8")
     sys.stdout = SocketConcatenator(sys.stdout, f)
     sys.stderr = SocketConcatenator(sys.stderr, f)
 

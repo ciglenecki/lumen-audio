@@ -2,6 +2,7 @@ from argparse import Namespace
 from pathlib import Path
 
 import pytorch_lightning as pl
+import torch
 import yaml
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import (
@@ -14,19 +15,24 @@ from pytorch_lightning.callbacks import (
 from src.config.config_defaults import ConfigDefault
 from src.config.config_train import get_config
 from src.data.datamodule import IRMASDataModule
-from src.enums.enums import MetricMode, OptimizeMetric
+from src.enums.enums import (
+    MetricMode,
+    OptimizeMetric,
+    SupportedAugmentations,
+    SupportedLossFunctions,
+    SupportedScheduler,
+)
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
-from src.features.augmentations import SupportedAugmentations, get_augmentations
+from src.features.augmentations import get_augmentations
 from src.features.chunking import get_collate_fn
-from src.model.loss_function import get_loss_fn
 from src.model.model import get_model
-from src.model.optimizers import SupportedScheduler
 from src.train.callbacks import (
     FinetuningCallback,
     GeneralMetricsEpochLogger,
     OverrideEpochMetricCallback,
     TensorBoardHparamFixer,
 )
+from src.utils.utils_dataset import calc_instrument_weight
 from src.utils.utils_functions import (
     add_prefix_to_keys,
     get_timestamp,
@@ -54,11 +60,17 @@ def experiment_setup(config: ConfigDefault, pl_args: Namespace):
     filename_report = Path(output_dir, experiment_name, "log.txt")
 
     stdout_to_file(filename_report)
+    print()
     print("Created experiment directory:", str(experiment_dir))
     print("Created log file:", str(filename_report))
-    print("Config:\n", config)
-    print("Config PyTorch Lightning:", to_yaml(vars(pl_args)), sep="\n")
-    input("Read the config above. Press enter if you wish to continue: ")
+    print()
+    print("================== Config ==================\n\n", config)
+    print()
+    print(
+        "================== PyTorch Lightning ==================\n\n",
+        to_yaml(vars(pl_args)),
+    )
+    input("Review the config above. Press enter if you wish to continue: ")
     return experiment_name, experiment_dir, output_dir
 
 
@@ -111,11 +123,14 @@ if __name__ == "__main__":
         use_weighted_train_sampler=config.use_weighted_train_sampler,
     )
 
-    loss_function = get_loss_fn(
-        config.loss_function,
-        datamodule=datamodule,
-        **config.loss_function_kwargs,
-    )
+    if config.loss_function == SupportedLossFunctions.CROSS_ENTROPY:
+        loss_function = torch.nn.BCEWithLogitsLoss(**config.loss_function_kwargs)
+    if config.loss_function == SupportedLossFunctions.CROSS_ENTROPY_POS_WEIGHT:
+        kwargs = {
+            **config.loss_function_kwargs,
+            "pos_weight": calc_instrument_weight(datamodule.count_classes()),
+        }
+        loss_function = torch.nn.BCEWithLogitsLoss(**kwargs)
 
     model = get_model(config, pl_args, loss_function=loss_function)
     print_modules(model)
