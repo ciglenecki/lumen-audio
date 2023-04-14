@@ -10,7 +10,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --val-dirs irmas:data/irmas/test --backbone-after backbone.classifier --head-after backbone.classifier --model AST --audio-transform AST",
+			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --val-dirs irmas:data/irmas/test --backbone-after backbone.classifier --head-after backbone.classifier --model AST --audio-transform AST --finetune-head-epochs 1 --augmentations CONCAT_N_SAMPLES",
 			"justMyCode": false
 		},
 		{
