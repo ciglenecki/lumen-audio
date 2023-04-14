@@ -228,6 +228,9 @@ class IRMASDatasetTrain(Dataset):
 
         n = len(audios)
 
+        if use_concat and not sum_two_samples:
+            audios = np.concatenate(audios)
+
         # If we want to sum two samples, create two concatenated audios
         # Otherwise use just one long big audio
         if use_concat and sum_two_samples:
@@ -235,9 +238,6 @@ class IRMASDatasetTrain(Dataset):
             top_audio = np.concatenate(audios[:n_half], axis=0)
             bottom_audio = np.concatenate(audios[n_half:], axis=0)
             audios = [top_audio, bottom_audio]
-
-        if use_concat and not sum_two_samples:
-            audios = np.concatenate(audios)
 
         # If at this point we have more than one audio we want to sum them
         # For summing, audios have to have equal size
