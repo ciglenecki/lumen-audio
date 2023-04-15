@@ -94,9 +94,9 @@ Ivan:
   - Shuffle parts of the spectrogram in the following way: (16x16 grid)
     - shuffle 15% of patches
     - electra, is the patch shuffled?
-- [ ] add gradient/activation visualization for a predicted image. Which parts of the image light up during inference?
+- [x] add gradient/activation visualization for a predicted image. Which parts of the image light up during inference?
 - ![](img/cnn_activations.png)
-- [ ] implement spectrogram normalization and std (norm,std) and use those paramters to preprocess the image before training.
+- [x] implement spectrogram normalization and std (norm,std) and use those paramters to preprocess the image before training.
 
 Vinko:
 sampling_rate = 16_000
