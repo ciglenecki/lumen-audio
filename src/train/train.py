@@ -88,13 +88,11 @@ if __name__ == "__main__":
 
     train_audio_transform: AudioTransformBase = get_audio_transform(
         config,
-        audio_transform_enum=config.audio_transform,
         spectrogram_augmentation=train_spectrogram_augmentation,
         waveform_augmentation=train_waveform_augmentation,
     )
     val_audio_transform: AudioTransformBase = get_audio_transform(
         config,
-        audio_transform_enum=config.audio_transform,
         spectrogram_augmentation=val_spectrogram_augmentation,
         waveform_augmentation=val_waveform_augmentation,
     )

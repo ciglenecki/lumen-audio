@@ -112,14 +112,6 @@ DEFAULT_NUM_LABELS = len(INSTRUMENT_TO_IDX)
 DEFAULT_IRMAS_TRAIN_SIZE = 6705
 DEFAULT_IRMAS_TEST_SIZE = 2874
 DEFAULT_RGB_CHANNELS = 3
-DEFAULT_LR_PLATEAU_FACTOR = 0.5
-
-DEFAULT_AST_PRETRAINED_TAG = "MIT/ast-finetuned-audioset-10-10-0.4593"
-DEFAULT_WAV2VEC_PRETRAINED_TAG = "m3hrdadfi/wav2vec2-base-100k-gtzan-music-genres"
-DEFAULT_TORCH_CNN_PRETRAINED_TAG = "IMAGENET1K_V2"
-DEFAULT_PRETRAINED_TAG = "DEFAULT"
-
-DEAFULT_HEAD = SupportedHeads.DEEP_HEAD
 DEFAULT_AUDIO_EXTENSIONS = ["wav"]
 
 IRMAS_TRAIN_CLASS_COUNT = {
@@ -142,6 +134,24 @@ _default_augmentations_set.discard(SupportedAugmentations.RANDOM_ERASE)
 _default_augmentations_set.discard(SupportedAugmentations.CONCAT_N_SAMPLES)
 _default_augmentations_set.discard(SupportedAugmentations.SUM_TWO_SAMPLES)
 _default_augmentations_list = list(_default_augmentations_set)
+
+TAG_AST_AUDIOSET = "MIT/ast-finetuned-audioset-10-10-0.4593"
+TAG_WAV2VEC2_MUSIC = "m3hrdadfi/wav2vec2-base-100k-gtzan-music-genres"
+TAG_IMAGENET1K_V2 = "IMAGENET1K_V2"
+TAG_IMAGENET1K_V1 = "IMAGENET1K_V1"
+DEFAULT_PRETRAINED_TAG = "DEFAULT"
+
+DEFAULT_PRETRAINED_TAG_MAP = {
+    SupportedModels.AST: TAG_AST_AUDIOSET,
+    SupportedModels.WAV2VEC_CNN: TAG_WAV2VEC2_MUSIC,
+    SupportedModels.WAV2VEC: TAG_WAV2VEC2_MUSIC,
+    SupportedModels.EFFICIENT_NET_V2_S: TAG_IMAGENET1K_V1,
+    SupportedModels.EFFICIENT_NET_V2_M: TAG_IMAGENET1K_V1,
+    SupportedModels.EFFICIENT_NET_V2_L: TAG_IMAGENET1K_V1,
+    SupportedModels.RESNEXT50_32X4D: TAG_IMAGENET1K_V2,
+    SupportedModels.RESNEXT101_32X8D: TAG_IMAGENET1K_V2,
+    SupportedModels.RESNEXT101_64X4D: TAG_IMAGENET1K_V1,
+}
 
 
 def create(arg, **kwargs):
@@ -295,7 +305,7 @@ class ConfigDefault(Serializable):
     pretrained: bool = create(True)
     """Use a pretrained model loaded from the web."""
 
-    pretrained_tag: str = create("DEFAULT")
+    pretrained_tag: str | None = create(None)
     """The string that denotes the pretrained weights used."""
 
     head: SupportedHeads = create(SupportedHeads.DEEP_HEAD)
@@ -375,26 +385,18 @@ class ConfigDefault(Serializable):
 
         # Dynamically set pretrained tag
         default_pretrain_tag = get_default_value_for_field("pretrained_tag", self)
-        if self.pretrained and self.pretrained_tag == default_pretrain_tag:
-            if self.model == SupportedModels.AST:
-                self.pretrained_tag = DEFAULT_AST_PRETRAINED_TAG
-            elif self.model in [SupportedModels.WAV2VEC_CNN, SupportedModels.WAV2VEC]:
-                self.pretrained_tag = DEFAULT_WAV2VEC_PRETRAINED_TAG
-            elif self.model in [
-                SupportedModels.EFFICIENT_NET_V2_S,
-                SupportedModels.EFFICIENT_NET_V2_M,
-                SupportedModels.EFFICIENT_NET_V2_L,
-                SupportedModels.RESNEXT50_32X4D,
-                SupportedModels.RESNEXT101_32X8D,
-                SupportedModels.RESNEXT101_64X4D,
-            ]:
-                self.pretrained_tag = DEFAULT_TORCH_CNN_PRETRAINED_TAG
+        if self.model is not None and self.pretrained and self.pretrained_tag is None:
+            if self.model not in DEFAULT_PRETRAINED_TAG_MAP:
+                raise InvalidArgument(
+                    f"Couldn't find pretrained tag for pretrained model {self.model}. Add a new tag to the DEFAULT_PRETRAINED_TAG_MAP map or pass the --pretrained-tag <tag> argument."
+                )
+            self.pretrained_tag = DEFAULT_PRETRAINED_TAG_MAP[self.model]
 
         # Dynamically AST DSP attributes
         if (
             self.model == SupportedModels.AST
             and self.pretrained
-            and self.pretrained_tag == DEFAULT_AST_PRETRAINED_TAG
+            and self.pretrained_tag == TAG_AST_AUDIOSET
         ):
             self.n_fft = 400
             self.hop_length = 160

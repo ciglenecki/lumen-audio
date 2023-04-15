@@ -10,7 +10,14 @@ IRMAS train dataset:
 │   ├── 012__[cel][nod][cla]0043__1.wav
 |   ├── ...
 ├── cla
-...
+├── flu
+├── gac
+├── gel
+├── org
+├── pia
+├── sax
+├── tru
+├── vio
 └── voi
 ```
 

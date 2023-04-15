@@ -48,6 +48,17 @@ def count_module_params(module: nn.Module):
     )
 
 
+def find_model_parameter(module: Union[nn.ModuleList, nn.Module], module_str: str):
+    """Returns all consequive submodules after and including the submodule `module_str`"""
+
+    for sub_module_name, sub_module in module.named_modules():
+        if type(sub_module) is Metric:
+            continue
+        if module_str in sub_module_name:
+            return sub_module_name, sub_module
+    raise ValueError(f"module_str '{module_str}' not found. should be (e.g. layer3.2)")
+
+
 def get_all_modules_after(
     module: Union[nn.ModuleList, nn.Module], module_str: str
 ) -> nn.ModuleDict:

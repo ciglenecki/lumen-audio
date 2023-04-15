@@ -20,15 +20,15 @@ current_working_dir = os.getcwd()
 
 
 def main():
+    config = config_defaults.get_default_config()
     BATCH_SIZE = 1
     OUTPUT_DIR = config.path_irmas_train_features
     OUTPUT_DIR.mkdir(exist_ok=True)
-
     # Create model and transform
-    model_name = config.DEFAULT_AST_PRETRAINED_TAG
-    config = ASTConfig.from_pretrained(pretrained_model_name_or_path=model_name)
+    model_name = config.TAG_AST_AUDIOSET
+    ast_conf = ASTConfig.from_pretrained(pretrained_model_name_or_path=model_name)
     model = ASTModel.from_pretrained(
-        model_name, config=config, ignore_mismatched_sizes=True
+        model_name, config=ast_conf, ignore_mismatched_sizes=True
     )
 
     model.eval()
@@ -36,7 +36,7 @@ def main():
 
     audio_transform = AudioTransformAST(
         sampling_rate=config.DEFAULT_SAMPLING_RATE,
-        pretrained_tag=config.DEFAULT_AST_PRETRAINED_TAG,
+        pretrained_tag=config.TAG_AST_AUDIOSET,
         augmentation_enums=[],
     )
 

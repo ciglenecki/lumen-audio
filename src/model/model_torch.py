@@ -17,6 +17,7 @@ from torchvision.models import (
 from src.model.heads import DeepHead
 from src.model.model import SupportedModels
 from src.model.model_base import ModelBase
+from src.utils.utils_exceptions import UnsupportedModel
 
 TORCHVISION_CONSTRUCTOR_DICT = {
     SupportedModels.EFFICIENT_NET_V2_S: efficientnet_v2_s,
@@ -46,6 +47,10 @@ class TorchvisionModel(ModelBase):
 
         self.f1_score = MultilabelF1Score(num_labels=self.num_labels)
 
+        if self.model_enum not in TORCHVISION_CONSTRUCTOR_DICT:
+            raise UnsupportedModel(
+                f"If you want to use {self.model_enum} in TorchvisionModel you need to add the enum to TORCHVISION_CONSTRUCTOR_DICT map."
+            )
         self.backbone = TORCHVISION_CONSTRUCTOR_DICT[self.model_enum](
             weights=self.pretrained_tag, progress=True
         )

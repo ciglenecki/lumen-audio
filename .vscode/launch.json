@@ -50,6 +50,15 @@
 			"justMyCode": false
 		},
 		{
+			"name": "Save embeddings",
+			"type": "python",
+			"request": "launch",
+			"program": "src/scripts/save_embeddings.py",
+			"console": "integratedTerminal",
+			"args": "--checkpoint models/04-13-14-20-12_GoodSinisa_ast/checkpoints/04-13-14-20-12_GoodSinisa_ast_val_acc_0.0000_val_loss_0.6611.ckpt --model AST --audio-transform AST",
+			"justMyCode": false
+		},
+		{
 			"name": "Gradcam",
 			"type": "python",
 			"request": "launch",

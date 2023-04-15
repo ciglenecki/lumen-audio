@@ -114,7 +114,7 @@ class ASTModelWrapper(ModelBase):
 if __name__ == "__main__":
     # example_audio_mel_audio()
     config_ = ASTConfig.from_pretrained(
-        pretrained_model_name_or_path=config_defaults.DEFAULT_AST_PRETRAINED_TAG,
+        pretrained_model_name_or_path=config_defaults.TAG_AST_AUDIOSET,
         id2label=config_defaults.IDX_TO_INSTRUMENT,
         label2id=config_defaults.INSTRUMENT_TO_IDX,
         num_labels=config_defaults.DEFAULT_NUM_LABELS,
@@ -123,7 +123,7 @@ if __name__ == "__main__":
     )
 
     backbone: ASTForAudioClassification = ASTForAudioClassification.from_pretrained(
-        config_defaults.DEFAULT_AST_PRETRAINED_TAG,
+        config_defaults.TAG_AST_AUDIOSET,
         config=config_,
         ignore_mismatched_sizes=True,
     )
@@ -134,7 +134,7 @@ if __name__ == "__main__":
     fname = "data/irmas_sample/1 - Hank's Other Bag-1.wav"
 
     feature_extractor = ASTFeatureExtractor.from_pretrained(
-        config_defaults.DEFAULT_AST_PRETRAINED_TAG,
+        config_defaults.TAG_AST_AUDIOSET,
         do_normalize=False,
     )
 

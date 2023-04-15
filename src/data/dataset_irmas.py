@@ -359,7 +359,7 @@ class IRMASDatasetTest(Dataset):
                 config_defaults.DEFAULT_NUM_LABELS,
             )
 
-            self.dataset.append((str(audio_file), labels, instrument))
+            self.dataset.append((str(audio_file), labels))
 
     def load_sample(self, item_idx: int) -> tuple[np.ndarray, np.ndarray, Path]:
         audio_path, labels = self.dataset[item_idx]
