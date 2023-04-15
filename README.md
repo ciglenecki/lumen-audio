@@ -80,9 +80,10 @@ Mirko:
 - ![](img/attention_weights.png)
 
 Ivan:
-- [ ] cleanup audio transform for spectrograms (remove repeat)
-  - [ ] you still need to resize because the height isn't 224 (it's 128) but make sure the width is the same as the pretrained model image width
-- [ ] move spectrogram chunking to collate. Use caculate_spectrogram_duration_in_seconds to dynamically determine the audio length.
+- [x] cleanup audio transform for spectrograms (remove repeat)
+  - [x] you still need to resize because the height isn't 224 (it's 128) but make sure the width is the same as the pretrained model image width
+- [x] move spectrogram chunking to collate
+- [ ] use caculate_spectrogram_duration_in_seconds to dynamically determine the audio length.
 - [ ] train  ResNeXt 50_32x4d on MelSpectrogram
   - [ ] Compare how augmentations affect the final metrics:
     - [ ] with no augmentations
