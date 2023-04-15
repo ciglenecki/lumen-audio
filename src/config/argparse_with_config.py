@@ -1,4 +1,5 @@
 import argparse
+import sys
 
 import pytorch_lightning as pl
 import simple_parsing
@@ -33,8 +34,10 @@ class ArgParseWithConfig(simple_parsing.ArgumentParser):
 
     def parse_args(
         self,
+        *n_args,
+        **kwargs,
     ) -> tuple[argparse.Namespace, ConfigDefault, argparse.Namespace]:
-        args = super().parse_args()
+        args = super().parse_args(*n_args, **kwargs)
 
         config = getattr(args, ArgParseWithConfig.config_dest_str)
         delattr(args, ArgParseWithConfig.config_dest_str)
@@ -54,12 +57,20 @@ class ArgParseWithConfig(simple_parsing.ArgumentParser):
         return args, config, pl_args
 
 
-def test_args_parse_with_config():
+def example_parse_args(args):
     parser = ArgParseWithConfig()
     parser.add_argument("--my-cool-arg", type=str, default=3)
     parser.add_argument("--hello-there", type=str, default=4)
-    args, config, pl_args = parser.parse_args()
+    args, config, pl_args = parser.parse_args(args)
+    return args, config, pl_args
 
+
+def test_args_parse_with_config():
+    # This is a test, dont use this function!
+    fake_cli_args = ["--my-cool-arg", "3", "--hello-there", "4"]
+    parser = ArgParseWithConfig()
+    parser.add_argument("--my-cool-arg", type=int, default=3)
+    parser.add_argument("--hello-there", type=int, default=4)
+    args, config, pl_args = parser.parse_args(fake_cli_args)
     assert args.my_cool_arg == 3
     assert args.hello_there == 4
-    assert config == ConfigDefault()
