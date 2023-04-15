@@ -57,14 +57,6 @@ class ArgParseWithConfig(simple_parsing.ArgumentParser):
         return args, config, pl_args
 
 
-def example_parse_args(args):
-    parser = ArgParseWithConfig()
-    parser.add_argument("--my-cool-arg", type=str, default=3)
-    parser.add_argument("--hello-there", type=str, default=4)
-    args, config, pl_args = parser.parse_args(args)
-    return args, config, pl_args
-
-
 def test_args_parse_with_config():
     # This is a test, dont use this function!
     fake_cli_args = ["--my-cool-arg", "3", "--hello-there", "4"]
@@ -74,3 +66,11 @@ def test_args_parse_with_config():
     args, config, pl_args = parser.parse_args(fake_cli_args)
     assert args.my_cool_arg == 3
     assert args.hello_there == 4
+
+
+if __name__ == "__main__":
+    parser = ArgParseWithConfig()
+    parser.add_argument("--my-cool-arg", type=str, default=3)
+    parser.add_argument("--hello-there", type=str, default=4)
+    args, config, pl_args = parser.parse_args()
+    print(args, config, pl_args)
