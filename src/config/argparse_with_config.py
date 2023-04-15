@@ -54,15 +54,12 @@ class ArgParseWithConfig(simple_parsing.ArgumentParser):
         return args, config, pl_args
 
 
-def main():
+def test_args_parse_with_config():
     parser = ArgParseWithConfig()
-    parser.add_argument("--my-cool-arg", type=str)
-    parser.add_argument("--hello-there", type=str)
+    parser.add_argument("--my-cool-arg", type=str, default=3)
+    parser.add_argument("--hello-there", type=str, default=4)
     args, config, pl_args = parser.parse_args()
-    print(args.my_cool_arg)
-    print(config.model)
-    print(pl_args.accelerator)
 
-
-if __name__ == "__main__":
-    main()
+    assert args.my_cool_arg == 3
+    assert args.hello_there == 4
+    assert config == ConfigDefault()
