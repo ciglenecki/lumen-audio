@@ -61,12 +61,12 @@ class ASTModelWrapper(ModelBase):
         return out.loss, out.logits
 
     def _step(self, batch, batch_idx, type: str):
-        spectrogram, y, file_indices = batch
+        image, y, file_indices, dataset_indices = batch
         # plot_spectrograms(spectrogram, y_axis=None)
         # play_audio(
         #     ast_spec_to_audio(spectrogram[0].unsqueeze(0)), sr=config.sampling_rate
         # )
-        loss, logits_pred = self.forward(spectrogram, labels=y)
+        loss, logits_pred = self.forward(image, labels=y)
         y_pred_prob = torch.sigmoid(logits_pred)
         y_pred = (y_pred_prob >= 0.5).float()
 

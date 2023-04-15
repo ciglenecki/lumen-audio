@@ -27,7 +27,7 @@ def caculate_spectrogram_width_for_one_second(sampling_rate: int, hop_size: int)
 def caculate_spectrogram_duration_in_seconds(
     sampling_rate: int, hop_size: int, image_width: int
 ) -> float:
-    audio_seconds = image_width / ((sampling_rate / hop_size) + 1)
+    audio_seconds = ((image_width - 1) * hop_size) / sampling_rate
     return audio_seconds
 
 
@@ -157,7 +157,7 @@ def plot_spectrograms(
             spec,
             y_axis=y_axis,
             x_axis="time",
-            sampling_rate=sampling_rate,
+            sr=sampling_rate,
             hop_length=hop_length,
             n_fft=n_fft,
             norm=norm,
@@ -192,7 +192,7 @@ def audios_to_mel_spectrograms(
         assert False, "Audio has to be 1D or 2D (batch)"
     spectrograms = [
         librosa.feature.melspectrogram(
-            y=a, sampling_rate=sampling_rate, hop_length=hop_length, n_fft=n_fft
+            y=a, sr=sampling_rate, hop_length=hop_length, n_fft=n_fft
         )
         for a in audio
     ]
@@ -286,7 +286,7 @@ def example_audio_mel_audio():
     print_tensor(spec, "spec")
 
     audio_reconstructed = librosa.feature.inverse.mel_to_audio(
-        spec, sampling_rate=16_000, n_fft=400, hop_length=160
+        spec, sr=16_000, n_fft=400, hop_length=160
     )
     print_tensor(audio_reconstructed, "audio_reconstructed")
 

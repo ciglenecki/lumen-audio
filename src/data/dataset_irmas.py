@@ -47,7 +47,6 @@ class IRMASDatasetTrain(Dataset):
         sum_two_samples: bool = False,
         concat_n_samples: int | None = None,
         train_override_csvs: list[Path] | None = config.train_override_csvs,
-        return_filename=False,
     ):
         """_summary_
 
@@ -75,7 +74,6 @@ class IRMASDatasetTrain(Dataset):
         self.concat_n_samples = concat_n_samples
         self.instrument_idx_list: dict[str, list[int]] = {}
         self.train_override_csvs = train_override_csvs
-        self.return_filename = return_filename
         self._populate_dataset()
 
         assert (
@@ -306,9 +304,7 @@ class IRMASDatasetTrain(Dataset):
         # play_audio(audio, sr=self.sampling_rate)
         # print("second time")
         # play_audio(audio, sr=self.sampling_rate)
-        if self.return_filename:
-            return features, labels, audio_path
-        return features, labels
+        return features, labels, index
 
 
 class IRMASDatasetTest(Dataset):
@@ -319,7 +315,6 @@ class IRMASDatasetTest(Dataset):
         num_classes=config_defaults.DEFAULT_NUM_LABELS,
         sampling_rate=config.sampling_rate,
         normalize_audio=config.normalize_audio,
-        return_filename=False,
     ):
         self.num_classes = num_classes
         self.audio_transform = audio_transform
@@ -327,7 +322,6 @@ class IRMASDatasetTest(Dataset):
         self.dataset_dir = dataset_dir
         self.sampling_rate = sampling_rate
         self.normalize_audio = normalize_audio
-        self.return_filename = return_filename
 
         self._populate_dataset()
 
@@ -391,9 +385,7 @@ class IRMASDatasetTest(Dataset):
 
         labels = torch.tensor(labels).float()
 
-        if self.return_filename:
-            return features, labels, audio_path
-        return features, labels
+        return features, labels, index
 
 
 class InstrumentInference(Dataset):

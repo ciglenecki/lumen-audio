@@ -20,11 +20,13 @@ class AudioTransformBase(ABC):
     def __init__(
         self,
         sampling_rate: int,
-        spectrogram_augmentation: SpectrogramAugmentation,
-        waveform_augmentation: WaveformAugmentation,
+        max_num_width_samples: float,
+        spectrogram_augmentation: SpectrogramAugmentation | None,
+        waveform_augmentation: WaveformAugmentation | None,
     ) -> None:
         super().__init__()
         self.sampling_rate = sampling_rate
+        self.max_num_width_samples = max_num_width_samples
         self.spectrogram_augmentation = spectrogram_augmentation
         self.waveform_augmentation = waveform_augmentation
 

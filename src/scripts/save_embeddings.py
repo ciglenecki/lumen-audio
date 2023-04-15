@@ -190,22 +190,16 @@ if __name__ == "__main__":
 
     data_loader = datamodule.train_dataloader()
 
-    for dataset in chain(
-        datamodule.train_dataset.datasets, datamodule.test_dataset.datasets
-    ):
-        if hasattr(dataset, "return_filename"):
-            dataset.return_filename = True
-
     for data in tqdm(data_loader, total=len(data_loader)):
-        spectrogram, onehot_labels, audio_paths_tensor = data
+        spectrogram, onehot_labels, file_indices, dataset_indices = data
         spectrogram, onehot_labels = spectrogram.to(device), onehot_labels.to(device)
 
         labels = torch.argmax(onehot_labels, dim=-1)  # extract label number
 
         embeddings = model.forward(spectrogram, **forward_kwargs)
         embeddings = clean_embeddings_after_foward(embeddings, config.model)
-
-        audio_paths_list = audio_paths_tensor.detach().cpu().tolist()
+        # TODO SCATETR MEAN ACCROSS FILE INDICES
+        audio_paths_list = dataset_indices.detach().cpu().tolist()
         embeddings_list = embeddings.detach().cpu().tolist()
         labels_list = labels.detach().cpu().tolist()
 

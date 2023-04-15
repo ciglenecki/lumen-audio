@@ -48,7 +48,7 @@ def main():
 
     print("Saving embeddings to: ", str(OUTPUT_DIR))
     for data in tqdm(training_loader, total=len(training_loader)):
-        spectrogram, onehot_labels, audio_paths = data
+        spectrogram, onehot_labels, audio_paths, _ = data
         spectrogram, onehot_labels = spectrogram.to(device), onehot_labels.to(device)
         labels = torch.argmax(onehot_labels, dim=-1)  # extract label number
 
