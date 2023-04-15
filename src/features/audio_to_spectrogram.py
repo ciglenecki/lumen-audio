@@ -26,7 +26,10 @@ class MelSpectrogramOurs(AudioTransformBase):
         self,
         audio: torch.Tensor | np.ndarray,
     ) -> torch.Tensor:
-        audio = self.waveform_augmentation(audio)
+    
+        if self.waveform_augmentation is not None:
+            audio = self.waveform_augmentation(audio)
+    
         spectrogram = librosa.feature.melspectrogram(
             y=audio,
             sr=self.sampling_rate,
@@ -34,7 +37,10 @@ class MelSpectrogramOurs(AudioTransformBase):
             hop_length=self.hop_length,
             n_mels=self.n_mels,
         )
-        spectrogram = self.spectrogram_augmentation(spectrogram)
+    
+        if self.spectrogram_augmentation is not None:
+            spectrogram = self.spectrogram_augmentation(spectrogram)
+            
         return spectrogram
 
 
