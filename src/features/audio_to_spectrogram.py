@@ -4,6 +4,11 @@ import torch
 import torchvision.transforms.functional as F
 
 from src.features.audio_transform_base import AudioTransformBase
+from src.config.config_defaults import (
+    DEFAULT_MEL_SPECTROGRAM_FIXED_REPEAT_MEAN,
+    DEFAULT_MEL_SPECTROGRAM_FIXED_REPEAT_STD
+)
+from src.utils.utils_audio import caculate_spectrogram_duration_in_seconds
 
 
 class MelSpectrogramOurs(AudioTransformBase):
@@ -43,42 +48,26 @@ class MelSpectrogramOurs(AudioTransformBase):
             
         return spectrogram
 
-
-# TODO: unify and change 4 classes so it's clear what the do, we might need a single class
-class MelSpectrogramResize(MelSpectrogramOurs):
-    """Resamples audio, extracts melspectrogram from audio, resizes it to the given dimensions."""
-
-    def __init__(self, image_dim: tuple[int, int], *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.image_dim = image_dim
-
-    def process(
-        self,
-        audio: torch.Tensor | np.ndarray,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        spectrogram = super().process(audio)
-
-        spectrogram = spectrogram.reshape(1, 1, *spectrogram.shape)
-        spectrogram = F.resize(
-            torch.tensor(spectrogram), size=self.image_dim, antialias=True
-        )
-        spectrogram = spectrogram.reshape(1, *self.image_dim)
-        return spectrogram
-
-
 class MelSpectrogramFixed(MelSpectrogramOurs):
     """Resamples audio, extracts melspectrogram from audio and pads the original spectrogram to
     dimension of spectrogram for max_audio_seconds sequence."""
 
     def __init__(
-        self, max_audio_seconds: int, image_dim: tuple[int, int], *args, **kwargs
+        self, image_dim: tuple[int, int], *args, **kwargs
     ):
         super().__init__(*args, **kwargs)
-        self.max_audio_seconds = max_audio_seconds
         self.image_dim = image_dim
+        
+        self.max_audio_seconds = caculate_spectrogram_duration_in_seconds(
+            sampling_rate=self.sampling_rate,
+            hop_size=self.hop_length,
+            image_width=self.image_dim[0],
+        )
+        
+
 
         FAKE_SAMPLE_RATE = 44_100
-        dummy_audio = np.random.random(size=(max_audio_seconds * FAKE_SAMPLE_RATE,))
+        dummy_audio = np.random.random(size=( int(self.max_audio_seconds * FAKE_SAMPLE_RATE), ))
         audio_resampled = librosa.resample(
             dummy_audio,
             orig_sr=FAKE_SAMPLE_RATE,
@@ -134,29 +123,11 @@ class MelSpectrogramFixedRepeat(MelSpectrogramFixed):
         audio: torch.Tensor | np.ndarray,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         spectrogram_chunks = super().process(audio)
+        
+        reshaped_mean = DEFAULT_MEL_SPECTROGRAM_FIXED_REPEAT_MEAN.view(-1, 1, 1)
+        reshaped_std = DEFAULT_MEL_SPECTROGRAM_FIXED_REPEAT_STD.view(-1, 1, 1)
         for i, _ in enumerate(spectrogram_chunks):
-            spectrogram_chunks[i] = spectrogram_chunks[i].repeat(1, self.repeat, 1, 1)[
-                0
-            ]
+            spectrogram_chunks[i] = spectrogram_chunks[i].repeat(1, self.repeat, 1, 1)[0]
+            spectrogram_chunks[i] = (spectrogram_chunks[i] - reshaped_mean) / reshaped_std
 
         return spectrogram_chunks
-
-
-class MelSpectrogramResizedRepeat(MelSpectrogramResize):
-    """Calls MelSpectrogramResize and repeats the output 3 times.
-
-    This is useful for mocking RGB channels.
-    """
-
-    def __init__(self, repeat=3, **kwargs):
-        super().__init__(**kwargs)
-        self.repeat = repeat
-
-    def process(
-        self,
-        audio: torch.Tensor | np.ndarray,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        spectrogram = super().process(audio)
-        spectrogram = spectrogram.repeat(1, self.repeat, 1, 1)[0]
-
-        return spectrogram

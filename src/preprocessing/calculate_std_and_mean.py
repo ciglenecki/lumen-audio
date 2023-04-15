@@ -13,13 +13,6 @@ def parse():
     parser = simple_parsing.ArgumentParser(
         add_option_string_dash_variants=simple_parsing.DashVariant.DASH
     )
-    #parser.add_argument(
-    #    "--audio-transform", 
-    #    type=AudioTransforms, 
-    #    default=None, 
-    #    choices=list(AudioTransforms), 
-    #    help="The audio transform for which the mean and std will be calculated."
-    #)
     parser.add_arguments(ConfigDefault, dest=destination_str)
     args = parser.parse_args()
 
@@ -55,60 +48,32 @@ if __name__ == "__main__":
         use_weighted_train_sampler=config.use_weighted_train_sampler,
     )
 
-    mean, std = torch.tensor([0., 0., 0.]), torch.tensor([0., 0., 0.])
-
-    max_, min_ = None, None
     train_dataloader = datamodule.train_dataloader()
-    for idx, (inputs, _, _) in tqdm(enumerate(train_dataloader)):
-        max_curr, min_curr = inputs.max(), inputs.min()
 
-        if max_ is None or max_curr > max_:
-            max_ = max_curr
- 
-        if min_ is None or min_curr < min_:
-            min_ = min_curr
+    mean = 0.0
+    for images, _, _ in tqdm(train_dataloader):
+        batch_samples = images.size(0) 
+        images = images.view(batch_samples, images.size(1), -1)
+        mean += images.mean(2).sum(0)
+    mean = mean / len(train_dataloader.dataset)
 
-    print(min_, max_)
+    print(f"Mean for each channel is: {mean}")
 
-    for idx, (inputs, _, _) in tqdm(enumerate(train_dataloader)):
-        if inputs.shape[0] != config.batch_size:
-            print(f"Something is wrong because chunking is being used... {inputs.shape}")
+    var = 0.0
+    for images, _, _ in tqdm(train_dataloader):
+        batch_samples = images.size(0)
+        images = images.view(batch_samples, images.size(1), -1)
+        var += ((images - mean.unsqueeze(1))**2).sum([0,2])
         
-        inputs_scaled = (inputs - min_) / (max_ - min_)
-        
-        if inputs_scaled.max() > 1 or inputs_scaled.min() < 0:
-            print(f"Something is wrong with the scaling... {inputs_scaled.max(), inputs_scaled.min()}")
-        
-        for i in range(len(mean)):
-            mean[i] += torch.sum(inputs_scaled[:, i])
+    std = torch.sqrt(var / (len(train_dataloader.dataset) * images.size(2)))
 
-    mean = mean / (len(train_dataloader) * inputs.shape[2] * inputs.shape[3] * config.batch_size)
-    
-    print(f"Mean for each channel is {mean}")
-
-
-
-    
-    for idx, (inputs, _, _) in tqdm(enumerate(train_dataloader)):
-        inputs_scaled = (inputs - min_) / (max_ - min_)
-        
-        for i in range(len(std)):
-            std[i] += (inputs_scaled[:, i] - mean[i]).sum()
-    
-    std = torch.sqrt( std**2 / ((len(train_dataloader) * inputs.shape[2] * inputs.shape[3] * config.batch_size) - 1) ) # unbiased estimate
-    
-    print(f"Stdev for each channel is {std}")
-
-
+    print(images.size(2))
+    print(f"Mean for each channel is: {std}")
 
 ## MFCC FIXED REPEAT ##
-# min_ = -723.2180
-# max_ = 282.6545
-# mean = [0.7117, 0.7117, 0.7117]
-# std = [0.0219, 0.0219, 0.0219]
+# mean = [-7.3612, -7.3612, -7.3612]
+# std = [56.4464, 56.4464, 56.4464]
 
 ## MELSPEC FIXED REPEAT ##
-# min_ = 0. 
-# max_ = 314.9380
-# mean = [0.0013, 0.0013, 0.0013]
-# std = [0.0367, 0.0367, 0.0367]
+# mean = [0.4125, 0.4125, 0.4125]
+# std = [2.3365, 2.3365, 2.3365]

@@ -5,7 +5,11 @@ import torchvision.transforms.functional as F
 
 import src.config.config_defaults as config_defaults
 from src.features.audio_transform_base import AudioTransformBase
-
+from src.config.config_defaults import (
+    DEFAULT_MFCC_FIXED_REPEAT_MEAN,
+    DEFAULT_MFCC_FIXED_REPEAT_STD
+)
+from src.utils.utils_audio import caculate_spectrogram_duration_in_seconds
 
 class MFCC(AudioTransformBase):
     """Calculates MFCC (mel-frequency cepstral coefficients) from audio."""
@@ -53,17 +57,23 @@ class MFCCFixed(MFCC):
 
     def __init__(
         self,
-        max_audio_seconds: int,
         image_dim: tuple[int, int],
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        self.max_audio_seconds = max_audio_seconds
         self.image_dim = image_dim
 
+        self.max_audio_seconds = caculate_spectrogram_duration_in_seconds(
+            sampling_rate=self.sampling_rate,
+            hop_size=self.hop_length,
+            image_width=self.image_dim[0],
+        )
+
         FAKE_SAMPLE_RATE = 44_100
-        dummy_audio = np.random.random(size=(max_audio_seconds * FAKE_SAMPLE_RATE,))
+        dummy_audio = np.random.random(
+            size=( int(self.max_audio_seconds * FAKE_SAMPLE_RATE), )
+        )
         audio_resampled = librosa.resample(
             dummy_audio,
             orig_sr=FAKE_SAMPLE_RATE,
@@ -78,6 +88,11 @@ class MFCCFixed(MFCC):
             hop_length=self.hop_length,
             n_mels=self.n_mels,
         )
+
+        import matplotlib.pyplot as plt        
+        plt.imshow(spectrogram)
+        plt.show()
+        
 
         self.spectrogram_dim = spectrogram.shape
 
@@ -108,7 +123,7 @@ class MFCCFixedRepeat(MFCCFixed):
 
     This is useful for mocking RGB channels.
     """
-
+    
     def __init__(self, repeat=config_defaults.DEFAULT_RGB_CHANNELS, **kwargs):
         super().__init__(**kwargs)
         self.repeat = repeat
@@ -118,9 +133,11 @@ class MFCCFixedRepeat(MFCCFixed):
         audio: torch.Tensor | np.ndarray,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         spectrogram_chunks = super().process(audio)
+        
+        reshaped_mean = DEFAULT_MFCC_FIXED_REPEAT_MEAN.view(-1, 1, 1)
+        reshaped_std = DEFAULT_MFCC_FIXED_REPEAT_STD.view(-1, 1, 1)
         for i, _ in enumerate(spectrogram_chunks):
-            spectrogram_chunks[i] = spectrogram_chunks[i].repeat(1, self.repeat, 1, 1)[
-                0
-            ]
+            spectrogram_chunks[i] = spectrogram_chunks[i].repeat(1, self.repeat, 1, 1)[0]
+            spectrogram_chunks[i] = (spectrogram_chunks[i] - reshaped_mean) / reshaped_std
 
         return spectrogram_chunks

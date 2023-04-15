@@ -9,6 +9,7 @@ from dataclasses import asdict, dataclass, field
 from enum import Enum
 from pathlib import Path
 
+import torch
 import pyrootutils
 import yaml
 from simple_parsing.helpers import Serializable
@@ -119,6 +120,11 @@ DEFAULT_AST_PRETRAINED_TAG = "MIT/ast-finetuned-audioset-10-10-0.4593"
 DEFAULT_WAV2VEC_PRETRAINED_TAG = "m3hrdadfi/wav2vec2-base-100k-gtzan-music-genres"
 DEFAULT_TORCH_CNN_PRETRAINED_TAG = "IMAGENET1K_V2"
 DEFAULT_PRETRAINED_TAG = "DEFAULT"
+
+DEFAULT_MFCC_FIXED_REPEAT_MEAN = torch.tensor([-7.3612, -7.3612, -7.3612])
+DEFAULT_MFCC_FIXED_REPEAT_STD = torch.tensor([56.4464, 56.4464, 56.4464])
+DEFAULT_MEL_SPECTROGRAM_FIXED_REPEAT_MEAN = torch.tensor([0.4125, 0.4125, 0.4125])
+DEFAULT_MEL_SPECTROGRAM_FIXED_REPEAT_STD = torch.tensor([2.3365, 2.3365, 2.3365])
 
 DEAFULT_HEAD = SupportedHeads.DEEP_HEAD
 DEFAULT_AUDIO_EXTENSIONS = ["wav"]

@@ -27,7 +27,7 @@ def caculate_spectrogram_width_for_one_second(sampling_rate: int, hop_size: int)
 def caculate_spectrogram_duration_in_seconds(
     sampling_rate: int, hop_size: int, image_width: int
 ) -> float:
-    audio_seconds = image_width / ((sampling_rate / hop_size) + 1)
+    audio_seconds = ( (image_width - 1) *  hop_size) / sampling_rate
     return audio_seconds
 
 

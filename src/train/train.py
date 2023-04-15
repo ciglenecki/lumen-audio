@@ -132,7 +132,7 @@ if __name__ == "__main__":
         }
         loss_function = torch.nn.BCEWithLogitsLoss(**kwargs)
 
-    model = get_model(config, pl_args, loss_function=loss_function)
+    model = get_model(config, loss_function=loss_function)
     print_modules(model)
 
     # ================= SETUP CALLBACKS (auto checkpoint, tensorboard, early stopping...)========================
