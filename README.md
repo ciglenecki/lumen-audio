@@ -99,6 +99,23 @@ Ivan:
 - [ ] implement spectrogram normalization and std (norm,std) and use those paramters to preprocess the image before training.
 
 Vinko:
+sampling_rate = 16_000
+n_fft = 400
+hop_length = 400
+
+Features:
+- librosa.feature.spectral_centroid
+- librosa.feature.spectral_bandwidth
+- librosa.feature.spectral_contrast
+- librosa.feature.spectral_flatness
+- librosa.feature.spectral_rolloff
+- librosa.feature.mfcc (n_mfcc=10, which means this produces 10 features for the whole sequence, no matter how long it is)
+- use np.mean() to reduce any time/temporal dimension to one feature.
+
+Each feature should be caculate for whole audio sequence.
+Dataframe columns: spectral_centroid, spectral_bandwidth..., mfcc_1, mfcc_2, ... mfcc_10
+Dataframe rows: one .wav file
+
 - [ ] Perform exploratory data analysis on large scale
   - [ ] how do spectrogram look before and after augmetations
   - [ ] musical key finder https://github.com/jackmcarthur/musical-key-finder, which tonalities happen a lot?
