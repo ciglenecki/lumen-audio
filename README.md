@@ -14,6 +14,7 @@ Check the code architecture drawing: https://docs.google.com/drawings/d/1DDG480M
 Tasks:
 - [ ] create eval script which will caculate ALL metrics for the whole dataset
 - [ ] use validation examples in train (without data leakage), check what's the total time of audio in train and val
+- [ ] add a feature that uses different features per channel - convolutional models expect a 3-channel tensor, so lets make full use of those 3 channels
 
 Low priority tasks:
 - [ ] add fluffy support for all models
