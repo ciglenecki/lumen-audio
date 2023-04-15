@@ -14,10 +14,10 @@ from src.utils.utils_exceptions import UnsupportedAudioTransforms
 
 def get_audio_transform(
     config: ConfigDefault,
-    audio_transform_enum: AudioTransforms,
     spectrogram_augmentation: SpectrogramAugmentation | None = None,
     waveform_augmentation: WaveformAugmentation | None = None,
 ) -> AudioTransformBase:
+    audio_transform_enum = config.audio_transform
     base_kwargs = dict(
         sampling_rate=config.sampling_rate,
         waveform_augmentation=waveform_augmentation,

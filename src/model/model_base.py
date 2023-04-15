@@ -19,8 +19,7 @@ from src.model.optimizers import (
 )
 from src.train.metrics import get_metrics
 from src.utils.utils_functions import add_prefix_to_keys
-from src.utils.utils_model import count_module_params
-from src.utils.utils_train import get_all_modules_after
+from src.utils.utils_model import count_module_params, get_all_modules_after
 
 
 class ModelBase(pl.LightningModule, ABC):

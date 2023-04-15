@@ -50,6 +50,15 @@
 			"justMyCode": false
 		},
 		{
+			"name": "Gradcam",
+			"type": "python",
+			"request": "launch",
+			"program": "src/grad_vis/visualize_grads.py",
+			"console": "integratedTerminal",
+			"args": "--path_to_model models_quick/04-14-15-25-32_CalmAlan_resnext50_32x4d/checkpoints/04-14-15-25-32_CalmAlan_resnext50_32x4d_val_acc_0.0000_val_loss_1.1923.ckpt --target_layer backbone.avgpool --model RESNEXT50_32X4D --audio-transform MEL_SPECTROGRAM_RESIZE_REPEAT --label vio --batch-size 1 --image-dim 256 256",
+			"justMyCode": false
+		},
+		{
 			"name": "Python: Current File",
 			"type": "python",
 			"request": "launch",

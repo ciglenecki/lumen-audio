@@ -5,12 +5,11 @@ Important: 0 dependencies except to enums!
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
 import pyrootutils
-import yaml
 from simple_parsing.helpers import Serializable
 
 from src.enums.enums import (
@@ -281,7 +280,7 @@ class ConfigDefault(Serializable):
 
     # ======================== MODEL ===========================
 
-    model: SupportedModels = create(None)
+    model: SupportedModels | None = create(None)
     """Models used for training."""
 
     finetune_head: bool = create(True)
@@ -477,7 +476,7 @@ class ConfigDefault(Serializable):
 
     def isfloat(self, x: str):
         try:
-            a = float(x)
+            float(x)
         except (TypeError, ValueError):
             return False
         else:

@@ -47,6 +47,7 @@ class IRMASDatasetTrain(Dataset):
         sum_two_samples: bool = False,
         concat_n_samples: int | None = None,
         train_override_csvs: list[Path] | None = config.train_override_csvs,
+        return_filename=False,
     ):
         """_summary_
 
@@ -74,6 +75,7 @@ class IRMASDatasetTrain(Dataset):
         self.concat_n_samples = concat_n_samples
         self.instrument_idx_list: dict[str, list[int]] = {}
         self.train_override_csvs = train_override_csvs
+        self.return_filename = return_filename
         self._populate_dataset()
 
         assert (
@@ -279,7 +281,7 @@ class IRMASDatasetTrain(Dataset):
         return audio, labels
 
     def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
-        audio, labels, _ = self.load_sample(index)
+        audio, labels, audio_path = self.load_sample(index)
 
         if (
             self.concat_n_samples is not None and self.concat_n_samples > 1
@@ -304,6 +306,8 @@ class IRMASDatasetTrain(Dataset):
         # play_audio(audio, sr=self.sampling_rate)
         # print("second time")
         # play_audio(audio, sr=self.sampling_rate)
+        if self.return_filename:
+            return features, labels, audio_path
         return features, labels
 
 
@@ -315,6 +319,7 @@ class IRMASDatasetTest(Dataset):
         num_classes=config_defaults.DEFAULT_NUM_LABELS,
         sampling_rate=config.sampling_rate,
         normalize_audio=config.normalize_audio,
+        return_filename=False,
     ):
         self.num_classes = num_classes
         self.audio_transform = audio_transform
@@ -322,6 +327,8 @@ class IRMASDatasetTest(Dataset):
         self.dataset_dir = dataset_dir
         self.sampling_rate = sampling_rate
         self.normalize_audio = normalize_audio
+        self.return_filename = return_filename
+
         self._populate_dataset()
 
         assert (
@@ -354,11 +361,21 @@ class IRMASDatasetTest(Dataset):
 
             self.dataset.append((str(audio_file), labels, instrument))
 
+    def load_sample(self, item_idx: int) -> tuple[np.ndarray, np.ndarray, Path]:
+        audio_path, labels = self.dataset[item_idx]
+        audio, _ = load_audio_from_file(
+            audio_path,
+            target_sr=self.sampling_rate,
+            method="librosa",
+            normalize=self.normalize_audio,
+        )
+        return audio, labels, audio_path
+
     def __len__(self) -> int:
         return len(self.dataset)
 
     def __getitem__(self, index) -> tuple[torch.Tensor, torch.Tensor]:
-        audio_path, labels, _ = self.dataset[index]
+        audio, labels, audio_path = self.load_sample(index)
 
         audio, _ = load_audio_from_file(
             audio_path,
@@ -374,6 +391,8 @@ class IRMASDatasetTest(Dataset):
 
         labels = torch.tensor(labels).float()
 
+        if self.return_filename:
+            return features, labels, audio_path
         return features, labels
 
 
