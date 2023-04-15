@@ -99,11 +99,14 @@ Ivan:
 - [x] implement spectrogram normalization and std (norm,std) and use those paramters to preprocess the image before training.
 
 Vinko:
-sampling_rate = 16_000
-n_fft = 400
-hop_length = 400
+Vinko:
 
-Features:
+Hyperparams:
+- sampling_rate = 16_000
+- n_fft = 400
+- hop_length = 400
+
+Caculate features for train for EACH instrument:
 - librosa.feature.spectral_centroid
 - librosa.feature.spectral_bandwidth
 - librosa.feature.spectral_contrast
@@ -112,20 +115,30 @@ Features:
 - librosa.feature.mfcc (n_mfcc=10, which means this produces 10 features for the whole sequence, no matter how long it is)
 - use np.mean() to reduce any time/temporal dimension to one feature.
 
-Each feature should be caculate for whole audio sequence.
-Dataframe columns: spectral_centroid, spectral_bandwidth..., mfcc_1, mfcc_2, ... mfcc_10
-Dataframe rows: one .wav file
+**Dataframe for one instrument (guitar):**
 
-- [ ] Perform exploratory data analysis on large scale
-  - [ ] how do spectrogram look before and after augmetations
-  - [ ] musical key finder https://github.com/jackmcarthur/musical-key-finder, which tonalities happen a lot?
-  - [ ] explore what's the corelation between genre and instruments
-  - [ ] explore what's the corelation between drums and instruments
-  - [ ] mfcc svm
-  - [ ] why is irmas bad???
-  - [ ] search kaggle and medium for exploratory data anal audio
-  - [ ] https://librosa.org/doc/main/feature.html
-  - [ ] https://rramnauth2220.github.io/blog/posts/code/200525-feature-extraction.html
+|                            | spectral_centroid | spectral_bandwidth |  ... | mfcc_1 | mfcc_2 | ... | mfcc_10 |
+| -------------------------- | ----------------: | -----------------: | ---: | -----: | -----: | --- | ------- |
+| 0 (guitar.wav from train)  |               0.3 |                0.1 |  ... |    0.5 |      3 | ... | 10      |
+| 1 (guitar2.wav from train) |               0.5 |               0.11 |  ... |   0.15 |      7 | ... | 0.3     |
+
+**Dataframe for whole train dataset**
+
+|                    | guitar | flute | **drums** | **is_drum_known** | spectral_centroid | spectral_bandwidth |  ... | mfcc_1 | mfcc_2 | ... | mfcc_10 |
+| ------------------ | ------ | ----- | --------- | --------- | ----------------: | -----------------: | ---: | -----: | -----: | --- | ------- |
+| 0 (wav from train) | 1      | 0     | 1         | 1         |               0.3 |                0.1 |  ... |    0.5 |      3 | ... | 10      |
+| 1 (wav from train) | 0      | 1     | 1         | 1         |               0.5 |               0.11 |  ... |   0.15 |      7 | ... | 0.3     |
+| 2 (wav from train) | 1      | 0     | 0         | 0         |               0.1 |               0.12 |  ... |   0.23 |      1 | ... | 0.34    |
+
+
+Caculate **correlation and covariance matrix** using the dataframe above.
+
+Add musical key finder https://github.com/jackmcarthur/musical-key-finder, which tonalities happen a lot?
+
+Search kaggle and medium for exploratory data analysis audio
+- [ ] https://librosa.org/doc/main/feature.html
+- [ ] https://rramnauth2220.github.io/blog/posts/code/200525-feature-extraction.html
+
 
 Else
 - audio features in the context of traditional approach => baseline
