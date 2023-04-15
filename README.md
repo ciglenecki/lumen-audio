@@ -80,10 +80,7 @@ Mirko:
 - ![](img/attention_weights.png)
 
 Ivan:
-- [x] cleanup audio transform for spectrograms (remove repeat)
-  - [x] you still need to resize because the height isn't 224 (it's 128) but make sure the width is the same as the pretrained model image width
-- [x] move spectrogram chunking to collate
-- [ ] use caculate_spectrogram_duration_in_seconds to dynamically determine the audio length.
+- [ ] move spectrogram chunking to collate
 - [ ] train  ResNeXt 50_32x4d on MelSpectrogram
   - [ ] Compare how augmentations affect the final metrics:
     - [ ] with no augmentations
@@ -98,7 +95,7 @@ Ivan:
     - electra, is the patch shuffled?
 - [x] add gradient/activation visualization for a predicted image. Which parts of the image light up during inference?
 - ![](img/cnn_activations.png)
-- [x] implement spectrogram normalization and std (norm,std) and use those paramters to preprocess the image before training.
+
 
 Vinko:
 Vinko:
@@ -510,7 +507,10 @@ Tasks:
 - [x] implement chunking of the audio in inference and perform multiple forward pass
 - [x] implement saving the embeddings of each model for visualizations using dimensionality reduction
 - [x] think about and reserach what happens with variable sampling rate and how can we avoid issues with time length change, solution: chunking
-
+- [x] cleanup audio transform for spectrograms (remove repeat)
+  - [x] you still need to resize because the height isn't 224 (it's 128) but make sure the width is the same as the pretrained model image width
+- [x] use caculate_spectrogram_duration_in_seconds to dynamically determine the audio length.
+- [x] implement spectrogram normalization and std (norm,std) and use those paramters to preprocess the image before training.
 ______________________________________________________________________
 
 ## 🏆 Team members
