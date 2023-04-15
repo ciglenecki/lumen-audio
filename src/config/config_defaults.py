@@ -281,7 +281,7 @@ class ConfigDefault(Serializable):
 
     # ======================== MODEL ===========================
 
-    model: SupportedModels = create(None)
+    model: SupportedModels | None = create(None)
     """Models used for training."""
 
     finetune_head: bool = create(True)
