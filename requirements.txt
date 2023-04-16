@@ -7,11 +7,11 @@ scipy==1.10.1
 librosa==0.10.0.post2
 ipykernel==6.22.0
 ConfigArgParse==1.5.3
-torch_audiomentations
-pydub
-pytest
-simple_parsing
-cleanlab
+torch_audiomentations==0.11.0
+pydub==0.25.1
+pytest==7.3.0
+simple_parsing==0.1.1
+cleanlab==2.3.1
 
 # ----------- torch -------- #
 torchvision==0.15.1
@@ -24,7 +24,7 @@ torchaudio==2.0.1
 pytorch-lightning==1.9.4
 torchmetrics==0.11.4
 torch-scatter==2.1.1
-grad-cam
+grad-cam==1.4.6
 
 # --------- others --------- #
 pyrootutils    # standardizing the project root setup
