@@ -1,5 +1,4 @@
 import argparse
-import sys
 
 import pytorch_lightning as pl
 import simple_parsing

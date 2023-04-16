@@ -4,18 +4,14 @@ import librosa
 import torch
 import torchaudio
 from pytorch_lightning.loggers import TensorBoardLogger
-from torch_scatter import scatter_max
 from transformers import ASTConfig, ASTFeatureExtractor, ASTForAudioClassification
 from transformers.modeling_outputs import SequenceClassifierOutput
 
 import src.config.config_defaults as config_defaults
+from src.config.argparse_with_config import ArgParseWithConfig
 from src.model.model_base import ModelBase
-from src.utils.utils_audio import (
-    ast_spec_to_audio,
-    load_audio_from_file,
-    play_audio,
-    plot_spectrograms,
-)
+from src.utils.utils_audio import load_audio_from_file, play_audio
+from src.utils.utils_dataset import get_example_val_sample
 
 
 class ASTModelWrapper(ModelBase):
@@ -61,36 +57,50 @@ class ASTModelWrapper(ModelBase):
         return out.loss, out.logits
 
     def _step(self, batch, batch_idx, type: str):
-        spectrogram, y, file_indices = batch
-        # plot_spectrograms(spectrogram, y_axis=None)
-        # play_audio(
-        #     ast_spec_to_audio(spectrogram[0].unsqueeze(0)), sr=config.sampling_rate
+        """
+        - batch_size: 4.
+        - `batch` size can actually be bigger (10) because of chunking.
+        - Split the `batch` with batch_size
+        - sub_batches = [[4, height, width], [4, height, width], [2, height, width]]
+        """
+
+        images, y, file_indices, item_indices = batch
+
+        # plot_spectrograms(
+        #     images,
+        #     sampling_rate=self.config.sampling_rate,
+        #     n_fft=self.config.n_fft,
+        #     n_mels=self.config.n_mels,
+        #     hop_length=self.config.hop_length,
+        #     y_axis=None,
         # )
-        loss, logits_pred = self.forward(spectrogram, labels=y)
-        y_pred_prob = torch.sigmoid(logits_pred)
-        y_pred = (y_pred_prob >= 0.5).float()
 
+        sub_batches = torch.split(images, self.batch_size, dim=0)
+        loss = 0
+        y_pred_prob = torch.zeros((len(images), self.num_labels), device=self.device)
+        y_pred = torch.zeros((len(images), self.num_labels), device=self.device)
+
+        passed_images = 0
+        for sub_batch_image in sub_batches:
+            b_size = len(sub_batch_image)
+            start = passed_images
+            end = passed_images + b_size
+
+            b_y = y[start:end]
+            b_loss, b_logits_pred = self.forward(sub_batch_image, labels=b_y)
+            b_y_pred_prob = torch.sigmoid(b_logits_pred)
+            b_y_pred = (b_y_pred_prob >= 0.5).float()
+
+            loss += b_loss * b_size
+            y_pred_prob[start:end] = b_y_pred_prob
+            y_pred[start:end] = b_y_pred
+
+            passed_images += b_size
         if type != "train":
-            """
-            >>> a
-            tensor([[0.6744, 0.7307, 0.6614],
-                    [0.1346, 0.0142, 0.5730],
-                    [0.3153, 0.0235, 0.7663],
-                    [0.4487, 0.9715, 0.9067],
-                    [0.3930, 0.9055, 0.6433]])
-            >>> ids = torch.tensor([0,0,0,1,2])
-            >>> ids
-            tensor([0, 0, 0, 1, 2])
-            >>> scatter_max(a,ids,dim=0)
-            (tensor([[0.6744, 0.7307, 0.7663],
-                    [0.4487, 0.9715, 0.9067],
-                    [0.3930, 0.9055, 0.6433]]), tensor([[0, 0, 2],
-                    [3, 3, 3],
-                    [4, 4, 4]]))
-            """
+            pass
+            # y_final_out, _ = scatter_max(y_pred, file_indices, dim=0)
 
-            y_final_out, _ = scatter_max(y_pred, file_indices, dim=0)
-
+        loss = loss / len(images)
         return self.log_and_return_loss_step(
             loss=loss, y_pred=y_pred, y_true=y, type=type
         )
@@ -112,9 +122,13 @@ class ASTModelWrapper(ModelBase):
 
 
 if __name__ == "__main__":
+    parser = ArgParseWithConfig()
+    args, config, pl_args = parser.parse_args()
+    audio = get_example_val_sample(config.sampling_rate)
+
     # example_audio_mel_audio()
     config_ = ASTConfig.from_pretrained(
-        pretrained_model_name_or_path=config_defaults.DEFAULT_AST_PRETRAINED_TAG,
+        pretrained_model_name_or_path=config_defaults.TAG_AST_AUDIOSET,
         id2label=config_defaults.IDX_TO_INSTRUMENT,
         label2id=config_defaults.INSTRUMENT_TO_IDX,
         num_labels=config_defaults.DEFAULT_NUM_LABELS,
@@ -123,7 +137,7 @@ if __name__ == "__main__":
     )
 
     backbone: ASTForAudioClassification = ASTForAudioClassification.from_pretrained(
-        config_defaults.DEFAULT_AST_PRETRAINED_TAG,
+        config_defaults.TAG_AST_AUDIOSET,
         config=config_,
         ignore_mismatched_sizes=True,
     )
@@ -134,8 +148,8 @@ if __name__ == "__main__":
     fname = "data/irmas_sample/1 - Hank's Other Bag-1.wav"
 
     feature_extractor = ASTFeatureExtractor.from_pretrained(
-        config_defaults.DEFAULT_AST_PRETRAINED_TAG,
-        do_normalize=False,
+        config_defaults.TAG_AST_AUDIOSET,
+        normalize=False,
     )
 
     audio_torch, org_sample_rate = torchaudio.load(fname)
@@ -190,5 +204,5 @@ if __name__ == "__main__":
 
     # play_audio(torch_reconstructed, sr=target_sr, max_seconds=3)
     # play_audio(lib_reconstruct, sr=target_sr, max_seconds=3)
-    play_audio(inv_torch.squeeze(0).numpy(), sr=target_sr, max_seconds=3)
-    play_audio(inv_lib.squeeze(0).numpy(), sr=target_sr, max_seconds=3)
+    play_audio(inv_torch.squeeze(0).numpy(), sampling_rate=target_sr, max_seconds=3)
+    play_audio(inv_lib.squeeze(0).numpy(), sampling_rate=target_sr, max_seconds=3)

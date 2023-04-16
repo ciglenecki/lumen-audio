@@ -5,12 +5,12 @@ Important: 0 dependencies except to enums!
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
 import pyrootutils
-import yaml
+import torch
 from simple_parsing.helpers import Serializable
 
 from src.enums.enums import (
@@ -112,15 +112,14 @@ IDX_TO_GENRE = {v: k for k, v in GENRE_TO_IDX.items()}
 DEFAULT_NUM_LABELS = len(INSTRUMENT_TO_IDX)
 DEFAULT_IRMAS_TRAIN_SIZE = 6705
 DEFAULT_IRMAS_TEST_SIZE = 2874
-DEFAULT_RGB_CHANNELS = 3
-DEFAULT_LR_PLATEAU_FACTOR = 0.5
+NUM_RGB_CHANNELS = 3
 
-DEFAULT_AST_PRETRAINED_TAG = "MIT/ast-finetuned-audioset-10-10-0.4593"
-DEFAULT_WAV2VEC_PRETRAINED_TAG = "m3hrdadfi/wav2vec2-base-100k-gtzan-music-genres"
-DEFAULT_TORCH_CNN_PRETRAINED_TAG = "IMAGENET1K_V2"
-DEFAULT_PRETRAINED_TAG = "DEFAULT"
-
-DEAFULT_HEAD = SupportedHeads.DEEP_HEAD
+DEFAULT_MFCC_MEAN = -7.3612
+DEFAULT_MFCC_STD = 56.4464
+DEFAULT_MEL_SPECTROGRAM_MEAN = 0.4125
+DEFAULT_MEL_SPECTROGRAM_STD = 2.3365
+DEFAULT_AST_MEAN = -4.2677393
+DEFAULT_AST_STD = 4.5689974
 DEFAULT_AUDIO_EXTENSIONS = ["wav"]
 
 IRMAS_TRAIN_CLASS_COUNT = {
@@ -142,7 +141,26 @@ _default_augmentations_set = set(SupportedAugmentations)
 _default_augmentations_set.discard(SupportedAugmentations.RANDOM_ERASE)
 _default_augmentations_set.discard(SupportedAugmentations.CONCAT_N_SAMPLES)
 _default_augmentations_set.discard(SupportedAugmentations.SUM_TWO_SAMPLES)
+_default_augmentations_set.discard(SupportedAugmentations.BANDPASS_FILTER)
 _default_augmentations_list = list(_default_augmentations_set)
+
+TAG_AST_AUDIOSET = "MIT/ast-finetuned-audioset-10-10-0.4593"
+TAG_WAV2VEC2_MUSIC = "m3hrdadfi/wav2vec2-base-100k-gtzan-music-genres"
+TAG_IMAGENET1K_V2 = "IMAGENET1K_V2"
+TAG_IMAGENET1K_V1 = "IMAGENET1K_V1"
+DEFAULT_PRETRAINED_TAG = "DEFAULT"
+
+DEFAULT_PRETRAINED_TAG_MAP = {
+    SupportedModels.AST: TAG_AST_AUDIOSET,
+    SupportedModels.WAV2VEC_CNN: TAG_WAV2VEC2_MUSIC,
+    SupportedModels.WAV2VEC: TAG_WAV2VEC2_MUSIC,
+    SupportedModels.EFFICIENT_NET_V2_S: TAG_IMAGENET1K_V1,
+    SupportedModels.EFFICIENT_NET_V2_M: TAG_IMAGENET1K_V1,
+    SupportedModels.EFFICIENT_NET_V2_L: TAG_IMAGENET1K_V1,
+    SupportedModels.RESNEXT50_32X4D: TAG_IMAGENET1K_V2,
+    SupportedModels.RESNEXT101_32X8D: TAG_IMAGENET1K_V2,
+    SupportedModels.RESNEXT101_64X4D: TAG_IMAGENET1K_V1,
+}
 
 
 def create(arg, **kwargs):
@@ -196,7 +214,7 @@ class ConfigDefault(Serializable):
     n_fft: int = create(400)
     """Length of the signal you want to calculate the Fourier transform of"""
 
-    hop_length: int = create(200)
+    hop_length: int = create(160)
     """Hop length which will be used during STFT cacualtion"""
 
     n_mels: int = create(128)
@@ -205,14 +223,14 @@ class ConfigDefault(Serializable):
     n_mfcc: int = create(20)
     """Number of Mel-frequency cepstrum (MFCC) coefficients"""
 
-    image_dim: tuple[int, int] = create((384, 384))
+    image_size: tuple[int, int] = create((384, 384))
     """The dimension to resize the image to."""
 
     normalize_audio: bool = create(True)
     """Do normalize audio"""
 
-    max_audio_seconds: float = create(3)
-    """Maximum number of seconds of audio which will be processed at one time."""
+    max_num_width_samples: float | None = create(None)
+    """Maximum number samples along the time dimension. For spectrogram: width truncation, for audio: waveform truncation. Useful for limiting transformer input size."""
 
     augmentations: list[SupportedAugmentations] = create(_default_augmentations_list)
     """Transformation which will be performed on audio and labels"""
@@ -220,7 +238,7 @@ class ConfigDefault(Serializable):
     aug_kwargs: dict | str = create(
         dict(
             stretch_factors=[0.6, 1.4],
-            time_inversion_p=0.5,
+            time_inversion_p=0.2,
             freq_mask_param=30,
             time_mask_param=30,
             hide_random_pixels_p=0.25,
@@ -281,7 +299,7 @@ class ConfigDefault(Serializable):
 
     # ======================== MODEL ===========================
 
-    model: SupportedModels = create(None)
+    model: SupportedModels | None = create(None)
     """Models used for training."""
 
     finetune_head: bool = create(True)
@@ -296,7 +314,7 @@ class ConfigDefault(Serializable):
     pretrained: bool = create(True)
     """Use a pretrained model loaded from the web."""
 
-    pretrained_tag: str = create("DEFAULT")
+    pretrained_tag: str | None = create(None)
     """The string that denotes the pretrained weights used."""
 
     head: SupportedHeads = create(SupportedHeads.DEEP_HEAD)
@@ -308,6 +326,7 @@ class ConfigDefault(Serializable):
     use_fluffy: bool = create(False)
     """Use multiple optimizers for Fluffy."""
 
+    use_rgb: bool | None = create(None)
     # ======================== OPTIM ===========================
 
     optimizer: str = create(SupportedOptimizer.ADAMW)
@@ -374,44 +393,6 @@ class ConfigDefault(Serializable):
         self.train_dirs = [self.dir_to_enum_and_path(d) for d in self.train_dirs]
         self.val_dirs = [self.dir_to_enum_and_path(d) for d in self.val_dirs]
 
-        # Dynamically set pretrained tag
-        default_pretrain_tag = get_default_value_for_field("pretrained_tag", self)
-        if self.pretrained and self.pretrained_tag == default_pretrain_tag:
-            if self.model == SupportedModels.AST:
-                self.pretrained_tag = DEFAULT_AST_PRETRAINED_TAG
-            elif self.model in [SupportedModels.WAV2VEC_CNN, SupportedModels.WAV2VEC]:
-                self.pretrained_tag = DEFAULT_WAV2VEC_PRETRAINED_TAG
-            elif self.model in [
-                SupportedModels.EFFICIENT_NET_V2_S,
-                SupportedModels.EFFICIENT_NET_V2_M,
-                SupportedModels.EFFICIENT_NET_V2_L,
-                SupportedModels.RESNEXT50_32X4D,
-                SupportedModels.RESNEXT101_32X8D,
-                SupportedModels.RESNEXT101_64X4D,
-            ]:
-                self.pretrained_tag = DEFAULT_TORCH_CNN_PRETRAINED_TAG
-
-        # Dynamically AST DSP attributes
-        if (
-            self.model == SupportedModels.AST
-            and self.pretrained
-            and self.pretrained_tag == DEFAULT_AST_PRETRAINED_TAG
-        ):
-            self.n_fft = 400
-            self.hop_length = 160
-            self.n_mels = 128
-            if self.augmentations == get_default_value_for_field("augmentations", self):
-                _augmentations_set = set(self.augmentations)
-                _augmentations_set.discard(SupportedAugmentations.TIME_STRETCH)
-                _augmentations_set.add(SupportedAugmentations.CONCAT_N_SAMPLES)
-                _augmentations_set.add(SupportedAugmentations.SUM_TWO_SAMPLES)
-                self.augmentations = list(_augmentations_set)
-
-        if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAM:
-            self.weight_decay = 0
-        if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAMW:
-            self.weight_decay = 1e-2
-
     def _validate_train_args(self):
         """This function validates arguments before training."""
 
@@ -453,6 +434,72 @@ class ConfigDefault(Serializable):
                 "You can't use mutliple optimizers if you are not using Fluffy!",
             )
 
+        if self.max_num_width_samples is None:
+            # There's no max num width for image based models because maximum is defined by their architecture.
+            MAX_NUM_WIDTH_SAMPLE = {
+                SupportedModels.AST: 1024,
+                SupportedModels.WAV2VEC_CNN: self.sampling_rate * 3,
+                SupportedModels.WAV2VEC: self.sampling_rate * 3,
+                SupportedModels.EFFICIENT_NET_V2_S: None,
+                SupportedModels.EFFICIENT_NET_V2_M: None,
+                SupportedModels.EFFICIENT_NET_V2_L: None,
+                SupportedModels.RESNEXT50_32X4D: None,
+                SupportedModels.RESNEXT101_32X8D: None,
+                SupportedModels.RESNEXT101_64X4D: None,
+            }
+            self.max_num_width_samples = MAX_NUM_WIDTH_SAMPLE[self.model]
+
+        # Dynamically set pretrained tag
+        if self.model is not None and self.pretrained and self.pretrained_tag is None:
+            if self.model not in DEFAULT_PRETRAINED_TAG_MAP:
+                raise InvalidArgument(
+                    f"Couldn't find pretrained tag for pretrained model {self.model}. Add a new tag to the DEFAULT_PRETRAINED_TAG_MAP map or pass the --pretrained-tag <tag> argument."
+                )
+            self.pretrained_tag = DEFAULT_PRETRAINED_TAG_MAP[self.model]
+        # Dynamically set the RGB option based on model's architecture
+        if self.model is not None and self.use_rgb is None:
+            USE_RGB = {
+                SupportedModels.AST: False,
+                SupportedModels.WAV2VEC_CNN: None,
+                SupportedModels.WAV2VEC: None,
+                SupportedModels.EFFICIENT_NET_V2_S: True,
+                SupportedModels.EFFICIENT_NET_V2_M: True,
+                SupportedModels.EFFICIENT_NET_V2_L: True,
+                SupportedModels.RESNEXT50_32X4D: True,
+                SupportedModels.RESNEXT101_32X8D: True,
+                SupportedModels.RESNEXT101_64X4D: True,
+            }
+            self.use_rgb = USE_RGB[self.model]
+
+        # Dynamically AST DSP attributes and augmentations
+        if (
+            self.model == SupportedModels.AST
+            and self.pretrained
+            and self.pretrained_tag == TAG_AST_AUDIOSET
+        ):
+            self.n_fft = 400
+            self.hop_length = 160
+            self.n_mels = 128
+
+            if self.augmentations == get_default_value_for_field("augmentations", self):
+                _augmentations_set = set(self.augmentations)
+                _augmentations_set.discard(SupportedAugmentations.TIME_STRETCH)
+                _augmentations_set.discard(SupportedAugmentations.BANDPASS_FILTER)
+                _augmentations_set.add(SupportedAugmentations.CONCAT_N_SAMPLES)
+                _augmentations_set.add(SupportedAugmentations.SUM_TWO_SAMPLES)
+                self.augmentations = list(_augmentations_set)
+
+        # Set typical weight decay for optimizers.
+        if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAM:
+            self.weight_decay = 0
+        if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAMW:
+            self.weight_decay = 1e-2
+
+        if self.finetune_head and (self.finetune_head_epochs >= self.epochs):
+            raise InvalidArgument(
+                "Please set --finetune-heads-epochs int so it's less than --epochs int."
+            )
+
     def dir_to_enum_and_path(
         self,
         string: str,
@@ -477,7 +524,7 @@ class ConfigDefault(Serializable):
 
     def isfloat(self, x: str):
         try:
-            a = float(x)
+            float(x)
         except (TypeError, ValueError):
             return False
         else:

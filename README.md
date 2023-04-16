@@ -11,7 +11,7 @@ Check the code architecture drawing: https://docs.google.com/drawings/d/1DDG480M
 
 ## Notes
 
-Tasks:
+## Tasks:
 - [ ] create eval script which will caculate ALL metrics for the whole dataset
 - [ ] use validation examples in train (without data leakage), check what's the total time of audio in train and val
 - [ ] add a feature that uses different features per channel - convolutional models expect a 3-channel tensor, so lets make full use of those 3 channels
@@ -28,50 +28,47 @@ Low priority tasks:
 - [ ] compare Mirko's wavelet transform with scipy's native transformation
   - run experiments in both cases
 - [ ] make sure augmetantions happen in batch
+- [ ] pretraning: SparK https://github.com/keyu-tian/SparK
+- [ ] read why this loss might be a problem at the article ((classification + perceptual distance (centroid of the class in AST latent space, https://hav4ik.github.io/articles/deep-metric-learning-survey)
 
+## Matej:
 
-Matej:
-- [ ] create backend API/inference
-- [ ] create technical documentation
-- [ ] create docker container
-- [ ] download ESC50 non instrument audio files and write data loader which are NOT instruments (@matej)
-- [ ] check for all models edge cases (0.1 sec, 2h)
-- [ ] include Ivan's relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
-- [ ] check for all models edge cases (0.1 sec, 2h)
-- [ ] perform validation on Rep's corected dataset to check how many labels are correctly marked in the original dataset
+- [ ] ❗create backend API/inference
+  - [ ] load model in inference, caculate metrics the whole test irmas dataset (analitics)
+    - [ ] should reuse the train.py script, just use different modes?
+  - [ ] any dataset/csv loader
+  - [ ] http server with some loaded model which returns responses
+- [ ] ❗create technical documentation
+- [ ] ❗create docker container
+- [ ] ⚠️ check for all models edge cases (0.1 sec, 2h)
+- [ ] ⚠️ download the whole IRMAS dataset
+- [ ] **train with relabeled data (rep):** Include Ivan's relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
+  - [ ] 🖊️ report your findings in Google Docs
+- [ ] **train with relabeled data (cleanlab):** Include train override csv. No augmentations. Compare both models metrics.
+  - [ ] 🖊️ report your findings in Google Docs
+- [ ] **Rep vs IRMAS:** perform validation on Rep's corected dataset to check how many labels are correctly marked in the original dataset
   - check if all instruments are correct
   - check if at least one instrument is correct
-- [ ] visualize embedded features for each model with tensorboard embedder
-- [ ] use AST's features for tensorboard embedder https://projector.tensorflow.org/
-- [ ] Low priortiy pretraning: SparK https://github.com/keyu-tian/SparK
-- [ ] create random classifier
-  - [ ] best accuracy = all zeros
-  - [ ] best f1 = randomly mark 2-4 instruments as True
-  - [ ] best recall = all ones
-- [ ] read why this loss might be a problem at the article ((classification + perceptual distance (centroid of the class in AST latent space, https://hav4ik.github.io/articles/deep-metric-learning-survey)
-- [ ] check the assumption that label instrument is present thought the whole audio (check n=200 samples and check how many occourances) VALIDATION
+  - [ ] 🖊️ report your findings in Google Docs
+- [ ] **visualize embedded features**: for each model with tensorboard embedder https://projector.tensorflow.org/
+- [ ] ⚠️ check the assumption that label instrument is present thought the whole audio (check n=200 samples and check how many occourances) VALIDATION
   - holds up for most cases?
-- High priority: Steal Vinko's menza reciept so he pays 10€ and get beaten by the Teta Mafia
-- [ ] this might not be important since the model usually gives [0,0,0,0,0] anyways: download ESC50 non instrument audio files and write data loader which are NOT instruments (@matej)
-
-Mirko:
-- [x] implement Fluffy nn.Module
-- [x] use Fluffy on Torch CNN, multi-head
-- [x] train some model Fluffy
-- [x] Wav2Vec2 feature extractor only
-- [ ] Train Wav2Vec2 Transformer "m3hrdadfi/wav2vec2-base-100k-gtzan-music-genres"
+  - [ ] 🖊️ report your findings in Google Docs
+- [ ] **ESC50:** download non instrument audio files and write data loader which are NOT instruments (@matej) this might not be important since the model usually gives [0,0,0,0,0] anyways: download ESC50 non instrument audio files and write data loader which are NOT instruments (@matej)
+- [ ] **Train Wav2Vec2 Transformer**: "m3hrdadfi/wav2vec2-base-100k-gtzan-music-genres"
   - [ ] nothing better than simple CNN?
+
+## Mirko:
 - [ ] Directly compare Fluffy to non. Fluffy (include metrics)
-  - [ ] report your findings in Google Docs
-- [ ] Train OpenMIC with Wav2Vec2 both
-  - maybe
+  - [ ] 🖊️ report your findings in Google Docs
+- [ ] Train OpenMIC with Wav2Vec2 CNN:
   - if Fluffy showed no improvement in previous step then don't use Fluffy
   - if Fluffy showed improvement train with Fluffy and no Fluffy
-  - [ ] report your findings in Google Docs
+  - [ ] 🖊️ report your findings in Google Docs
 - [ ] add new metric loss function inside `src/model/loss_function.py` and train model using it. Compare metrics.
-  - [ ] report your findings in Google Docs
+  - [ ] 🖊️ report your findings in Google Docs
 - [ ] add Contrastive loss from here https://kevinmusgrave.github.io/pytorch-metric-learning/losses/#contrastiveloss
-  - [ ] report your findings in Google Docs
+  - [ ] 🖊️ report your findings in Google Docs
   - [ ] implement dataset anchor, positive and negative based on a given loss function, should work for all
     - [ ] how do you sample positive and negative? Is it uniform acorss dataset, uniform across classes or p=0.5 positive/negative
 - [ ] add ArcFace loss and repeat everything for the above
@@ -79,8 +76,7 @@ Mirko:
 - [ ] create attention visualization
 - ![](img/attention_weights.png)
 
-Ivan:
-- [ ] move spectrogram chunking to collate
+## Ivan:
 - [ ] train  ResNeXt 50_32x4d on MelSpectrogram
   - [ ] Compare how augmentations affect the final metrics:
     - [ ] with no augmentations
@@ -93,12 +89,13 @@ Ivan:
   - Shuffle parts of the spectrogram in the following way: (16x16 grid)
     - shuffle 15% of patches
     - electra, is the patch shuffled?
-- [x] add gradient/activation visualization for a predicted image. Which parts of the image light up during inference?
+- [ ] add gradient/activation visualization for a predicted image. Which parts of the image light up during inference?
+- [ ] add gradcam for multiple trained models
+  - [ ] 🖊️ report your findings in Google Docs
 - ![](img/cnn_activations.png)
 
 
-Vinko:
-Vinko:
+## Vinko:
 
 Hyperparams:
 - sampling_rate = 16_000
@@ -137,6 +134,10 @@ Add musical key finder https://github.com/jackmcarthur/musical-key-finder, which
 Search kaggle and medium for exploratory data analysis audio
 - [ ] https://librosa.org/doc/main/feature.html
 - [ ] https://rramnauth2220.github.io/blog/posts/code/200525-feature-extraction.html
+- [ ] create random classifier
+  - [ ] best accuracy = all zeros
+  - [ ] best f1 = randomly mark 2-4 instruments as True
+  - [ ] best recall = all ones
 
 
 Else
@@ -483,8 +484,8 @@ hop_length
 
 with a 25ms Hamming window every 10ms (hop)
 
-nfft = 1/(1 / 44100 * 1000) * 25
-hop = 1/(1 / 44100 * 1000) * 10
+nfft = 1/(1 / 44100 * 1000) * 25 = 1102
+hop = 1/(1 / 44100 * 1000) * 10 = 441
 
 ### Web
 
@@ -511,6 +512,12 @@ Tasks:
   - [x] you still need to resize because the height isn't 224 (it's 128) but make sure the width is the same as the pretrained model image width
 - [x] use caculate_spectrogram_duration_in_seconds to dynamically determine the audio length.
 - [x] implement spectrogram normalization and std (norm,std) and use those paramters to preprocess the image before training.
+- [x] implement Fluffy nn.Module
+- [x] use Fluffy on Torch CNN, multi-head
+- [x] train some model Fluffy
+- [x] Wav2Vec2 feature extractor only
+- [x] move spectrogram chunking to collate
+
 ______________________________________________________________________
 
 ## 🏆 Team members

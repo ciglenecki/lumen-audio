@@ -28,7 +28,7 @@ class WaveformAugmentation:
             sample_rate=self.sampling_rate,
         )
         self.bandpass_filter = torch_audiomentations.BandPassFilter(
-            p=1, sample_rate=self.sampling_rate
+            p=1, sample_rate=self.sampling_rate, target_rate=self.sampling_rate
         )
         self.pitch_shift = torch_audiomentations.PitchShift(
             p=1, sample_rate=self.sampling_rate
@@ -97,9 +97,11 @@ class SpectrogramAugmentation:
             return_batch_dim = False
             spectrogram = spectrogram.unsqueeze(0)
 
+        spec_mean = spectrogram.mean()
         if SupportedAugmentations.FREQ_MASK in self.augmentation_enums:
             spectrogram = FrequencyMasking(freq_mask_param=self.freq_mask_param)(
-                spectrogram
+                spectrogram,
+                mask_value=spec_mean,
             )
         if SupportedAugmentations.TIME_MASK in self.augmentation_enums:
             spectrogram = TimeMasking(time_mask_param=self.time_mask_param)(spectrogram)
@@ -114,7 +116,7 @@ class SpectrogramAugmentation:
             )
             num_of_masked_elements = mask.sum()
             noise = torch.normal(
-                mean=spectrogram.mean(),
+                mean=spec_mean,
                 std=self.std_noise,
                 size=(num_of_masked_elements,),
             )

@@ -8,24 +8,18 @@ from pathlib import Path
 import librosa
 import numpy as np
 import pandas as pd
-import pytest
 import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
 import src.config.config_defaults as config_defaults
-from src.features.audio_to_ast import AudioTransformAST
 from src.features.audio_transform_base import AudioTransformBase
-from src.features.augmentations import SupportedAugmentations
-from src.utils.utils_audio import ast_spec_to_audio, load_audio_from_file, play_audio
+from src.utils.utils_audio import load_audio_from_file, play_audio
 from src.utils.utils_dataset import (
     decode_instrument_label,
-    encode_drums,
-    encode_genre,
     encode_instruments,
     multi_hot_encode,
 )
-from src.utils.utils_exceptions import InvalidDataException
 
 # '*.(wav|mp3|flac)'
 # glob_expression = f"*\.({'|'.join(defaults.DEFAULT_AUDIO_EXTENSIONS)})"
@@ -156,16 +150,16 @@ class IRMASDatasetTrain(Dataset):
             ~original_labels.astype(bool)
         ]
 
-        unique_labels = True
+        allow_repeating_labels = False
 
         # The pool of negative indices isn't large enough so we have to sample same negative indices mulitple times
         if len(negative_indices_pool) < n:
-            unique_labels = False
+            allow_repeating_labels = True
 
         negative_indices = np.random.choice(
             negative_indices_pool,
             size=n,
-            replace=unique_labels,
+            replace=allow_repeating_labels,
         )
 
         negative_audios = []
@@ -301,10 +295,10 @@ class IRMASDatasetTrain(Dataset):
         #     ]
         # )
         # print("first time")
-        # play_audio(audio, sr=self.sampling_rate)
+        # play_audio(audio, sampling_rate=self.sampling_rate)
         # print("second time")
-        # play_audio(audio, sr=self.sampling_rate)
-        return features, labels
+        # play_audio(audio, sampling_rate=self.sampling_rate)
+        return features, labels, index
 
 
 class IRMASDatasetPreTrain(IRMASDatasetTrain):
@@ -336,6 +330,7 @@ class IRMASDatasetTest(Dataset):
         self.dataset_dir = dataset_dir
         self.sampling_rate = sampling_rate
         self.normalize_audio = normalize_audio
+
         self._populate_dataset()
 
         assert (
@@ -366,13 +361,23 @@ class IRMASDatasetTest(Dataset):
                 config_defaults.DEFAULT_NUM_LABELS,
             )
 
-            self.dataset.append((str(audio_file), labels, instrument))
+            self.dataset.append((str(audio_file), labels))
+
+    def load_sample(self, item_idx: int) -> tuple[np.ndarray, np.ndarray, Path]:
+        audio_path, labels = self.dataset[item_idx]
+        audio, _ = load_audio_from_file(
+            audio_path,
+            target_sr=self.sampling_rate,
+            method="librosa",
+            normalize=self.normalize_audio,
+        )
+        return audio, labels, audio_path
 
     def __len__(self) -> int:
         return len(self.dataset)
 
     def __getitem__(self, index) -> tuple[torch.Tensor, torch.Tensor]:
-        audio_path, labels, _ = self.dataset[index]
+        audio, labels, audio_path = self.load_sample(index)
 
         audio, _ = load_audio_from_file(
             audio_path,
@@ -388,7 +393,7 @@ class IRMASDatasetTest(Dataset):
 
         labels = torch.tensor(labels).float()
 
-        return features, labels
+        return features, labels, index
 
 
 

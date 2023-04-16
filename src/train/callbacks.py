@@ -5,7 +5,7 @@ from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import BaseFinetuning, Callback
 from torch.optim.optimizer import Optimizer
 
-from src.utils.utils_train import print_modules
+from src.utils.utils_model import print_modules
 
 
 class TensorBoardHparamFixer(pl.Callback):

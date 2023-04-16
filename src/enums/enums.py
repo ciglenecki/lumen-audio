@@ -28,7 +28,7 @@ class SupportedAugmentations(Enum):
     RANDOM_ERASE = "random_erase"
     RANDOM_PIXELS = "radnom_pixels"
     COLOR_NOISE = "color_noise"
-    BANDPASS_FILTER = "bandpass"
+    BANDPASS_FILTER = "bandpass"  # Dangerous: changes the distribution of the sample in a meaningful way.
     PITCH = "pitch"
     TIMEINV = "timeinv"
     CONCAT_N_SAMPLES = "concat_n"
@@ -56,10 +56,9 @@ class AudioTransforms(Enum):
     """List of supported AudioTransforms we use."""
 
     AST = "ast"
-    MEL_SPECTROGRAM_RESIZE_REPEAT = "mel_spectrogram_resize_repeat"
-    MEL_SPECTROGRAM_FIXED_REPEAT = "mel_spectrogram_fixed_repeat"
+    MEL_SPECTROGRAM = "mel_spectrogram"
     WAV2VEC = "wav2vec"
-    MFCC_FIXED_REPEAT = "mfcc_fixed_repeat"
+    MFCC = "mfcc"
     WAV2VEC_CNN = "wav2vec_cnn"
 
 
