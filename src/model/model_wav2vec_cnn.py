@@ -1,8 +1,6 @@
-import math
 from typing import Any
 
 import torch
-import torch.nn as nn
 import torchmetrics
 from pytorch_lightning.loggers import TensorBoardLogger
 from torchmetrics.classification import MultilabelF1Score

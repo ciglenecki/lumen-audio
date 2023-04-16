@@ -21,16 +21,10 @@ import src.config.config_defaults as config_defaults
 from src.config.argparse_with_config import ArgParseWithConfig
 from src.data.datamodule import IRMASDataModule
 from src.data.dataset_irmas import IRMASDatasetTest, IRMASDatasetTrain
-from src.enums.enums import (
-    AudioTransforms,
-    SupportedAugmentations,
-    SupportedLossFunctions,
-    SupportedModels,
-)
+from src.enums.enums import AudioTransforms, SupportedModels
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
 from src.features.chunking import get_collate_fn
 from src.model.model import get_model, model_constructor_map
-from src.utils.utils_dataset import calc_instrument_weight
 from src.utils.utils_exceptions import InvalidArgument, UnsupportedModel
 
 

@@ -5,7 +5,6 @@ import random
 import sys
 import time
 from datetime import datetime
-from enum import Enum
 from pathlib import Path
 from typing import TypeVar
 

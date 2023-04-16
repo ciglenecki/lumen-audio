@@ -10,7 +10,6 @@ from enum import Enum
 from pathlib import Path
 
 import pyrootutils
-import torch
 from simple_parsing.helpers import Serializable
 
 from src.enums.enums import (
@@ -405,7 +404,7 @@ class ConfigDefault(Serializable):
                 SupportedModels.RESNEXT101_64X4D: True,
             }
             self.use_rgb = USE_RGB[self.model]
-            
+
         # Dynamically AST DSP attributes
         if (
             self.model == SupportedModels.AST

@@ -1,4 +1,4 @@
-from typing import Any, Callable, Union
+from typing import Callable, Union
 
 import pytorch_lightning.callbacks
 import torch.nn as nn

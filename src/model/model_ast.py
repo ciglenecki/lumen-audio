@@ -4,19 +4,13 @@ import librosa
 import torch
 import torchaudio
 from pytorch_lightning.loggers import TensorBoardLogger
-from torch_scatter import scatter_max
 from transformers import ASTConfig, ASTFeatureExtractor, ASTForAudioClassification
 from transformers.modeling_outputs import SequenceClassifierOutput
 
 import src.config.config_defaults as config_defaults
 from src.config.argparse_with_config import ArgParseWithConfig
 from src.model.model_base import ModelBase
-from src.utils.utils_audio import (
-    ast_spec_to_audio,
-    load_audio_from_file,
-    play_audio,
-    plot_spectrograms,
-)
+from src.utils.utils_audio import load_audio_from_file, play_audio
 from src.utils.utils_dataset import get_example_val_sample
 
 
@@ -90,7 +84,6 @@ class ASTModelWrapper(ModelBase):
                     [3, 3, 3],
                     [4, 4, 4]]))
             """
-            pass
             # y_final_out, _ = scatter_max(y_pred, file_indices, dim=0)
 
         return self.log_and_return_loss_step(

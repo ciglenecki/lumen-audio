@@ -2,9 +2,6 @@ from typing import Any, Union
 
 import torch
 import torch.nn as nn
-from torchmetrics.metric import Metric
-
-from src.utils.utils_exceptions import InvalidModuleStr
 
 
 def multi_acc(y_pred_log, y_test):

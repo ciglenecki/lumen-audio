@@ -5,7 +5,6 @@ from transformers import ASTFeatureExtractor
 from src.config.argparse_with_config import ArgParseWithConfig
 from src.config.config_defaults import TAG_AST_AUDIOSET
 from src.features.audio_transform_base import AudioTransformBase
-from src.features.chunking import chunk_image_by_width
 from src.utils.utils_audio import plot_spectrograms, spec_width_to_num_samples
 from src.utils.utils_dataset import get_example_val_sample
 
