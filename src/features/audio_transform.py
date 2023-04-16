@@ -1,8 +1,8 @@
 from src.config.config_defaults import ConfigDefault
 from src.enums.enums import AudioTransforms
 from src.features.audio_to_ast import AudioTransformAST
-from src.features.audio_to_mfcc import MFCCFixedRepeat
-from src.features.audio_to_spectrogram import MelSpectrogramFixedRepeat
+from src.features.audio_to_mfcc import MFCC
+from src.features.audio_to_spectrogram import MelSpectrogram
 from src.features.audio_to_wav2vec import AudioToWav2Vec2, AudioToWav2Vec2CNN
 from src.features.audio_transform_base import AudioTransformBase
 from src.features.augmentations import SpectrogramAugmentation, WaveformAugmentation
@@ -26,6 +26,7 @@ def get_audio_transform(
         hop_length=config.hop_length,
         n_mels=config.n_mels,
         image_size=config.image_size,
+        use_rgb=config.use_rgb,
     )
 
     if audio_transform_enum is AudioTransforms.AST:
@@ -35,8 +36,8 @@ def get_audio_transform(
             n_mels=config.n_mels,
             **base_kwargs,
         )
-    elif audio_transform_enum is AudioTransforms.MEL_SPECTROGRAM_FIXED_REPEAT:
-        return MelSpectrogramFixedRepeat(
+    elif audio_transform_enum is AudioTransforms.MEL_SPECTROGRAM:
+        return MelSpectrogram(
             **image_kwargs,
             **base_kwargs,
         )
@@ -46,8 +47,8 @@ def get_audio_transform(
             **image_kwargs,
             **base_kwargs,
         )
-    elif audio_transform_enum is AudioTransforms.MFCC_FIXED_REPEAT:
-        return MFCCFixedRepeat(
+    elif audio_transform_enum is AudioTransforms.MFCC:
+        return MFCC(
             n_mfcc=config.n_mfcc,
             **image_kwargs,
             **base_kwargs,

@@ -279,7 +279,7 @@ class IRMASDatasetTrain(Dataset):
         return audio, labels
 
     def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
-        audio, labels, audio_path = self.load_sample(index)
+        audio, labels, _ = self.load_sample(index)
 
         if (
             self.concat_n_samples is not None and self.concat_n_samples > 1

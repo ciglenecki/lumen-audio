@@ -20,8 +20,8 @@ from torch.nn.utils.rnn import pad_sequence
 from src.utils.utils_functions import print_tensor
 
 
-def caculate_spectrogram_width_for_one_second(sampling_rate: int, hop_size: int):
-    return (sampling_rate / hop_size) + 1
+def caculate_spectrogram_width_for_waveform(num_audio_samples: int, hop_size: int):
+    return math.floor((num_audio_samples / hop_size) + 1)
 
 
 def caculate_spectrogram_duration_in_seconds(
@@ -29,6 +29,10 @@ def caculate_spectrogram_duration_in_seconds(
 ) -> float:
     audio_seconds = ((image_width - 1) * hop_size) / sampling_rate
     return audio_seconds
+
+
+def spec_width_to_num_samples(image_width: int, hop_size: int):
+    return (image_width - 1) * hop_size
 
 
 def stereo_to_mono(audio: torch.Tensor | np.ndarray):

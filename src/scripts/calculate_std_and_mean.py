@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from src.config.config_defaults import ConfigDefault
 from src.data.datamodule import IRMASDataModule
-from src.enums.enums import AudioTransforms, SupportedAugmentations
+from src.enums.enums import SupportedAugmentations
 from src.features.audio_transform import get_audio_transform
 from src.features.chunking import collate_fn_spectrogram
 
@@ -73,11 +73,3 @@ if __name__ == "__main__":
 
     print(images.size(2))
     print(f"Mean for each channel is: {std}")
-
-## MFCC FIXED REPEAT ##
-# mean = [-7.3612, -7.3612, -7.3612]
-# std = [56.4464, 56.4464, 56.4464]
-
-## MELSPEC FIXED REPEAT ##
-# mean = [0.4125, 0.4125, 0.4125]
-# std = [2.3365, 2.3365, 2.3365]

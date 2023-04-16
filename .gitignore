@@ -14,6 +14,7 @@ data/nsynth-train
 models/**
 models_archive/
 models_quick/
+embeddings/
 
 # =============================================
 # Ignore files

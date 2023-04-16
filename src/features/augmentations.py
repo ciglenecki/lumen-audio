@@ -5,7 +5,7 @@ import torch_audiomentations
 from torchaudio.transforms import FrequencyMasking, TimeMasking
 from torchvision.transforms import RandomErasing
 
-from src.config.config_defaults import ConfigDefault
+from src.config.config_defaults import DEFAULT_MEL_SPECTROGRAM_MEAN, ConfigDefault
 from src.enums.enums import SupportedAugmentations
 
 
@@ -112,14 +112,14 @@ class SpectrogramAugmentation:
                 torch.FloatTensor(*spectrogram.shape).uniform_()
                 < self.hide_random_pixels_p
             )
-            num_of_masked_elements = mask.sum()
-            noise = torch.normal(
-                mean=spectrogram.mean(),
-                std=self.std_noise,
-                size=(num_of_masked_elements,),
-            )
+            # num_of_masked_elements = mask.sum()
+            # noise = torch.normal(
+            #     mean=spectrogram.mean(),
+            #     std=self.std_noise,
+            #     size=(num_of_masked_elements,),
+            # )
 
-            spectrogram[mask] = noise
+            spectrogram[mask] = DEFAULT_MEL_SPECTROGRAM_MEAN
 
         if not return_batch_dim:
             return spectrogram.squeeze(0)

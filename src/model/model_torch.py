@@ -89,7 +89,7 @@ class TorchvisionModel(ModelBase):
         return out
 
     def _step(self, batch, batch_idx, type: str):
-        audio, y, file_indices, dataset_indices = batch
+        audio, y, file_indices, item_indices = batch
 
         logits_pred = self.forward(audio)
         loss = self.loss_function(logits_pred, y)

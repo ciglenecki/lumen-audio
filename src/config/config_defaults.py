@@ -112,12 +112,12 @@ IDX_TO_GENRE = {v: k for k, v in GENRE_TO_IDX.items()}
 DEFAULT_NUM_LABELS = len(INSTRUMENT_TO_IDX)
 DEFAULT_IRMAS_TRAIN_SIZE = 6705
 DEFAULT_IRMAS_TEST_SIZE = 2874
-DEFAULT_RGB_CHANNELS = 3
+NUM_RGB_CHANNELS = 3
 
-DEFAULT_MFCC_FIXED_REPEAT_MEAN = torch.tensor([-7.3612, -7.3612, -7.3612])
-DEFAULT_MFCC_FIXED_REPEAT_STD = torch.tensor([56.4464, 56.4464, 56.4464])
-DEFAULT_MEL_SPECTROGRAM_FIXED_REPEAT_MEAN = torch.tensor([0.4125, 0.4125, 0.4125])
-DEFAULT_MEL_SPECTROGRAM_FIXED_REPEAT_STD = torch.tensor([2.3365, 2.3365, 2.3365])
+DEFAULT_MFCC_MEAN = -7.3612
+DEFAULT_MFCC_STD = 56.4464
+DEFAULT_MEL_SPECTROGRAM_MEAN = 0.4125
+DEFAULT_MEL_SPECTROGRAM_STD = 2.3365
 
 DEFAULT_AUDIO_EXTENSIONS = ["wav"]
 
@@ -324,6 +324,7 @@ class ConfigDefault(Serializable):
     use_fluffy: bool = create(False)
     """Use multiple optimizers for Fluffy."""
 
+    use_rgb: bool | None = create(None)
     # ======================== OPTIM ===========================
 
     optimizer: str = create(SupportedOptimizer.ADAMW)
@@ -414,6 +415,7 @@ class ConfigDefault(Serializable):
                 _augmentations_set.add(SupportedAugmentations.SUM_TWO_SAMPLES)
                 self.augmentations = list(_augmentations_set)
 
+        # Set typical weight decay for optimizers.
         if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAM:
             self.weight_decay = 0
         if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAMW:
@@ -474,6 +476,20 @@ class ConfigDefault(Serializable):
                 SupportedModels.RESNEXT101_64X4D: None,
             }
             self.max_num_width_samples = MAX_NUM_WIDTH_SAMPLE[self.model]
+
+        if self.use_rgb is None:
+            USE_RGB = {
+                SupportedModels.AST: False,
+                SupportedModels.WAV2VEC_CNN: None,
+                SupportedModels.WAV2VEC: None,
+                SupportedModels.EFFICIENT_NET_V2_S: True,
+                SupportedModels.EFFICIENT_NET_V2_M: True,
+                SupportedModels.EFFICIENT_NET_V2_L: True,
+                SupportedModels.RESNEXT50_32X4D: True,
+                SupportedModels.RESNEXT101_32X8D: True,
+                SupportedModels.RESNEXT101_64X4D: True,
+            }
+            self.use_rgb = USE_RGB[self.model]
 
     def dir_to_enum_and_path(
         self,

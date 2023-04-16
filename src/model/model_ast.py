@@ -9,6 +9,7 @@ from transformers import ASTConfig, ASTFeatureExtractor, ASTForAudioClassificati
 from transformers.modeling_outputs import SequenceClassifierOutput
 
 import src.config.config_defaults as config_defaults
+from src.config.argparse_with_config import ArgParseWithConfig
 from src.model.model_base import ModelBase
 from src.utils.utils_audio import (
     ast_spec_to_audio,
@@ -16,6 +17,7 @@ from src.utils.utils_audio import (
     play_audio,
     plot_spectrograms,
 )
+from src.utils.utils_dataset import get_example_val_sample
 
 
 class ASTModelWrapper(ModelBase):
@@ -61,7 +63,7 @@ class ASTModelWrapper(ModelBase):
         return out.loss, out.logits
 
     def _step(self, batch, batch_idx, type: str):
-        image, y, file_indices, dataset_indices = batch
+        image, y, file_indices, item_indices = batch
         # plot_spectrograms(spectrogram, y_axis=None)
         # play_audio(
         #     ast_spec_to_audio(spectrogram[0].unsqueeze(0)), sr=config.sampling_rate
@@ -88,8 +90,8 @@ class ASTModelWrapper(ModelBase):
                     [3, 3, 3],
                     [4, 4, 4]]))
             """
-
-            y_final_out, _ = scatter_max(y_pred, file_indices, dim=0)
+            pass
+            # y_final_out, _ = scatter_max(y_pred, file_indices, dim=0)
 
         return self.log_and_return_loss_step(
             loss=loss, y_pred=y_pred, y_true=y, type=type
@@ -112,6 +114,10 @@ class ASTModelWrapper(ModelBase):
 
 
 if __name__ == "__main__":
+    parser = ArgParseWithConfig()
+    args, config, pl_args = parser.parse_args()
+    audio = get_example_val_sample(config.sampling_rate)
+
     # example_audio_mel_audio()
     config_ = ASTConfig.from_pretrained(
         pretrained_model_name_or_path=config_defaults.TAG_AST_AUDIOSET,
@@ -135,7 +141,7 @@ if __name__ == "__main__":
 
     feature_extractor = ASTFeatureExtractor.from_pretrained(
         config_defaults.TAG_AST_AUDIOSET,
-        do_normalize=False,
+        normalize=False,
     )
 
     audio_torch, org_sample_rate = torchaudio.load(fname)
