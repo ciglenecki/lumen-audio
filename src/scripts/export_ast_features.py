@@ -20,15 +20,15 @@ current_working_dir = os.getcwd()
 
 
 def main():
+    config = config_defaults.get_default_config()
     BATCH_SIZE = 1
     OUTPUT_DIR = config.path_irmas_train_features
     OUTPUT_DIR.mkdir(exist_ok=True)
-
     # Create model and transform
-    model_name = config.DEFAULT_AST_PRETRAINED_TAG
-    config = ASTConfig.from_pretrained(pretrained_model_name_or_path=model_name)
+    model_name = config.TAG_AST_AUDIOSET
+    ast_conf = ASTConfig.from_pretrained(pretrained_model_name_or_path=model_name)
     model = ASTModel.from_pretrained(
-        model_name, config=config, ignore_mismatched_sizes=True
+        model_name, config=ast_conf, ignore_mismatched_sizes=True
     )
 
     model.eval()
@@ -36,7 +36,7 @@ def main():
 
     audio_transform = AudioTransformAST(
         sampling_rate=config.DEFAULT_SAMPLING_RATE,
-        pretrained_tag=config.DEFAULT_AST_PRETRAINED_TAG,
+        pretrained_tag=config.TAG_AST_AUDIOSET,
         augmentation_enums=[],
     )
 
@@ -48,7 +48,7 @@ def main():
 
     print("Saving embeddings to: ", str(OUTPUT_DIR))
     for data in tqdm(training_loader, total=len(training_loader)):
-        spectrogram, onehot_labels, audio_paths = data
+        spectrogram, onehot_labels, audio_paths, _ = data
         spectrogram, onehot_labels = spectrogram.to(device), onehot_labels.to(device)
         labels = torch.argmax(onehot_labels, dim=-1)  # extract label number
 

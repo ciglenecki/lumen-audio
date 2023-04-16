@@ -24,7 +24,7 @@ torchaudio==2.0.1
 pytorch-lightning==1.9.4
 torchmetrics==0.11.4
 torch-scatter==2.1.1
-pytorch_grad_cam
+grad-cam
 
 # --------- others --------- #
 pyrootutils    # standardizing the project root setup

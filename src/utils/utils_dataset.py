@@ -5,7 +5,15 @@ import torch
 
 from src.config import config_defaults
 from src.enums.enums import SupportedDatasets
+from src.utils.utils_audio import load_audio_from_file
 from src.utils.utils_exceptions import InvalidArgument, InvalidDataException
+
+
+def get_example_val_sample(target_sr: int = None) -> np.ndarray:
+    config = config_defaults.get_default_config()
+    audio_path = Path(config.path_irmas_test, "(02) dont kill the whale-4.wav")
+    audio, _ = load_audio_from_file(audio_path, target_sr=target_sr)
+    return audio
 
 
 def encode_instruments(instruments: list[str]) -> np.ndarray:

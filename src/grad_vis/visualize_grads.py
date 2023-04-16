@@ -1,16 +1,17 @@
+import operator
+
+import cv2
+import torch
 from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
+
+from src.config import config_defaults
+from src.data.datamodule import IRMASDataModule
+from src.enums.enums import SupportedAugmentations
+from src.features.audio_transform import get_audio_transform
+from src.features.chunking import get_collate_fn
 from src.grad_vis.parser import parse
 from src.model.model import get_model
-from src.features.audio_transform import get_audio_transform
-from src.enums.enums import SupportedAugmentations
-from src.features.chunking import get_collate_fn
-from src.data.datamodule import IRMASDataModule
-from src.config import config_defaults
-import operator
-import torch
-import numpy as np
-import cv2
 
 
 class MultiLabelBinaryClassifierOutputTarget:
@@ -22,8 +23,8 @@ class MultiLabelBinaryClassifierOutputTarget:
             model_output = model_output.unsqueeze(0)
         return -model_output[:, self.output_index]
 
-if __name__=="__main__":
 
+if __name__ == "__main__":
     args, config = parse()
     model_type = get_model(config, torch.nn.BCEWithLogitsLoss())
     model = model_type.load_from_checkpoint(args.path_to_model)
@@ -55,33 +56,33 @@ if __name__=="__main__":
 
     test_dataloader = datamodule.test_dataloader()
     for inputs, labels, ids in test_dataloader:
-        
         instrument_idx = config_defaults.INSTRUMENT_TO_IDX[args.label]
         targets = [MultiLabelBinaryClassifierOutputTarget(instrument_idx)]
         res = cam(input_tensor=inputs, targets=targets)
-        
+
         unique_ids = torch.unique(ids)
         grouped_tensors = []
         for id in unique_ids:
             indices = torch.where(ids == id)
 
-            grouped_example = torch.cat([
-                torch.tensor(i)for i in res[indices]
-            ], dim=-1)
+            grouped_example = torch.cat([torch.tensor(i) for i in res[indices]], dim=-1)
 
-            grouped_example_rgb = torch.cat([
-                torch.tensor(i) for i in inputs[indices]
-            ], dim=-1)
-            
-            grouped_example = (grouped_example - grouped_example.min()) / (grouped_example.max() - grouped_example.min())
-            grouped_example_rgb = (grouped_example_rgb - grouped_example_rgb.min()) / (grouped_example_rgb.max() - grouped_example_rgb.min())
+            grouped_example_rgb = torch.cat(
+                [torch.tensor(i) for i in inputs[indices]], dim=-1
+            )
+
+            grouped_example = (grouped_example - grouped_example.min()) / (
+                grouped_example.max() - grouped_example.min()
+            )
+            grouped_example_rgb = (grouped_example_rgb - grouped_example_rgb.min()) / (
+                grouped_example_rgb.max() - grouped_example_rgb.min()
+            )
 
             final_img = visualization = show_cam_on_image(
                 grouped_example_rgb.detach().cpu().permute(1, 2, 0).numpy(),
-                grouped_example.detach().cpu().numpy()
+                grouped_example.detach().cpu().numpy(),
             )
-            
+
             cv2.imshow("img", final_img)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
-        

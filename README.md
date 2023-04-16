@@ -14,6 +14,7 @@ Check the code architecture drawing: https://docs.google.com/drawings/d/1DDG480M
 Tasks:
 - [ ] create eval script which will caculate ALL metrics for the whole dataset
 - [ ] use validation examples in train (without data leakage), check what's the total time of audio in train and val
+- [ ] add a feature that uses different features per channel - convolutional models expect a 3-channel tensor, so lets make full use of those 3 channels
 
 Low priority tasks:
 - [ ] add fluffy support for all models
@@ -79,9 +80,7 @@ Mirko:
 - ![](img/attention_weights.png)
 
 Ivan:
-- [ ] cleanup audio transform for spectrograms (remove repeat)
-  - [ ] you still need to resize because the height isn't 224 (it's 128) but make sure the width is the same as the pretrained model image width
-- [ ] move spectrogram chunking to collate. Use caculate_spectrogram_duration_in_seconds to dynamically determine the audio length.
+- [ ] move spectrogram chunking to collate
 - [ ] train  ResNeXt 50_32x4d on MelSpectrogram
   - [ ] Compare how augmentations affect the final metrics:
     - [ ] with no augmentations
@@ -94,21 +93,51 @@ Ivan:
   - Shuffle parts of the spectrogram in the following way: (16x16 grid)
     - shuffle 15% of patches
     - electra, is the patch shuffled?
-- [ ] add gradient/activation visualization for a predicted image. Which parts of the image light up during inference?
+- [x] add gradient/activation visualization for a predicted image. Which parts of the image light up during inference?
 - ![](img/cnn_activations.png)
-- [ ] implement spectrogram normalization and std (norm,std) and use those paramters to preprocess the image before training.
+
 
 Vinko:
-- [ ] Perform exploratory data analysis on large scale
-  - [ ] how do spectrogram look before and after augmetations
-  - [ ] musical key finder https://github.com/jackmcarthur/musical-key-finder, which tonalities happen a lot?
-  - [ ] explore what's the corelation between genre and instruments
-  - [ ] explore what's the corelation between drums and instruments
-  - [ ] mfcc svm
-  - [ ] why is irmas bad???
-  - [ ] search kaggle and medium for exploratory data anal audio
-  - [ ] https://librosa.org/doc/main/feature.html
-  - [ ] https://rramnauth2220.github.io/blog/posts/code/200525-feature-extraction.html
+Vinko:
+
+Hyperparams:
+- sampling_rate = 16_000
+- n_fft = 400
+- hop_length = 400
+
+Caculate features for train for EACH instrument:
+- librosa.feature.spectral_centroid
+- librosa.feature.spectral_bandwidth
+- librosa.feature.spectral_contrast
+- librosa.feature.spectral_flatness
+- librosa.feature.spectral_rolloff
+- librosa.feature.mfcc (n_mfcc=10, which means this produces 10 features for the whole sequence, no matter how long it is)
+- use np.mean() to reduce any time/temporal dimension to one feature.
+
+**Dataframe for one instrument (guitar):**
+
+|                            | spectral_centroid | spectral_bandwidth |  ... | mfcc_1 | mfcc_2 | ... | mfcc_10 |
+| -------------------------- | ----------------: | -----------------: | ---: | -----: | -----: | --- | ------- |
+| 0 (guitar.wav from train)  |               0.3 |                0.1 |  ... |    0.5 |      3 | ... | 10      |
+| 1 (guitar2.wav from train) |               0.5 |               0.11 |  ... |   0.15 |      7 | ... | 0.3     |
+
+**Dataframe for whole train dataset**
+
+|                    | guitar | flute | **drums** | **is_drum_known** | spectral_centroid | spectral_bandwidth |  ... | mfcc_1 | mfcc_2 | ... | mfcc_10 |
+| ------------------ | ------ | ----- | --------- | --------- | ----------------: | -----------------: | ---: | -----: | -----: | --- | ------- |
+| 0 (wav from train) | 1      | 0     | 1         | 1         |               0.3 |                0.1 |  ... |    0.5 |      3 | ... | 10      |
+| 1 (wav from train) | 0      | 1     | 1         | 1         |               0.5 |               0.11 |  ... |   0.15 |      7 | ... | 0.3     |
+| 2 (wav from train) | 1      | 0     | 0         | 0         |               0.1 |               0.12 |  ... |   0.23 |      1 | ... | 0.34    |
+
+
+Caculate **correlation and covariance matrix** using the dataframe above.
+
+Add musical key finder https://github.com/jackmcarthur/musical-key-finder, which tonalities happen a lot?
+
+Search kaggle and medium for exploratory data analysis audio
+- [ ] https://librosa.org/doc/main/feature.html
+- [ ] https://rramnauth2220.github.io/blog/posts/code/200525-feature-extraction.html
+
 
 Else
 - audio features in the context of traditional approach => baseline
@@ -454,8 +483,8 @@ hop_length
 
 with a 25ms Hamming window every 10ms (hop)
 
-nfft = 1/(1 / 44100 * 1000) * 25
-hop = 1/(1 / 44100 * 1000) * 10
+nfft = 1/(1 / 44100 * 1000) * 25 = 1102
+hop = 1/(1 / 44100 * 1000) * 10 = 441
 
 ### Web
 
@@ -478,7 +507,10 @@ Tasks:
 - [x] implement chunking of the audio in inference and perform multiple forward pass
 - [x] implement saving the embeddings of each model for visualizations using dimensionality reduction
 - [x] think about and reserach what happens with variable sampling rate and how can we avoid issues with time length change, solution: chunking
-
+- [x] cleanup audio transform for spectrograms (remove repeat)
+  - [x] you still need to resize because the height isn't 224 (it's 128) but make sure the width is the same as the pretrained model image width
+- [x] use caculate_spectrogram_duration_in_seconds to dynamically determine the audio length.
+- [x] implement spectrogram normalization and std (norm,std) and use those paramters to preprocess the image before training.
 ______________________________________________________________________
 
 ## 🏆 Team members
