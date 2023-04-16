@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, Type, Union
+from typing import Callable
 
 import torch
 import torch.nn as nn

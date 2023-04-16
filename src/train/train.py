@@ -40,7 +40,7 @@ from src.utils.utils_functions import (
     stdout_to_file,
     to_yaml,
 )
-from src.utils.utils_train import print_modules
+from src.utils.utils_model import print_modules
 
 
 def experiment_setup(config: ConfigDefault, pl_args: Namespace):
@@ -88,13 +88,11 @@ if __name__ == "__main__":
 
     train_audio_transform: AudioTransformBase = get_audio_transform(
         config,
-        audio_transform_enum=config.audio_transform,
         spectrogram_augmentation=train_spectrogram_augmentation,
         waveform_augmentation=train_waveform_augmentation,
     )
     val_audio_transform: AudioTransformBase = get_audio_transform(
         config,
-        audio_transform_enum=config.audio_transform,
         spectrogram_augmentation=val_spectrogram_augmentation,
         waveform_augmentation=val_waveform_augmentation,
     )
@@ -132,7 +130,7 @@ if __name__ == "__main__":
         }
         loss_function = torch.nn.BCEWithLogitsLoss(**kwargs)
 
-    model = get_model(config, pl_args, loss_function=loss_function)
+    model = get_model(config, loss_function=loss_function)
     print_modules(model)
 
     # ================= SETUP CALLBACKS (auto checkpoint, tensorboard, early stopping...)========================

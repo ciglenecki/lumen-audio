@@ -1,8 +1,6 @@
-import math
 from typing import Any
 
 import torch
-import torch.nn as nn
 import torchmetrics
 from pytorch_lightning.loggers import TensorBoardLogger
 from torchmetrics.classification import MultilabelF1Score
@@ -101,7 +99,7 @@ class Wav2VecCnnWrapper(ModelBase):
         return logits_pred
 
     def _step(self, batch, batch_idx, type: str):
-        audio, y, file_indices = batch
+        audio, y, file_indices, item_indices = batch
 
         logits_pred = self.forward(audio)
         y_pred_prob = torch.sigmoid(logits_pred)

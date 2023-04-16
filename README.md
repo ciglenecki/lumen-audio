@@ -483,8 +483,8 @@ hop_length
 
 with a 25ms Hamming window every 10ms (hop)
 
-nfft = 1/(1 / 44100 * 1000) * 25
-hop = 1/(1 / 44100 * 1000) * 10
+nfft = 1/(1 / 44100 * 1000) * 25 = 1102
+hop = 1/(1 / 44100 * 1000) * 10 = 441
 
 ### Web
 
