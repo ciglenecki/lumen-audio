@@ -117,7 +117,8 @@ DEFAULT_MFCC_MEAN = -7.3612
 DEFAULT_MFCC_STD = 56.4464
 DEFAULT_MEL_SPECTROGRAM_MEAN = 0.4125
 DEFAULT_MEL_SPECTROGRAM_STD = 2.3365
-
+DEFAULT_AST_MEAN = -4.2677393
+DEFAULT_AST_STD = 4.5689974
 DEFAULT_AUDIO_EXTENSIONS = ["wav"]
 
 IRMAS_TRAIN_CLASS_COUNT = {
@@ -139,6 +140,7 @@ _default_augmentations_set = set(SupportedAugmentations)
 _default_augmentations_set.discard(SupportedAugmentations.RANDOM_ERASE)
 _default_augmentations_set.discard(SupportedAugmentations.CONCAT_N_SAMPLES)
 _default_augmentations_set.discard(SupportedAugmentations.SUM_TWO_SAMPLES)
+_default_augmentations_set.discard(SupportedAugmentations.BANDPASS_FILTER)
 _default_augmentations_list = list(_default_augmentations_set)
 
 TAG_AST_AUDIOSET = "MIT/ast-finetuned-audioset-10-10-0.4593"
@@ -235,7 +237,7 @@ class ConfigDefault(Serializable):
     aug_kwargs: dict | str = create(
         dict(
             stretch_factors=[0.6, 1.4],
-            time_inversion_p=0.5,
+            time_inversion_p=0.2,
             freq_mask_param=30,
             time_mask_param=30,
             hide_random_pixels_p=0.25,
@@ -390,43 +392,6 @@ class ConfigDefault(Serializable):
         self.train_dirs = [self.dir_to_enum_and_path(d) for d in self.train_dirs]
         self.val_dirs = [self.dir_to_enum_and_path(d) for d in self.val_dirs]
 
-        # Dynamically set the RGB option based on model's architecture
-        if self.model is not None and self.use_rgb is None:
-            USE_RGB = {
-                SupportedModels.AST: False,
-                SupportedModels.WAV2VEC_CNN: None,
-                SupportedModels.WAV2VEC: None,
-                SupportedModels.EFFICIENT_NET_V2_S: True,
-                SupportedModels.EFFICIENT_NET_V2_M: True,
-                SupportedModels.EFFICIENT_NET_V2_L: True,
-                SupportedModels.RESNEXT50_32X4D: True,
-                SupportedModels.RESNEXT101_32X8D: True,
-                SupportedModels.RESNEXT101_64X4D: True,
-            }
-            self.use_rgb = USE_RGB[self.model]
-
-        # Dynamically AST DSP attributes
-        if (
-            self.model == SupportedModels.AST
-            and self.pretrained
-            and self.pretrained_tag == TAG_AST_AUDIOSET
-        ):
-            self.n_fft = 400
-            self.hop_length = 160
-            self.n_mels = 128
-            if self.augmentations == get_default_value_for_field("augmentations", self):
-                _augmentations_set = set(self.augmentations)
-                _augmentations_set.discard(SupportedAugmentations.TIME_STRETCH)
-                _augmentations_set.add(SupportedAugmentations.CONCAT_N_SAMPLES)
-                _augmentations_set.add(SupportedAugmentations.SUM_TWO_SAMPLES)
-                self.augmentations = list(_augmentations_set)
-
-        # Set typical weight decay for optimizers.
-        if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAM:
-            self.weight_decay = 0
-        if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAMW:
-            self.weight_decay = 1e-2
-
     def _validate_train_args(self):
         """This function validates arguments before training."""
 
@@ -490,6 +455,49 @@ class ConfigDefault(Serializable):
                     f"Couldn't find pretrained tag for pretrained model {self.model}. Add a new tag to the DEFAULT_PRETRAINED_TAG_MAP map or pass the --pretrained-tag <tag> argument."
                 )
             self.pretrained_tag = DEFAULT_PRETRAINED_TAG_MAP[self.model]
+        # Dynamically set the RGB option based on model's architecture
+        if self.model is not None and self.use_rgb is None:
+            USE_RGB = {
+                SupportedModels.AST: False,
+                SupportedModels.WAV2VEC_CNN: None,
+                SupportedModels.WAV2VEC: None,
+                SupportedModels.EFFICIENT_NET_V2_S: True,
+                SupportedModels.EFFICIENT_NET_V2_M: True,
+                SupportedModels.EFFICIENT_NET_V2_L: True,
+                SupportedModels.RESNEXT50_32X4D: True,
+                SupportedModels.RESNEXT101_32X8D: True,
+                SupportedModels.RESNEXT101_64X4D: True,
+            }
+            self.use_rgb = USE_RGB[self.model]
+
+        # Dynamically AST DSP attributes and augmentations
+        if (
+            self.model == SupportedModels.AST
+            and self.pretrained
+            and self.pretrained_tag == TAG_AST_AUDIOSET
+        ):
+            self.n_fft = 400
+            self.hop_length = 160
+            self.n_mels = 128
+
+            if self.augmentations == get_default_value_for_field("augmentations", self):
+                _augmentations_set = set(self.augmentations)
+                _augmentations_set.discard(SupportedAugmentations.TIME_STRETCH)
+                _augmentations_set.discard(SupportedAugmentations.BANDPASS_FILTER)
+                _augmentations_set.add(SupportedAugmentations.CONCAT_N_SAMPLES)
+                _augmentations_set.add(SupportedAugmentations.SUM_TWO_SAMPLES)
+                self.augmentations = list(_augmentations_set)
+
+        # Set typical weight decay for optimizers.
+        if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAM:
+            self.weight_decay = 0
+        if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAMW:
+            self.weight_decay = 1e-2
+
+        if self.finetune_head and (self.finetune_head_epochs >= self.epochs):
+            raise InvalidArgument(
+                "Please set --finetune-heads-epochs int so it's less than --epochs int."
+            )
 
     def dir_to_enum_and_path(
         self,

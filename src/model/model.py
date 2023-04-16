@@ -80,6 +80,7 @@ def get_model(
         loss_function=loss_function,
         fluffy_config=fluffy_config,
         use_fluffy=config.use_fluffy,
+        config=config,
     )
 
     if model_enum not in model_constructor_map:

@@ -28,7 +28,7 @@ class SupportedAugmentations(Enum):
     RANDOM_ERASE = "random_erase"
     RANDOM_PIXELS = "radnom_pixels"
     COLOR_NOISE = "color_noise"
-    BANDPASS_FILTER = "bandpass"
+    BANDPASS_FILTER = "bandpass"  # Dangerous: changes the distribution of the sample in a meaningful way.
     PITCH = "pitch"
     TIMEINV = "timeinv"
     CONCAT_N_SAMPLES = "concat_n"

@@ -10,6 +10,7 @@ from pytorch_lightning.callbacks import BaseFinetuning
 from pytorch_lightning.loggers import TensorBoardLogger
 
 import src.config.config_defaults as config_defaults
+from src.config.config_defaults import ConfigDefault
 from src.enums.enums import MetricMode, OptimizeMetric, SupportedModels
 from src.model.fluffy import FluffyConfig
 from src.model.optimizers import (
@@ -51,6 +52,7 @@ class ModelBase(pl.LightningModule, ABC):
         log_per_instrument_metrics,
         pretrained_tag: str,
         fluffy_config: FluffyConfig | None = None,
+        config: None | ConfigDefault = None,
         *args,
         **kwargs,
     ) -> None:
@@ -122,6 +124,7 @@ class ModelBase(pl.LightningModule, ABC):
         self.finetune_head = finetune_head
         self.finetune_head_epochs = finetune_head_epochs
         self.weight_decay = weight_decay
+        self.config = config
 
         if self.finetune_head:
             # Initially set to learning rate to warmup. later ot will change to 'normal' lr
@@ -259,6 +262,7 @@ class ModelBase(pl.LightningModule, ABC):
         lr = ((lr_warmup * numerator) * numerator) ... * numerator))  =  lr_warmup * (numerator)^finetune_head_epochs
                                                     ^ multiplying finetune_head_epochs times
         """
+
         assert (
             isinstance(self.finetune_head_epochs, int) and self.finetune_head_epochs > 0
         )
@@ -266,6 +270,10 @@ class ModelBase(pl.LightningModule, ABC):
         self.finetune_until_step = (
             self.num_of_steps_in_epoch * self.finetune_head_epochs
         )
+
+        if self.finetune_until_step == 1:
+            self.finetune_lr_nominator = 1
+            return
 
         _a = self.lr_backbone / self.lr_warmup
         _b = self.finetune_until_step - 1

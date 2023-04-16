@@ -5,7 +5,7 @@ import torch_audiomentations
 from torchaudio.transforms import FrequencyMasking, TimeMasking
 from torchvision.transforms import RandomErasing
 
-from src.config.config_defaults import DEFAULT_MEL_SPECTROGRAM_MEAN, ConfigDefault
+from src.config.config_defaults import ConfigDefault
 from src.enums.enums import SupportedAugmentations
 
 
@@ -28,7 +28,7 @@ class WaveformAugmentation:
             sample_rate=self.sampling_rate,
         )
         self.bandpass_filter = torch_audiomentations.BandPassFilter(
-            p=1, sample_rate=self.sampling_rate
+            p=1, sample_rate=self.sampling_rate, target_rate=self.sampling_rate
         )
         self.pitch_shift = torch_audiomentations.PitchShift(
             p=1, sample_rate=self.sampling_rate
@@ -97,9 +97,11 @@ class SpectrogramAugmentation:
             return_batch_dim = False
             spectrogram = spectrogram.unsqueeze(0)
 
+        spec_mean = spectrogram.mean()
         if SupportedAugmentations.FREQ_MASK in self.augmentation_enums:
             spectrogram = FrequencyMasking(freq_mask_param=self.freq_mask_param)(
-                spectrogram
+                spectrogram,
+                mask_value=spec_mean,
             )
         if SupportedAugmentations.TIME_MASK in self.augmentation_enums:
             spectrogram = TimeMasking(time_mask_param=self.time_mask_param)(spectrogram)
@@ -112,14 +114,14 @@ class SpectrogramAugmentation:
                 torch.FloatTensor(*spectrogram.shape).uniform_()
                 < self.hide_random_pixels_p
             )
-            # num_of_masked_elements = mask.sum()
-            # noise = torch.normal(
-            #     mean=spectrogram.mean(),
-            #     std=self.std_noise,
-            #     size=(num_of_masked_elements,),
-            # )
+            num_of_masked_elements = mask.sum()
+            noise = torch.normal(
+                mean=spec_mean,
+                std=self.std_noise,
+                size=(num_of_masked_elements,),
+            )
 
-            spectrogram[mask] = DEFAULT_MEL_SPECTROGRAM_MEAN
+            spectrogram[mask] = noise
 
         if not return_batch_dim:
             return spectrogram.squeeze(0)

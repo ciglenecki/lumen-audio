@@ -90,7 +90,7 @@ def load_audio_from_file(
     elif method == "torch":
         # default normalize for torch is True
         waveform, original_sr = torchaudio.load(audio_path, normalize=normalize)
-        torch.mean(waveform, dim=0, keepdim=waveform)
+        torch.mean(waveform, dim=0, keepdim=False)
         if target_sr is not None:
             torchaudio.functional.resample(
                 waveform, orig_freq=original_sr, new_freq=target_sr
@@ -150,7 +150,10 @@ def plot_spectrograms(
     fig = plt.figure(figsize=(13, 9))
 
     # AST scale
-    norm = plt.Normalize(-1.25, 1.25) if y_axis is None else None
+    norm = plt.Normalize(-1.25, 1) if y_axis is None else None
+
+    format_str = "%+2.f dB" if y_axis is None else None
+    # y_axis_name = "%+2.f dB" if y_axis is None else None
     # Plot each spectrogram
     for i, spec in enumerate(spectrograms):
         title = titles[i] if titles is not None else ""
@@ -160,21 +163,22 @@ def plot_spectrograms(
         img = librosa.display.specshow(
             spec,
             y_axis=y_axis,
-            x_axis="time",
+            x_axis="s",
             sr=sampling_rate,
             hop_length=hop_length,
             n_fft=n_fft,
             norm=norm,
         )
+        plt.title(title, loc="left")
 
         # Add an Axes to the right of the main Axes.
         ax_divider = make_axes_locatable(ax)
         cax = ax_divider.append_axes("right", size="2%", pad="2%")
-        fig.colorbar(img, cax=cax, format="%+2.f dB")
+        fig.colorbar(img, cax=cax, format=format_str)
 
-        plt.title(title)
     plt.tight_layout()
     plt.show()
+    # plt.close()
 
 
 def audios_to_mel_spectrograms(

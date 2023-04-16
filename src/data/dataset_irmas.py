@@ -14,8 +14,12 @@ from tqdm import tqdm
 
 import src.config.config_defaults as config_defaults
 from src.features.audio_transform_base import AudioTransformBase
-from src.utils.utils_audio import load_audio_from_file
-from src.utils.utils_dataset import encode_instruments, multi_hot_encode
+from src.utils.utils_audio import load_audio_from_file, play_audio
+from src.utils.utils_dataset import (
+    decode_instrument_label,
+    encode_instruments,
+    multi_hot_encode,
+)
 
 # '*.(wav|mp3|flac)'
 # glob_expression = f"*\.({'|'.join(defaults.DEFAULT_AUDIO_EXTENSIONS)})"
@@ -146,16 +150,16 @@ class IRMASDatasetTrain(Dataset):
             ~original_labels.astype(bool)
         ]
 
-        unique_labels = True
+        allow_repeating_labels = False
 
         # The pool of negative indices isn't large enough so we have to sample same negative indices mulitple times
         if len(negative_indices_pool) < n:
-            unique_labels = False
+            allow_repeating_labels = True
 
         negative_indices = np.random.choice(
             negative_indices_pool,
             size=n,
-            replace=unique_labels,
+            replace=allow_repeating_labels,
         )
 
         negative_audios = []
@@ -291,9 +295,9 @@ class IRMASDatasetTrain(Dataset):
         #     ]
         # )
         # print("first time")
-        # play_audio(audio, sr=self.sampling_rate)
+        # play_audio(audio, sampling_rate=self.sampling_rate)
         # print("second time")
-        # play_audio(audio, sr=self.sampling_rate)
+        # play_audio(audio, sampling_rate=self.sampling_rate)
         return features, labels, index
 
 

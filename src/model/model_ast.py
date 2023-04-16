@@ -57,35 +57,50 @@ class ASTModelWrapper(ModelBase):
         return out.loss, out.logits
 
     def _step(self, batch, batch_idx, type: str):
-        image, y, file_indices, item_indices = batch
-        # plot_spectrograms(spectrogram, y_axis=None)
-        # play_audio(
-        #     ast_spec_to_audio(spectrogram[0].unsqueeze(0)), sr=config.sampling_rate
-        # )
-        loss, logits_pred = self.forward(image, labels=y)
-        y_pred_prob = torch.sigmoid(logits_pred)
-        y_pred = (y_pred_prob >= 0.5).float()
+        """
+        - batch_size: 4.
+        - `batch` size can actually be bigger (10) because of chunking.
+        - Split the `batch` with batch_size
+        - sub_batches = [[4, height, width], [4, height, width], [2, height, width]]
+        """
 
+        images, y, file_indices, item_indices = batch
+
+        # plot_spectrograms(
+        #     images,
+        #     sampling_rate=self.config.sampling_rate,
+        #     n_fft=self.config.n_fft,
+        #     n_mels=self.config.n_mels,
+        #     hop_length=self.config.hop_length,
+        #     y_axis=None,
+        # )
+
+        sub_batches = torch.split(images, self.batch_size, dim=0)
+        loss = 0
+        y_pred_prob = torch.zeros((len(images), self.num_labels), device=self.device)
+        y_pred = torch.zeros((len(images), self.num_labels), device=self.device)
+
+        passed_images = 0
+        for sub_batch_image in sub_batches:
+            b_size = len(sub_batch_image)
+            start = passed_images
+            end = passed_images + b_size
+
+            b_y = y[start:end]
+            b_loss, b_logits_pred = self.forward(sub_batch_image, labels=b_y)
+            b_y_pred_prob = torch.sigmoid(b_logits_pred)
+            b_y_pred = (b_y_pred_prob >= 0.5).float()
+
+            loss += b_loss * b_size
+            y_pred_prob[start:end] = b_y_pred_prob
+            y_pred[start:end] = b_y_pred
+
+            passed_images += b_size
         if type != "train":
-            """
-            >>> a
-            tensor([[0.6744, 0.7307, 0.6614],
-                    [0.1346, 0.0142, 0.5730],
-                    [0.3153, 0.0235, 0.7663],
-                    [0.4487, 0.9715, 0.9067],
-                    [0.3930, 0.9055, 0.6433]])
-            >>> ids = torch.tensor([0,0,0,1,2])
-            >>> ids
-            tensor([0, 0, 0, 1, 2])
-            >>> scatter_max(a,ids,dim=0)
-            (tensor([[0.6744, 0.7307, 0.7663],
-                    [0.4487, 0.9715, 0.9067],
-                    [0.3930, 0.9055, 0.6433]]), tensor([[0, 0, 2],
-                    [3, 3, 3],
-                    [4, 4, 4]]))
-            """
+            pass
             # y_final_out, _ = scatter_max(y_pred, file_indices, dim=0)
 
+        loss = loss / len(images)
         return self.log_and_return_loss_step(
             loss=loss, y_pred=y_pred, y_true=y, type=type
         )
@@ -189,5 +204,5 @@ if __name__ == "__main__":
 
     # play_audio(torch_reconstructed, sr=target_sr, max_seconds=3)
     # play_audio(lib_reconstruct, sr=target_sr, max_seconds=3)
-    play_audio(inv_torch.squeeze(0).numpy(), sr=target_sr, max_seconds=3)
-    play_audio(inv_lib.squeeze(0).numpy(), sr=target_sr, max_seconds=3)
+    play_audio(inv_torch.squeeze(0).numpy(), sampling_rate=target_sr, max_seconds=3)
+    play_audio(inv_lib.squeeze(0).numpy(), sampling_rate=target_sr, max_seconds=3)

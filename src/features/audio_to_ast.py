@@ -3,7 +3,11 @@ import torch
 from transformers import ASTFeatureExtractor
 
 from src.config.argparse_with_config import ArgParseWithConfig
-from src.config.config_defaults import TAG_AST_AUDIOSET
+from src.config.config_defaults import (
+    DEFAULT_AST_MEAN,
+    DEFAULT_AST_STD,
+    TAG_AST_AUDIOSET,
+)
 from src.features.audio_transform_base import AudioTransformBase
 from src.utils.utils_audio import plot_spectrograms, spec_width_to_num_samples
 from src.utils.utils_dataset import get_example_val_sample
@@ -33,6 +37,7 @@ class AudioTransformAST(AudioTransformBase):
                 sampling_rate=self.sampling_rate,
                 num_mel_bins=self.n_mels,
                 max_length=self.max_num_width_samples,
+                do_normalize=True,
             )
         else:
             print(
@@ -48,6 +53,17 @@ class AudioTransformAST(AudioTransformBase):
         self.max_audio_length = spec_width_to_num_samples(
             self.image_size[-1], self.hop_length
         )
+
+    @staticmethod
+    def ast_feature_to_melspec(spectrogram: torch.Tensor):
+        denormalized = (spectrogram * DEFAULT_AST_STD * 2) + DEFAULT_AST_MEAN
+        return AudioTransformAST.denorm_ast_feature_to_melspec(denormalized)
+
+    @staticmethod
+    def denorm_ast_feature_to_melspec(spectrogram: torch.Tensor):
+        spectrogram = spectrogram.exp()
+        spectrogram = spectrogram.transpose(-2, -1)
+        return spectrogram
 
     def process(
         self, audio: torch.Tensor | np.ndarray
