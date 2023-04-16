@@ -56,7 +56,7 @@ class AudioTransformAST(AudioTransformBase):
         if self.waveform_augmentation is not None:
             audio = self.waveform_augmentation(audio)
 
-        # Split waveform because feature extraction because transformer has a limit (trunc/padding)
+        # Split waveform because feature extraction because transformer has a limit (trunc/padding). It creates fixed sized spectrogram. If audio is too long the spectrogram won't contain all of the audio.
         if len(audio) > self.max_audio_length:
             audio_tensors: tuple[torch.Tensor] = torch.tensor(audio).split(
                 self.max_audio_length

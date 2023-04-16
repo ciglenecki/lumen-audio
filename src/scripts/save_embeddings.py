@@ -7,16 +7,11 @@ python3 src/scripts/save_embeddings.py --model EFFICIENT_NET_V2_S --audio-transf
 """
 import bisect
 import json
-import os
-from itertools import chain
 from pathlib import Path
 
 import torch
 import torch_scatter
-import transformers.utils.fx
-from torch.fx import symbolic_trace
 from torchvision.models.feature_extraction import (
-    _get_leaf_modules_for_ops,
     create_feature_extractor,
     get_graph_node_names,
 )
@@ -33,18 +28,15 @@ from src.enums.enums import (
     SupportedModels,
 )
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
-from src.features.augmentations import get_augmentations
-from src.features.chunking import add_rgb_channel, get_collate_fn
+from src.features.chunking import get_collate_fn
 from src.model.model import get_model, model_constructor_map
 from src.utils.utils_dataset import calc_instrument_weight
 from src.utils.utils_exceptions import InvalidArgument, UnsupportedModel
-from src.utils.utils_model import find_model_parameter
 
 
 def parse_args():
     parser = ArgParseWithConfig()
     parser.add_argument("--checkpoint", type=Path)
-    # parser.add_argument("--pretrained-tag", type=str)
     parser.add_argument("--output-dir", type=Path, default=Path("embeddings"))
     parser.add_argument("--target-model-layer", type=str)
 
@@ -100,7 +92,6 @@ def get_feature_extractor(
             f"Please add appropriate target_model_layer for model {model_enum}. You can pass the --target-model-layer instead."
         )
     print(get_graph_node_names(model))
-    # target_layer_str, _ = find_model_parameter(model, target_model_layer)
 
     model = create_feature_extractor(
         model, return_nodes={target_model_layer: "target_layer"}
@@ -108,33 +99,10 @@ def get_feature_extractor(
     return model, forward_kwargs
 
 
-# def prepare_model_input(spectrogram: torch.Tensor, model_enum: SupportedModels):
-#     if model_enum == SupportedModels.AST:
-#         return spectrogram
-#     elif model_enum in [
-#         SupportedModels.EFFICIENT_NET_V2_S,
-#         SupportedModels.EFFICIENT_NET_V2_M,
-#         SupportedModels.EFFICIENT_NET_V2_L,
-#         SupportedModels.RESNEXT50_32X4D,
-#         SupportedModels.RESNEXT101_32X8D,
-#         SupportedModels.RESNEXT101_64X4D,
-#     ]:
-#         return add_rgb_channel(spectrogram)
-#     elif model_enum == SupportedModels.WAV2VEC:
-#         target_model_layer = "backbone.layers.11.final_layer_norm"
-#     elif model_enum == SupportedModels.WAV2VEC_CNN:
-#         target_model_layer = "backbone.conv_layers.6.activation"
-#     return spectrogram
-
-
 def clean_embeddings_after_foward(embeddings: torch.Tensor, model: SupportedModels):
     if model == SupportedModels.AST:
         return embeddings["pooler_output"]
     return embeddings["target_layer"]
-    assert (
-        embeddings.size() == 2
-    ), f"Embeddings {embeddings.shape} should be [Batch size, flattened embeddings]"
-    return embeddings
 
 
 if __name__ == "__main__":
