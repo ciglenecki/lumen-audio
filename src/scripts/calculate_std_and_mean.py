@@ -55,7 +55,7 @@ if __name__ == "__main__":
     train_dataloader = datamodule.train_dataloader()
 
     mean = 0.0
-    for images, _, _ in tqdm(train_dataloader):
+    for images, _, _, _ in tqdm(train_dataloader):
         batch_samples = images.size(0)
         images = images.view(batch_samples, images.size(1), -1)
         mean += images.mean(2).sum(0)
@@ -64,7 +64,7 @@ if __name__ == "__main__":
     print(f"Mean for each channel is: {mean}")
 
     var = 0.0
-    for images, _, _ in tqdm(train_dataloader):
+    for images, _, _, _ in tqdm(train_dataloader):
         batch_samples = images.size(0)
         images = images.view(batch_samples, images.size(1), -1)
         var += ((images - mean.unsqueeze(1)) ** 2).sum([0, 2])

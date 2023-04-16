@@ -55,7 +55,7 @@ if __name__ == "__main__":
     )
 
     test_dataloader = datamodule.test_dataloader()
-    for inputs, labels, ids in test_dataloader:
+    for inputs, labels, ids, _ in test_dataloader:
         instrument_idx = config_defaults.INSTRUMENT_TO_IDX[args.label]
         targets = [MultiLabelBinaryClassifierOutputTarget(instrument_idx)]
         res = cam(input_tensor=inputs, targets=targets)
