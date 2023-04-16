@@ -228,7 +228,7 @@ class ConfigDefault(Serializable):
     """Do normalize audio"""
 
     max_num_width_samples: float | None = create(None)
-    """Maximum number of seconds of audio which will be processed at one time. Useful for limiting transformers."""
+    """Maximum number samples along the time dimension. For spectrogram: width truncation, for audio: waveform truncation. Useful for limiting transformer input size."""
 
     augmentations: list[SupportedAugmentations] = create(_default_augmentations_list)
     """Transformation which will be performed on audio and labels"""
@@ -391,14 +391,21 @@ class ConfigDefault(Serializable):
         self.train_dirs = [self.dir_to_enum_and_path(d) for d in self.train_dirs]
         self.val_dirs = [self.dir_to_enum_and_path(d) for d in self.val_dirs]
 
-        # Dynamically set pretrained tag
-        if self.model is not None and self.pretrained and self.pretrained_tag is None:
-            if self.model not in DEFAULT_PRETRAINED_TAG_MAP:
-                raise InvalidArgument(
-                    f"Couldn't find pretrained tag for pretrained model {self.model}. Add a new tag to the DEFAULT_PRETRAINED_TAG_MAP map or pass the --pretrained-tag <tag> argument."
-                )
-            self.pretrained_tag = DEFAULT_PRETRAINED_TAG_MAP[self.model]
-
+        # Dynamically set the RGB option based on model's architecture
+        if self.model is not None and self.use_rgb is None:
+            USE_RGB = {
+                SupportedModels.AST: False,
+                SupportedModels.WAV2VEC_CNN: None,
+                SupportedModels.WAV2VEC: None,
+                SupportedModels.EFFICIENT_NET_V2_S: True,
+                SupportedModels.EFFICIENT_NET_V2_M: True,
+                SupportedModels.EFFICIENT_NET_V2_L: True,
+                SupportedModels.RESNEXT50_32X4D: True,
+                SupportedModels.RESNEXT101_32X8D: True,
+                SupportedModels.RESNEXT101_64X4D: True,
+            }
+            self.use_rgb = USE_RGB[self.model]
+            
         # Dynamically AST DSP attributes
         if (
             self.model == SupportedModels.AST
@@ -477,19 +484,13 @@ class ConfigDefault(Serializable):
             }
             self.max_num_width_samples = MAX_NUM_WIDTH_SAMPLE[self.model]
 
-        if self.use_rgb is None:
-            USE_RGB = {
-                SupportedModels.AST: False,
-                SupportedModels.WAV2VEC_CNN: None,
-                SupportedModels.WAV2VEC: None,
-                SupportedModels.EFFICIENT_NET_V2_S: True,
-                SupportedModels.EFFICIENT_NET_V2_M: True,
-                SupportedModels.EFFICIENT_NET_V2_L: True,
-                SupportedModels.RESNEXT50_32X4D: True,
-                SupportedModels.RESNEXT101_32X8D: True,
-                SupportedModels.RESNEXT101_64X4D: True,
-            }
-            self.use_rgb = USE_RGB[self.model]
+        # Dynamically set pretrained tag
+        if self.model is not None and self.pretrained and self.pretrained_tag is None:
+            if self.model not in DEFAULT_PRETRAINED_TAG_MAP:
+                raise InvalidArgument(
+                    f"Couldn't find pretrained tag for pretrained model {self.model}. Add a new tag to the DEFAULT_PRETRAINED_TAG_MAP map or pass the --pretrained-tag <tag> argument."
+                )
+            self.pretrained_tag = DEFAULT_PRETRAINED_TAG_MAP[self.model]
 
     def dir_to_enum_and_path(
         self,

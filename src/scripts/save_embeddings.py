@@ -1,7 +1,8 @@
-"""python3 src/scripts/save_embeddings.py --checkpoint models/04-13-14-20-
-12_GoodSinisa_ast/checkpoints/04-13-14-20-12_GoodSinisa_ast_val_acc_0.0000_val_loss_0.6611.ckpt.
+"""
 
---model AST --audio-transform AST.
+python3 src/scripts/save_embeddings.py  --model EFFICIENT_NET_V2_S --audio-transform MEL_SPECTROGRAM
+
+--checkpoint models/04-13-14-20-12_GoodSinisa_ast/checkpoints/04-13-14-20-12_GoodSinisa_ast_val_acc_0.0000_val_loss_0.6611.ckpt --model AST --audio-transform AST
 """
 import bisect
 import json
@@ -32,7 +33,7 @@ from src.enums.enums import (
 )
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
 from src.features.augmentations import get_augmentations
-from src.features.chunking import get_collate_fn
+from src.features.chunking import add_rgb_channel, get_collate_fn
 from src.model.model import get_model, model_constructor_map
 from src.utils.utils_dataset import calc_instrument_weight
 from src.utils.utils_exceptions import InvalidArgument, UnsupportedModel
@@ -42,6 +43,7 @@ from src.utils.utils_model import find_model_parameter
 def parse_args():
     parser = ArgParseWithConfig()
     parser.add_argument("--checkpoint", type=Path)
+    # parser.add_argument("--pretrained-tag", type=str)
     parser.add_argument("--output-dir", type=Path, default=Path("embeddings"))
     parser.add_argument("--target-model-layer", type=str)
 
@@ -56,7 +58,7 @@ def parse_args():
             f"Please provide --audio-transform {[e.name for e in AudioTransforms]}"
         )
 
-    if int(bool(config.pretrained_tag)) + int(bool(args.checkpoint)) == 1:
+    if int(config.pretrained_tag is not None) + int(args.checkpoint is not None) != 1:
         raise InvalidArgument(
             "Please provide either --pretrained-tag or --checkpoint <PATH>"
         )
@@ -68,47 +70,65 @@ def get_feature_extractor(
     model: torch.nn.Module, model_enum: SupportedModels, target_model_layer: str = None
 ) -> tuple[torch.nn.Module, dict]:
     forward_kwargs = {}
-    if args.target_model_layer is None:
-        if model_enum == SupportedModels.AST:
-            model = model.backbone.audio_spectrogram_transformer
-            forward_kwargs = dict(
-                head_mask=None, output_attentions=False, return_dict=True
-            )
-            return model, forward_kwargs
 
-        elif model_enum == SupportedModels.WAV2VEC:
-            args.target_model_layer = "layers.11.final_layer_norm"
-        elif model_enum == SupportedModels.WAV2VEC_CNN:
-            args.target_model_layer = "conv_layers.6.activation"
-        elif model_enum == SupportedModels.EFFICIENT_NET_V2_S:
-            args.target_model_layer = "features.7.2"
-        elif model_enum == SupportedModels.EFFICIENT_NET_V2_M:
-            args.target_model_layer = "features.8.2"
-        elif model_enum == SupportedModels.EFFICIENT_NET_V2_L:
-            args.target_model_layer = "features.8.2"
-        elif model_enum == SupportedModels.RESNEXT50_32X4D:
-            args.target_model_layer = "layer4.2.relu"
-        elif model_enum == SupportedModels.RESNEXT101_32X8D:
-            args.target_model_layer = "layer4.2.relu"
-        elif model_enum == SupportedModels.RESNEXT101_64X4D:
-            args.target_model_layer = "layer4.2.relu"
-        else:
-            raise UnsupportedModel(
-                f"Please add appropriate target_model_layer for model {model_enum}. You can pass the --target-model-layer instead."
-            )
-        target_layer_str, _ = find_model_parameter(model, args.target_model_layer)
-        model = create_feature_extractor(
-            model, return_nodes={target_layer_str: "target_layer"}
-        )
+    if model_enum == SupportedModels.AST:
+        model = model.backbone.audio_spectrogram_transformer
+        forward_kwargs = dict(head_mask=None, output_attentions=False, return_dict=True)
         return model, forward_kwargs
 
-    pass
+    if target_model_layer is not None:
+        pass
+    elif model_enum == SupportedModels.WAV2VEC:
+        target_model_layer = "backbone.layers.11.final_layer_norm"
+    elif model_enum == SupportedModels.WAV2VEC_CNN:
+        target_model_layer = "backbone.conv_layers.6.activation"
+    elif model_enum == SupportedModels.EFFICIENT_NET_V2_S:
+        target_model_layer = "backbone.flatten"
+    elif model_enum == SupportedModels.EFFICIENT_NET_V2_M:
+        target_model_layer = "backbone.flatten"
+    elif model_enum == SupportedModels.EFFICIENT_NET_V2_L:
+        target_model_layer = "backbone.flatten"
+    elif model_enum == SupportedModels.RESNEXT50_32X4D:
+        target_model_layer = "backbone.flatten"
+    elif model_enum == SupportedModels.RESNEXT101_32X8D:
+        target_model_layer = "backbone.flatten"
+    elif model_enum == SupportedModels.RESNEXT101_64X4D:
+        target_model_layer = "backbone.flatten"
+    else:
+        raise UnsupportedModel(
+            f"Please add appropriate target_model_layer for model {model_enum}. You can pass the --target-model-layer instead."
+        )
+    target_layer_str, _ = find_model_parameter(model, target_model_layer)
+
+    model = create_feature_extractor(
+        model, return_nodes={target_layer_str: "target_layer"}
+    )
+    return model, forward_kwargs
+
+
+# def prepare_model_input(spectrogram: torch.Tensor, model_enum: SupportedModels):
+#     if model_enum == SupportedModels.AST:
+#         return spectrogram
+#     elif model_enum in [
+#         SupportedModels.EFFICIENT_NET_V2_S,
+#         SupportedModels.EFFICIENT_NET_V2_M,
+#         SupportedModels.EFFICIENT_NET_V2_L,
+#         SupportedModels.RESNEXT50_32X4D,
+#         SupportedModels.RESNEXT101_32X8D,
+#         SupportedModels.RESNEXT101_64X4D,
+#     ]:
+#         return add_rgb_channel(spectrogram)
+#     elif model_enum == SupportedModels.WAV2VEC:
+#         target_model_layer = "backbone.layers.11.final_layer_norm"
+#     elif model_enum == SupportedModels.WAV2VEC_CNN:
+#         target_model_layer = "backbone.conv_layers.6.activation"
+#     return spectrogram
 
 
 def clean_embeddings_after_foward(embeddings: torch.Tensor, model: SupportedModels):
     if model == SupportedModels.AST:
         return embeddings["pooler_output"]
-
+    return embeddings["target_layer"]
     assert (
         embeddings.size() == 2
     ), f"Embeddings {embeddings.shape} should be [Batch size, flattened embeddings]"
@@ -122,27 +142,21 @@ if __name__ == "__main__":
     base_experiment_name = (
         Path(args.checkpoint).stem
         if args.checkpoint
-        else config.model + config.pretrained_tag
+        else config.model.value + config.pretrained_tag
     )
     config.batch_size = 1
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    (
-        train_spectrogram_augmentation,
-        train_waveform_augmentation,
-        val_spectrogram_augmentation,
-        val_waveform_augmentation,
-    ) = get_augmentations(config)
 
     train_audio_transform: AudioTransformBase = get_audio_transform(
         config,
-        spectrogram_augmentation=train_spectrogram_augmentation,
-        waveform_augmentation=train_waveform_augmentation,
+        spectrogram_augmentation=None,
+        waveform_augmentation=None,
     )
     val_audio_transform: AudioTransformBase = get_audio_transform(
         config,
-        spectrogram_augmentation=val_spectrogram_augmentation,
-        waveform_augmentation=val_waveform_augmentation,
+        spectrogram_augmentation=None,
+        waveform_augmentation=None,
     )
 
     concat_n_samples = (
@@ -208,7 +222,8 @@ if __name__ == "__main__":
             # Get exact label n label number
             labels = torch.argmax(onehot_labels, dim=-1)
 
-            # Create and merge embeddings for each file
+            # Create and merge embeddings for each  file
+            # spectrogram = prepare_model_input(spectrogram)
             embeddings = model.forward(spectrogram, **forward_kwargs)
             embeddings = clean_embeddings_after_foward(embeddings, config.model)
             embeddings = torch_scatter.scatter_mean(embeddings, file_indices, dim=0)
