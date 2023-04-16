@@ -85,7 +85,9 @@ class AudioTransformAST(AudioTransformBase):
         )["input_values"]
 
         if self.spectrogram_augmentation is not None:
-            spectrogram = self.spectrogram_augmentation(spectrogram)  # [1, 1024, 128]
+            spectrogram = self.spectrogram_augmentation(
+                spectrogram
+            )  # [Batch, 1024, 128]
 
         assert len(spectrogram.shape) == 3, "Spectrogram chunks are 2D images"
         return spectrogram

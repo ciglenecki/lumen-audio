@@ -3,7 +3,8 @@ import argparse
 import simple_parsing
 import torch
 
-from src.config.config_defaults import ConfigDefault
+from src.config.config_defaults import ConfigDefault, get_default_config
+from src.enums.enums import SupportedModels
 
 
 def parse():

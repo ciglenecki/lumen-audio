@@ -10,6 +10,7 @@ from enum import Enum
 from pathlib import Path
 
 import pyrootutils
+import torch
 from simple_parsing.helpers import Serializable
 
 from src.enums.enums import (
