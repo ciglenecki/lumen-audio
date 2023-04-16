@@ -62,6 +62,11 @@ def parse_args():
 def get_feature_extractor(
     model: torch.nn.Module, model_enum: SupportedModels, target_model_layer: str = None
 ) -> tuple[torch.nn.Module, dict]:
+    """Get only the subset of the original model.
+
+    This is usually something that ends with a flattened linaer layer.
+    """
+    # Different models might have different forward passes
     forward_kwargs = {}
 
     if model_enum == SupportedModels.AST:
@@ -71,6 +76,7 @@ def get_feature_extractor(
 
     if model_enum == SupportedModels.WAV2VEC:
         return model.backbone
+
     if target_model_layer is not None:
         pass
     elif model_enum == SupportedModels.WAV2VEC_CNN:
@@ -91,6 +97,7 @@ def get_feature_extractor(
         raise UnsupportedModel(
             f"Please add appropriate target_model_layer for model {model_enum}. You can pass the --target-model-layer instead."
         )
+
     print(get_graph_node_names(model))
 
     model = create_feature_extractor(
@@ -99,7 +106,11 @@ def get_feature_extractor(
     return model, forward_kwargs
 
 
-def clean_embeddings_after_foward(embeddings: torch.Tensor, model: SupportedModels):
+def extract_embeddings(embeddings: torch.Tensor, model: SupportedModels):
+    """Some models may output a dictionary instead of a tensor.
+
+    This function unpacks the output of each model
+    """
     if model == SupportedModels.AST:
         return embeddings["pooler_output"]
     return embeddings["target_layer"]
@@ -114,7 +125,6 @@ if __name__ == "__main__":
         if args.checkpoint
         else config.model.value + config.pretrained_tag
     )
-    config.batch_size = 1
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -129,11 +139,6 @@ if __name__ == "__main__":
         waveform_augmentation=None,
     )
 
-    concat_n_samples = (
-        config.aug_kwargs["concat_n_samples"]
-        if SupportedAugmentations.CONCAT_N_SAMPLES in config.augmentations
-        else None
-    )
     collate_fn = get_collate_fn(config)
     datamodule = IRMASDataModule(
         train_dirs=config.train_dirs,
@@ -146,34 +151,25 @@ if __name__ == "__main__":
         val_audio_transform=val_audio_transform,
         collate_fn=collate_fn,
         normalize_audio=config.normalize_audio,
-        train_only_dataset=config.train_only_dataset,
-        concat_n_samples=concat_n_samples,
-        sum_two_samples=SupportedAugmentations.SUM_TWO_SAMPLES in config.augmentations,
-        use_weighted_train_sampler=config.use_weighted_train_sampler,
+        train_only_dataset=False,
+        concat_n_samples=None,
+        sum_two_samples=False,
+        use_weighted_train_sampler=False,
     )
-    datamodule.setup()
-
-    if config.loss_function == SupportedLossFunctions.CROSS_ENTROPY:
-        loss_function = torch.nn.BCEWithLogitsLoss(**config.loss_function_kwargs)
-    if config.loss_function == SupportedLossFunctions.CROSS_ENTROPY_POS_WEIGHT:
-        kwargs = {
-            **config.loss_function_kwargs,
-            "pos_weight": calc_instrument_weight(datamodule.count_classes()),
-        }
-        loss_function = torch.nn.BCEWithLogitsLoss(**kwargs)
 
     if args.checkpoint:
         model_constructor = model_constructor_map[config.model]
         model = model_constructor.load_from_checkpoint(args.checkpoint)
     elif config.pretrained_tag:
-        model = get_model(config, loss_function=loss_function)
+        model = get_model(config, loss_function=torch.nn.BCEWithLogitsLoss())
 
     model, forward_kwargs = get_feature_extractor(
         model, model_enum=config.model, target_model_layer=args.target_model_layer
     )
     model.eval()
     model = model.to(device)
-    print("Saving embeddings to:", args.output_dir)
+
+    print("Saving embeddings to directory:", args.output_dir)
 
     train_data_loader = datamodule.train_dataloader()
     val_data_loader = datamodule.val_dataloader()
@@ -195,7 +191,7 @@ if __name__ == "__main__":
             # Create and merge embeddings for each  file
             # spectrogram = prepare_model_input(spectrogram)
             embeddings = model.forward(spectrogram, **forward_kwargs)
-            embeddings = clean_embeddings_after_foward(embeddings, config.model)
+            embeddings = extract_embeddings(embeddings, config.model)
             embeddings = torch_scatter.scatter_mean(embeddings, file_indices, dim=0)
             labels = torch_scatter.scatter_max(labels, file_indices, dim=0)
 

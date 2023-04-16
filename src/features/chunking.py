@@ -459,6 +459,3 @@ def test_collate_fn_spectrogram_diff_sizes():
     assert torch.all(item_indices[id_1] == dataset_id_1)
     assert torch.all(item_indices[id_2] == dataset_id_2)
     assert torch.all(item_indices[id_3] == dataset_id_3)
-
-
-test_collate_fn_spectrogram_diff_sizes()
