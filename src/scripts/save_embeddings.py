@@ -1,8 +1,9 @@
-"""
+"""python3 src/scripts/save_embeddings.py  --model EFFICIENT_NET_V2_S --audio-transform
+MEL_SPECTROGRAM.
 
-python3 src/scripts/save_embeddings.py  --model EFFICIENT_NET_V2_S --audio-transform MEL_SPECTROGRAM
+python3 src/scripts/save_embeddings.py --checkpoint models/04-13-14-20-12_GoodSinisa_ast/checkpoints/04-13-14-20-12_GoodSinisa_ast_val_acc_0.0000_val_loss_0.6611.ckpt --model AST --audio-transform AST
 
---checkpoint models/04-13-14-20-12_GoodSinisa_ast/checkpoints/04-13-14-20-12_GoodSinisa_ast_val_acc_0.0000_val_loss_0.6611.ckpt --model AST --audio-transform AST
+python3 src/scripts/save_embeddings.py --model EFFICIENT_NET_V2_S --audio-transform MEL_SPECTROGRAM --pretrained-tag IMAGENET1K_V1
 """
 import bisect
 import json
@@ -76,32 +77,33 @@ def get_feature_extractor(
         forward_kwargs = dict(head_mask=None, output_attentions=False, return_dict=True)
         return model, forward_kwargs
 
+    if model_enum == SupportedModels.WAV2VEC:
+        return model.backbone
     if target_model_layer is not None:
         pass
-    elif model_enum == SupportedModels.WAV2VEC:
-        target_model_layer = "backbone.layers.11.final_layer_norm"
     elif model_enum == SupportedModels.WAV2VEC_CNN:
         target_model_layer = "backbone.conv_layers.6.activation"
     elif model_enum == SupportedModels.EFFICIENT_NET_V2_S:
-        target_model_layer = "backbone.flatten"
+        target_model_layer = "flatten"
     elif model_enum == SupportedModels.EFFICIENT_NET_V2_M:
-        target_model_layer = "backbone.flatten"
+        target_model_layer = "flatten"
     elif model_enum == SupportedModels.EFFICIENT_NET_V2_L:
-        target_model_layer = "backbone.flatten"
+        target_model_layer = "flatten"
     elif model_enum == SupportedModels.RESNEXT50_32X4D:
-        target_model_layer = "backbone.flatten"
+        target_model_layer = "flatten"
     elif model_enum == SupportedModels.RESNEXT101_32X8D:
-        target_model_layer = "backbone.flatten"
+        target_model_layer = "flatten"
     elif model_enum == SupportedModels.RESNEXT101_64X4D:
-        target_model_layer = "backbone.flatten"
+        target_model_layer = "flatten"
     else:
         raise UnsupportedModel(
             f"Please add appropriate target_model_layer for model {model_enum}. You can pass the --target-model-layer instead."
         )
-    target_layer_str, _ = find_model_parameter(model, target_model_layer)
+    print(get_graph_node_names(model))
+    # target_layer_str, _ = find_model_parameter(model, target_model_layer)
 
     model = create_feature_extractor(
-        model, return_nodes={target_layer_str: "target_layer"}
+        model, return_nodes={target_model_layer: "target_layer"}
     )
     return model, forward_kwargs
 
