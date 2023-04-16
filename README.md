@@ -34,6 +34,10 @@ Low priority tasks:
 ## Matej:
 
 - [ ] ❗create backend API/inference
+  - [ ] load model in inference, caculate metrics the whole test irmas dataset (analitics)
+    - [ ] should reuse the train.py script, just use different modes?
+  - [ ] any dataset/csv loader
+  - [ ] http server with some loaded model which returns responses
 - [ ] ❗create technical documentation
 - [ ] ❗create docker container
 - [ ] ⚠️ check for all models edge cases (0.1 sec, 2h)
