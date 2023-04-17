@@ -53,7 +53,7 @@ class MelSpectrogram(AudioTransformBase):
     ) -> tuple[torch.Tensor]:
         if self.waveform_augmentation is not None:
             audio = self.waveform_augmentation(audio)
-        audio = np.concatenate([audio] * 10)
+
         spectrogram = librosa.feature.melspectrogram(
             y=audio,
             sr=self.sampling_rate,
