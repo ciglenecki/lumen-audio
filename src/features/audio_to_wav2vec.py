@@ -17,7 +17,7 @@ class AudioToWav2Vec2(AudioTransformBase):
             pretrained_tag
         )
 
-    def process(
+    def __call__(
         self, audio: torch.Tensor | np.ndarray
     ) -> tuple[torch.Tensor, torch.Tensor]:
         if self.waveform_augmentation is not None:
@@ -34,7 +34,7 @@ class AudioToWav2Vec2CNN(AudioTransformBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def process(self, audio: torch.Tensor | np.ndarray) -> torch.Tensor:
+    def __call__(self, audio: torch.Tensor | np.ndarray) -> torch.Tensor:
         audio = self.waveform_augmentation(audio)
         audio = torch.tensor(audio)
         return audio

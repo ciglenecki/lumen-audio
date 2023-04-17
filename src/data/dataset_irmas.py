@@ -280,9 +280,9 @@ class IRMASDatasetTrain(Dataset):
         ) or self.sum_two_samples:
             audio, labels = self.concat_and_sum_random_negative_samples(audio, labels)
         if self.audio_transform is None:
-            return audio, labels
+            return audio, labels, index
 
-        features = self.audio_transform.process(audio)
+        features = self.audio_transform(audio)
         labels = torch.tensor(labels).float()
 
         # Uncomment for playing audio
@@ -373,9 +373,9 @@ class IRMASDatasetTest(Dataset):
         )
 
         if self.audio_transform is None:
-            return audio, labels
+            return audio, labels, index
 
-        features = self.audio_transform.process(audio)
+        features = self.audio_transform(audio)
 
         labels = torch.tensor(labels).float()
 

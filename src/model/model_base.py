@@ -7,7 +7,9 @@ import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 from pytorch_lightning.callbacks import BaseFinetuning
+from pytorch_lightning.core.optimizer import LightningOptimizer
 from pytorch_lightning.loggers import TensorBoardLogger
+from pytorch_lightning.utilities.types import LRSchedulerPLType
 
 import src.config.config_defaults as config_defaults
 from src.config.config_defaults import ConfigDefault
@@ -25,6 +27,9 @@ from src.utils.utils_model import count_module_params, get_all_modules_after
 
 class ModelBase(pl.LightningModule, ABC):
     loggers: list[TensorBoardLogger]
+    optimizers_list: list[LightningOptimizer]
+    schedulers_list: list[LRSchedulerPLType]
+    finetuning_step: int
 
     def __init__(
         self,
@@ -149,6 +154,7 @@ class ModelBase(pl.LightningModule, ABC):
 
         if self.finetune_head:
             self._set_finetune_until_step()
+        self.finetuning_step = 0
         return out
 
     def log_and_return_loss_step(self, loss, y_pred, y_true, type):
@@ -235,7 +241,7 @@ class ModelBase(pl.LightningModule, ABC):
             return False
 
         return (self.finetune_until_step is not None) and (
-            self.global_step < self.finetune_until_step
+            self.finetuning_step < self.finetune_until_step
         )
 
     def print_params(self):
@@ -290,7 +296,7 @@ class ModelBase(pl.LightningModule, ABC):
 
         Mupltiplicator is the finetune_lr_nominator
         """
-
+        self.finetuning_step += 1
         old_lr = self.trainer.optimizers[optimizer_idx].param_groups[0]["lr"]
         new_lr = old_lr * self.finetune_lr_nominator
         self._set_lr(new_lr)
@@ -315,6 +321,14 @@ class ModelBase(pl.LightningModule, ABC):
         super().on_fit_start()
         if self.lr_warmup:
             self._set_lr(self.lr_warmup)
+        optimizers = self.optimizers()
+        self.optimizers_list = (
+            optimizers if isinstance(optimizers, list) else [optimizers]
+        )
+        schedulers = self.lr_schedulers()
+        self.schedulers_list = (
+            schedulers if isinstance(schedulers, list) is list else [schedulers]
+        )
 
     def configure_optimizers(self):
         if self.finetune_head:

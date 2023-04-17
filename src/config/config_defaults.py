@@ -116,8 +116,10 @@ NUM_RGB_CHANNELS = 3
 
 DEFAULT_MFCC_MEAN = -7.3612
 DEFAULT_MFCC_STD = 56.4464
-DEFAULT_MEL_SPECTROGRAM_MEAN = 0.4125
-DEFAULT_MEL_SPECTROGRAM_STD = 2.3365
+# DEFAULT_MEL_SPECTROGRAM_MEAN = 0.4125 # with some augmentations?
+# DEFAULT_MEL_SPECTROGRAM_STD = 2.3365 # with some augmentations?
+DEFAULT_MEL_SPECTROGRAM_MEAN = 0.413
+DEFAULT_MEL_SPECTROGRAM_STD = 2.582
 DEFAULT_AST_MEAN = -4.2677393
 DEFAULT_AST_STD = 4.5689974
 DEFAULT_AUDIO_EXTENSIONS = ["wav"]
@@ -381,8 +383,9 @@ class ConfigDefault(Serializable):
             self.path_workdir, "models_quick"
         ).relative_to(self.path_workdir)
         self.output_dir: Path = self.path_models
-        """Output directory of the model and report file."""
 
+    def _validate_dataset_paths(self):
+        """Output directory of the model and report file."""
         # We can't put where other default values live because we can't reference `self.path_irmas_test` until the user sets irmas directory.
         if self.train_dirs is None:
             self.train_dirs = [f"irmas:{str(self.path_irmas_train)}"]
@@ -499,6 +502,7 @@ class ConfigDefault(Serializable):
             raise InvalidArgument(
                 "Please set --finetune-heads-epochs int so it's less than --epochs int."
             )
+        self._validate_dataset_paths()
 
     def dir_to_enum_and_path(
         self,

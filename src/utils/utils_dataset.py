@@ -4,9 +4,24 @@ import numpy as np
 import torch
 
 from src.config import config_defaults
+from src.config.config_defaults import NUM_RGB_CHANNELS
 from src.enums.enums import SupportedDatasets
 from src.utils.utils_audio import load_audio_from_file
 from src.utils.utils_exceptions import InvalidArgument, InvalidDataException
+
+
+def create_and_repeat_channel(images: torch.Tensor, num_repeat: int):
+    # Create new dimension then repeat along it.
+    return images.unsqueeze(dim=1).repeat(1, num_repeat, 1, 1)
+
+
+def add_rgb_channel(images: torch.Tensor):
+    return create_and_repeat_channel(images, NUM_RGB_CHANNELS)
+
+
+def remove_rgb_channel(images: torch.Tensor):
+    # Pick only one channel out of 3..
+    return images[:, 0, :, :]
 
 
 def get_example_val_sample(target_sr: int = None) -> np.ndarray:
