@@ -41,6 +41,7 @@ Low priority tasks:
 - [ ] ❗create technical documentation
 - [ ] ❗create docker container
 - [ ] **augmentations**: time shift, pitch shift, sox
+  - [ ] add normalization after augmentations
 - [ ] ⚠️ check for all models edge cases (0.1 sec, 2h)
 - [ ] ⚠️ download the whole IRMAS dataset
 - [ ] **train with relabeled data (rep):** Include Ivan's relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)

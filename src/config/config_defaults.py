@@ -383,16 +383,6 @@ class ConfigDefault(Serializable):
         self.output_dir: Path = self.path_models
         """Output directory of the model and report file."""
 
-        # We can't put where other default values live because we can't reference `self.path_irmas_test` until the user sets irmas directory.
-        if self.train_dirs is None:
-            self.train_dirs = [f"irmas:{str(self.path_irmas_train)}"]
-        if self.val_dirs is None:
-            self.val_dirs = [f"irmas:{str(self.path_irmas_test)}"]
-
-        # Parse strings to dataset type and path
-        self.train_dirs = [self.dir_to_enum_and_path(d) for d in self.train_dirs]
-        self.val_dirs = [self.dir_to_enum_and_path(d) for d in self.val_dirs]
-
     def _validate_train_args(self):
         """This function validates arguments before training."""
 
@@ -499,6 +489,16 @@ class ConfigDefault(Serializable):
             raise InvalidArgument(
                 "Please set --finetune-heads-epochs int so it's less than --epochs int."
             )
+
+        # We can't put where other default values live because we can't reference `self.path_irmas_test` until the user sets irmas directory.
+        if self.train_dirs is None:
+            self.train_dirs = [f"irmas:{str(self.path_irmas_train)}"]
+        if self.val_dirs is None:
+            self.val_dirs = [f"irmas:{str(self.path_irmas_test)}"]
+
+        # Parse strings to dataset type and path
+        self.train_dirs = [self.dir_to_enum_and_path(d) for d in self.train_dirs]
+        self.val_dirs = [self.dir_to_enum_and_path(d) for d in self.val_dirs]
 
     def dir_to_enum_and_path(
         self,
