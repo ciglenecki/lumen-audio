@@ -15,7 +15,7 @@ def chunk_image_by_width(
     image: torch.Tensor,
     pad_value: float | str = "repeat",
 ):
-    """Target image size: (384, 384)
+    """EXAMPLE 1 Target image size: (384, 384)
 
     Image:
     (128 x 1024)
@@ -36,13 +36,50 @@ def chunk_image_by_width(
     |              |              |          |
     |==============|==============|==========|
 
-    Step 3: pad with zeros on the right
+    Step 3a): pad with zeros on the right
     |==============|==============|==============|
     |  (384, 384)  |  (384, 384)  |  (384, 384)0 |
     |              |              |            0 |
     |==============|==============|==============|
 
+    Step 3b): repeat with first chunk
+    |==============|==============|==============|
+    |1 (384, 384)  |  (384, 384)  |  (384, 384)1 |
+    |1             |              |            1 |
+    |==============|==============|==============|
+
     Returns 3x (384, 384)
+
+
+    EXAMPLE 2
+    Target image size: (384, 384)
+
+    Image:
+    (128 x 100)
+    |====|
+    |    |
+    |====|
+
+    Step 1: scale height only
+    (384 x 100)
+    |====|
+    |    |
+    |    |
+    |====|
+
+    Step 2: repeat images
+    |====================|
+    | 100  100  100  100 |
+    |                    |
+    |====================|
+
+    Step 3: cut excess
+    |=================|
+    |100  100  100  84|
+    |                 |
+    |=================|
+
+    Returns 1x (384, 384)
     """
     image_height, image_width = target_image_size
     # Simulate that this is a batch of images
