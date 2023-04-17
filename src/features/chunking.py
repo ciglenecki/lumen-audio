@@ -125,7 +125,7 @@ def chunk_image_by_width(
             [first_chunk] * num_first_chunk_repeats, dim=-1
         )  # [384, 334]
 
-        # Remove remove excess width cause by repeat
+        # Remove remove excess width caused by repeating
         repeated_first_chunk = repeated_first_chunk[..., :diff]  # [384, 334]
         chunks[-1] = torch.cat((chunks[-1], repeated_first_chunk), dim=-1)  # [384, 334]
 
