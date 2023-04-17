@@ -49,7 +49,7 @@ def get_audio_transform(
     elif audio_transform_enum is AudioTransforms.WAV2VEC:
         return AudioToWav2Vec2(
             pretrained_tag=config.pretrained_tag,
-            **image_kwargs,
+            #**image_kwargs,
             **base_kwargs,
         )
     elif audio_transform_enum is AudioTransforms.MFCC_FIXED_REPEAT:
