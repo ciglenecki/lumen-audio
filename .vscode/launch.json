@@ -48,14 +48,14 @@
 			"console": "integratedTerminal",
 			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --val-dirs irmas:data/irmas/test --audio-transform WAV2VEC_CNN --model WAV2VEC_CNN --use-fluffy --head ATTENTION_HEAD --use-multiple-optimizers --loss-function CROSS_ENTROPY_POS_WEIGHT --backbone-after classifier.heads --head-after classifier.heads --quick",
 			"justMyCode": false
-		},		
+		},
 		{
 			"name": "Check pretraining",
 			"type": "python",
 			"request": "launch",
 			"program": "src/pretrain/pretrain.py",
 			"console": "integratedTerminal",
-			"args": "--model RESNEXT50_32X4D --audio-transform MEL_SPECTROGRAM_FIXED_REPEAT",
+			"args": "--model RESNEXT50_32X4D --audio-transform MEL_SPECTROGRAM",
 			"justMyCode": false
 		},
 		{
