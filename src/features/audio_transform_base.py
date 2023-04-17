@@ -31,7 +31,7 @@ class AudioTransformBase(ABC):
         self.waveform_augmentation = waveform_augmentation
 
     @abstractmethod
-    def process(
+    def __call__(
         self,
         audio: torch.Tensor | np.ndarray,
     ) -> tuple[torch.Tensor]:
@@ -65,4 +65,4 @@ class AudioTransformBase(ABC):
             method=method,
             normalize=normalize,
         )
-        return self.process(audio)
+        return audio

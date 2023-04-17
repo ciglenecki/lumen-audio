@@ -10,21 +10,11 @@ from src.enums.enums import ModelInputDataType
 from src.model.model import get_data_input_type
 
 
-def create_and_repeat_channel(images: torch.Tensor, num_repeat: int):
-    # Create new dimension then repeat along it.
-    return images.unsqueeze(dim=1).repeat(1, num_repeat, 1, 1)
-
-
-def add_rgb_channel(images: torch.Tensor):
-    return create_and_repeat_channel(images, NUM_RGB_CHANNELS)
-
-
-def remove_rgb_channel(images: torch.Tensor):
-    # Pick only one channel out of 3..
-    return images[:, 0, :, :]
-
-
-def chunk_image_by_width(target_image_size: tuple[int, int], image: torch.Tensor):
+def chunk_image_by_width(
+    target_image_size: tuple[int, int],
+    image: torch.Tensor,
+    pad_value: float | str = "repeat",
+):
     """Target image size: (384, 384)
 
     Image:
@@ -73,18 +63,34 @@ def chunk_image_by_width(target_image_size: tuple[int, int], image: torch.Tensor
     # Chunk by last dimension (width)
     # list([1, 384, 384]), length = 5
     # list([batch, height, width]), length = full_width // image_width
-    chunks = list(torch.tensor(image).split(image_width, dim=-1))
-
+    chunks = list(image.split(image_width, dim=-1))
     # Last chunk might be cut off which means the time dimension (image width) will be smaller
     # Add zero padding if last chunk's width is shorter than image width
     last_chunk = chunks[-1]  # [Batch]
     last_chunk_width = last_chunk.shape[-1]
     diff = image_width - last_chunk_width  # e.g. 384 - 200 = 184
-    if diff > 0:
+    if diff > 0 and type(pad_value) is int or type(pad_value) is float:
         # we add 0 pads on the left, and diff on the right side, pad=(padding_left,padding_right)
         chunks[-1] = torch.nn.functional.pad(
-            input=chunks[-1], pad=(0, diff), mode="constant", value=0
+            input=last_chunk, pad=(0, diff), mode="constant", value=pad_value
         )
+
+    elif diff > 0 and type(pad_value) is str:
+        """Take the first chunk, glue it to the last (which is shorter).
+
+        If first chunk is last chunk then repeat it until the size is large enough.
+        """
+        # diff = 384 - 50 = 334
+        first_chunk: torch.Tensor = chunks[0]  # [384, 50] if first chunk == first chunk
+        first_chunk_width = first_chunk.shape[-1]  # 50
+        num_first_chunk_repeats = max(1, int(diff / first_chunk_width))  # 8
+        repeated_first_chunk = torch.cat(
+            [first_chunk] * num_first_chunk_repeats, dim=-1
+        )  # [384, 334]
+
+        # Remove remove excess width cause by repeat
+        repeated_first_chunk = repeated_first_chunk[..., :diff]  # [384, 334]
+        chunks[-1] = torch.cat((chunks[-1], repeated_first_chunk), dim=-1)  # [384, 334]
 
     if len(chunks) == 1:
         return chunks[0].float()
@@ -459,3 +465,54 @@ def test_collate_fn_spectrogram_diff_sizes():
     assert torch.all(item_indices[id_1] == dataset_id_1)
     assert torch.all(item_indices[id_2] == dataset_id_2)
     assert torch.all(item_indices[id_3] == dataset_id_3)
+
+
+def test_chunk_small_image_and_height_resize():
+    image = torch.rand(128, 50)
+    target_image_size = (384, 384)
+    repeated = chunk_image_by_width(target_image_size, image, pad_value="repeat")
+    assert len(repeated) == 1
+    repeated = torchvision.transforms.functional.resize(
+        repeated, size=(128, repeated.shape[-1]), antialias=False
+    )
+    repeated = repeated[0]
+    assert torch.all(torch.isclose(repeated[..., 0:50], image))
+    assert torch.all(torch.isclose(repeated[..., 50:100], image))
+    assert torch.all(torch.isclose(repeated[..., 150:200], image))
+
+
+def test_chunk_large_image():
+    image = torch.rand(384, 800)
+    target_image_size = (384, 384)
+    num_images = 3  # 800 / 384
+    diff = 800 - (384 * (num_images - 1))  # 32
+    last_chunk_width = 384 - diff
+
+    # big image width: 384 + 384 + 32
+    # ================================
+    # [    384    |    384    | 32 ]
+    # image1 width: 384
+    # image2 width: 384
+    # image3 width: 32
+
+    fixed = chunk_image_by_width(target_image_size, image, pad_value="repeat")
+    assert len(fixed) == 3
+
+    first_image = fixed[0]
+    second_image = fixed[1]
+    third_image = fixed[2]
+
+    first_image_end = 384
+    second_image_end = first_image_end + 384
+    third_image_end = second_image_end + diff
+    original_first_image = image[..., :first_image_end]
+    original_second_image = image[..., first_image_end:second_image_end]
+    original_third_small_chunk = image[..., second_image_end:third_image_end]
+
+    first_image_glued_part = image[..., 0:last_chunk_width]
+    original_third_small_chunk = image[..., second_image_end:third_image_end]
+
+    assert torch.all(torch.isclose(first_image, original_first_image))
+    assert torch.all(torch.isclose(second_image, original_second_image))
+    assert torch.all(torch.isclose(third_image[..., :diff], original_third_small_chunk))
+    assert torch.all(torch.isclose(third_image[..., diff:], first_image_glued_part))

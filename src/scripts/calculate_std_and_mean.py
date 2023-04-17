@@ -1,35 +1,54 @@
 import argparse
 
+import librosa
 import simple_parsing
 import torch
 from tqdm import tqdm
 
-from src.config.config_defaults import ConfigDefault
+from src.config.argparse_with_config import ArgParseWithConfig
+from src.config.config_defaults import NUM_RGB_CHANNELS, ConfigDefault
 from src.data.datamodule import IRMASDataModule
-from src.enums.enums import SupportedAugmentations
-from src.features.audio_transform import get_audio_transform
-from src.features.chunking import collate_fn_spectrogram
+from src.utils.utils_dataset import add_rgb_channel, create_and_repeat_channel
+from src.utils.utils_exceptions import InvalidArgument
 
 
 def parse():
-    destination_str = "user_args"
-    parser = simple_parsing.ArgumentParser(
-        add_option_string_dash_variants=simple_parsing.DashVariant.DASH
-    )
-    parser.add_arguments(ConfigDefault, dest=destination_str)
-    args = parser.parse_args()
-
-    args_dict = vars(args)
-    config: ConfigDefault = args_dict.pop(destination_str)
-    args = argparse.Namespace(**args_dict)
-
+    parser = ArgParseWithConfig()
+    args, config, pl_args = parser.parse_args()
+    config._validate_dataset_paths()
     return args, config
+
+
+def audios_to_flat_spectrograms(
+    audio: torch.Tensor, num_channels: int, config: ConfigDefault
+):
+    audio = audio.numpy()
+    spectrograms = [
+        torch.tensor(
+            librosa.feature.melspectrogram(
+                y=a,
+                sr=config.sampling_rate,
+                n_fft=config.n_fft,
+                hop_length=config.hop_length,
+                n_mels=config.n_mels,
+            )
+        )
+        for a in audio
+    ]
+    images = torch.stack(spectrograms)  # list to tensor
+    batch_size = images.size(0)
+    images = create_and_repeat_channel(
+        images, num_channels
+    )  # [Batch, Channel, Height, Width]
+
+    flat_images = images.view(
+        batch_size, images.size(1), -1
+    )  # [Batch, Channel, Height x Width]
+    return flat_images
 
 
 if __name__ == "__main__":
     args, config = parse()
-
-    config.audio_transform = get_audio_transform(config, config.audio_transform)
 
     datamodule = IRMASDataModule(
         train_dirs=config.train_dirs,
@@ -37,39 +56,47 @@ if __name__ == "__main__":
         batch_size=config.batch_size,
         num_workers=config.num_workers,
         dataset_fraction=config.dataset_fraction,
-        drop_last_sample=config.drop_last,
-        train_audio_transform=config.audio_transform,
-        val_audio_transform=config.audio_transform,
-        collate_fn=collate_fn_spectrogram,
+        drop_last_sample=False,
+        train_audio_transform=None,
+        val_audio_transform=None,
+        collate_fn=None,
         normalize_audio=config.normalize_audio,
         train_only_dataset=config.train_only_dataset,
-        concat_n_samples=(
-            config.aug_kwargs["concat_n_samples"]
-            if SupportedAugmentations.CONCAT_N_SAMPLES in config.augmentations
-            else None
-        ),
-        sum_two_samples=SupportedAugmentations.SUM_TWO_SAMPLES in config.augmentations,
-        use_weighted_train_sampler=config.use_weighted_train_sampler,
+        concat_n_samples=None,
+        sum_two_samples=None,
+        use_weighted_train_sampler=False,
     )
 
     train_dataloader = datamodule.train_dataloader()
 
-    mean = 0.0
-    for images, _, _, _ in tqdm(train_dataloader):
-        batch_samples = images.size(0)
-        images = images.view(batch_samples, images.size(1), -1)
-        mean += images.mean(2).sum(0)
-    mean = mean / len(train_dataloader.dataset)
+    num_channels = 1
+    mean = torch.zeros(num_channels)
 
+    # We can perform means of means because each image has the same number of pixels.
+
+    for audio, _, _ in tqdm(train_dataloader):
+        flat_images = audios_to_flat_spectrograms(
+            audio, num_channels, config
+        )  # [Batch, Channel, Height x Width]
+
+        mean_per_channel_per_batch = flat_images.mean(2)  # [Batch, Channel]
+        mean_per_channel = mean_per_channel_per_batch.sum(0)  # [Channel]
+        mean += mean_per_channel
+
+    mean = mean / len(train_dataloader.dataset)
     print(f"Mean for each channel is: {mean}")
 
-    var = 0.0
-    for images, _, _, _ in tqdm(train_dataloader):
-        batch_samples = images.size(0)
-        images = images.view(batch_samples, images.size(1), -1)
-        var += ((images - mean.unsqueeze(1)) ** 2).sum([0, 2])
+    var = torch.zeros(num_channels)
+    for audio, _, _ in tqdm(train_dataloader):
+        flat_images = audios_to_flat_spectrograms(
+            audio, num_channels, config
+        )  # [Batch, Channel, Height x Width]
 
-    std = torch.sqrt(var / (len(train_dataloader.dataset) * images.size(2)))
+        # unsqueeze 1 because we have to bring the `mean` to the channel dimension instead of zero-th dimension.
+        diff = (flat_images - mean.unsqueeze(1)) ** 2
+        var += diff.sum([0, 2])
 
-    print(images.size(2))
-    print(f"Mean for each channel is: {std}")
+    num_of_pixels = flat_images.size(2)
+    std = torch.sqrt(var / (len(train_dataloader.dataset) * num_of_pixels))
+
+    print(f"Std for each channel is: {std}")
