@@ -40,6 +40,7 @@ Low priority tasks:
   - [ ] http server with some loaded model which returns responses
 - [ ] ❗create technical documentation
 - [ ] ❗create docker container
+- [ ] **augmentations**: time shift, pitch shift, sox
 - [ ] ⚠️ check for all models edge cases (0.1 sec, 2h)
 - [ ] ⚠️ download the whole IRMAS dataset
 - [ ] **train with relabeled data (rep):** Include Ivan's relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
