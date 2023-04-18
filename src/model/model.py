@@ -8,6 +8,7 @@ from src.model.heads import get_head_constructor
 from src.model.model_ast import ASTModelWrapper
 from src.model.model_wav2vec import Wav2VecWrapper
 from src.model.model_wav2vec_cnn import Wav2VecCnnWrapper
+from src.model.model_lstm import LSTMWrapper
 from src.utils.utils_exceptions import UnsupportedModel
 
 
@@ -87,6 +88,10 @@ def get_model(
             **model_base_kwargs,
         )
         return model
+    elif model_enum == SupportedModels.LSTM_BASELINE:
+        model = LSTMWrapper(
+            **model_base_kwargs,
+            )
     raise UnsupportedModel(f"Model {model_enum} is not supported")
 
 
