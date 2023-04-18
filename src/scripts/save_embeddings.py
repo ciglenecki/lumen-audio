@@ -145,6 +145,7 @@ if __name__ == "__main__":
         val_audio_transform=val_audio_transform,
         collate_fn=collate_fn,
         normalize_audio=config.normalize_audio,
+        normalize_image=config.normalize_image,
         train_only_dataset=False,
         concat_n_samples=None,
         sum_two_samples=False,

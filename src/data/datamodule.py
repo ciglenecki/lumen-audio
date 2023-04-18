@@ -52,6 +52,7 @@ class IRMASDataModule(pl.LightningDataModule):
         val_dirs: list[tuple[SupportedDatasets, Path]],
         train_only_dataset: bool,
         normalize_audio: bool,
+        normalize_image: bool,
         concat_n_samples: int | None,
         sum_two_samples: bool,
         use_weighted_train_sampler,
@@ -68,6 +69,7 @@ class IRMASDataModule(pl.LightningDataModule):
         self.val_dirs = val_dirs
         self.train_only_dataset = train_only_dataset
         self.normalize_audio = normalize_audio
+        self.normalize_image = normalize_image
         self.concat_n_samples = concat_n_samples
         self.sum_two_samples = sum_two_samples
         self.use_weighted_train_sampler = use_weighted_train_sampler
@@ -120,6 +122,7 @@ class IRMASDataModule(pl.LightningDataModule):
                     dataset_dir=dataset_path,
                     audio_transform=self.train_audio_transform,
                     normalize_audio=self.normalize_audio,
+                    normalize_image=self.normalize_image,
                     concat_n_samples=self.concat_n_samples,
                     sum_two_samples=self.sum_two_samples,
                 )
@@ -134,6 +137,7 @@ class IRMASDataModule(pl.LightningDataModule):
                     dataset_dir=dataset_path,
                     audio_transform=self.val_audio_transform,
                     normalize_audio=self.normalize_audio,
+                    normalize_image=self.normalize_image,
                 )
             datasets.append(dataset)
         return torch.utils.data.ConcatDataset(datasets)

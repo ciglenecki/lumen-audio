@@ -61,6 +61,7 @@ if __name__ == "__main__":
         val_audio_transform=None,
         collate_fn=None,
         normalize_audio=config.normalize_audio,
+        normalize_image=config.normalize_image,
         train_only_dataset=config.train_only_dataset,
         concat_n_samples=None,
         sum_two_samples=None,

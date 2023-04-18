@@ -231,6 +231,9 @@ class ConfigDefault(Serializable):
     normalize_audio: bool = create(True)
     """Do normalize audio"""
 
+    normalize_image: bool = create(True)
+    """Do image audio"""
+
     max_num_width_samples: float | None = create(None)
     """Maximum number samples along the time dimension. For spectrogram: width truncation, for audio: waveform truncation. Useful for limiting transformer input size."""
 
@@ -342,13 +345,13 @@ class ConfigDefault(Serializable):
     loss_function_kwargs: dict | dict = create({})
     """Loss function kwargs"""
 
-    lr: float = create(1e-4)
+    lr: float = create(3e-4)
     """Learning rate"""
 
-    lr_onecycle_max: float = create(5e-4)
+    lr_onecycle_max: float = create(1e-3)
     """Maximum lr OneCycle scheduler reaches"""
 
-    lr_warmup: float = create(1e-4)
+    lr_warmup: float = create(3e-4)
     """warmup learning rate"""
 
     use_multiple_optimizers: bool = create(False)
