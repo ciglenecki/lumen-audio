@@ -54,7 +54,7 @@ def decode_instruments(multi_hot_array: np.ndarray) -> list[str]:
     return instruments
 
 
-def decode_instrument_label(multi_hot_array: np.ndarray) -> np.ndarray:
+def instrument_multihot_to_idx(multi_hot_array: np.ndarray) -> np.ndarray:
     """Return [unknown_drum, drum/no_drum]
     Example
         instruments = [0,0,0,1,0,0,0,1,0]

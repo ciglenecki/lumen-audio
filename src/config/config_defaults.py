@@ -191,10 +191,10 @@ class ConfigDefault(Serializable):
     path_models_quick: Path | None = create(None)
 
     train_dirs: list[str] | None = create(None)
-    """Dataset root directories that will be used for training in the following format: --train-dirs irmas:/path/to openmic:/path/to"""
+    """Dataset root directories that will be used for training in the following format: --train-dirs irmas:/path/to/dataset or openmic:/path/to/dataset"""
 
     val_dirs: list[str] | None = create(None)
-    """Dataset root directories that will be used for validation in the following format: --val-dirs irmas:/path/to openmic:/path/to"""
+    """Dataset root directories that will be used for validation in the following format: --val-dirs irmas:/path/to/dataset openmic:/path/to/dataset"""
 
     train_only_dataset: bool = create(False)
     """Use only the train portion of the dataset and split it 0.8 0.2"""
@@ -387,7 +387,7 @@ class ConfigDefault(Serializable):
         ).relative_to(self.path_workdir)
         self.output_dir: Path = self.path_models
 
-    def _validate_dataset_paths(self):
+    def parse_dataset_paths(self):
         """Output directory of the model and report file."""
         # We can't put where other default values live because we can't reference `self.path_irmas_test` until the user sets irmas directory.
         if self.train_dirs is None:
@@ -396,19 +396,21 @@ class ConfigDefault(Serializable):
             self.val_dirs = [f"irmas:{str(self.path_irmas_test)}"]
 
         # Parse strings to dataset type and path
-        self.train_dirs = [self.dir_to_enum_and_path(d) for d in self.train_dirs]
-        self.val_dirs = [self.dir_to_enum_and_path(d) for d in self.val_dirs]
+        try:
+            self.train_dirs = [self.dir_to_enum_and_path(d) for d in self.train_dirs]
+            self.val_dirs = [self.dir_to_enum_and_path(d) for d in self.val_dirs]
+        except InvalidArgument as e:
+            msg = f"Usage:\t--train-dirs <TYPE>:/path/to/dataset\n\t--val-dirs <TYPE>:/path/to/dataset.\nSupported <TYPE>: {[ d.value for d in SupportedDatasets]}"
+            raise InvalidArgument(f"{str(e)}\n{msg}")
 
     def _validate_train_args(self):
         """This function validates arguments before training."""
 
         if self.model is None:
-            raise InvalidArgument(
-                f"--model is required for training {list(SupportedModels)}"
-            )
+            raise InvalidArgument(f"--model is required {list(SupportedModels)}")
         if self.audio_transform is None:
             raise InvalidArgument(
-                f"--audio-transform is required for training {list(AudioTransforms)}"
+                f"--audio-transform is required {list(AudioTransforms)}"
             )
         if self.metric and not self.metric_mode:
             raise InvalidArgument("Can't pass --metric without passing --metric-mode")
@@ -505,7 +507,7 @@ class ConfigDefault(Serializable):
             raise InvalidArgument(
                 "Please set --finetune-heads-epochs int so it's less than --epochs int."
             )
-        self._validate_dataset_paths()
+        self.parse_dataset_paths()
 
     def dir_to_enum_and_path(
         self,
@@ -516,14 +518,23 @@ class ConfigDefault(Serializable):
             string: irmas:/path/to/irmas
             return (SupportedDatasets.IRMAS, Path("/path/to/irmas"))
         """
-
-        pair = string.split(":")
+        delimiter = ":"
+        pair = string.split(delimiter)
         if len(pair) != 2:
             raise InvalidArgument(
-                f"Pair {pair} needs to have two elements. First arg is {list(SupportedDatasets)} and the second is the path "
+                f"Pair {pair} needs to have two elements split with '{delimiter}'."
             )
         dataset_name, dataset_path = pair
-        dataset = SupportedDatasets(dataset_name)
+        if len(pair) != 2:
+            raise InvalidArgument(
+                f"Pair {pair} needs to have two elements split with '{delimiter}'."
+            )
+        try:
+            dataset = SupportedDatasets(dataset_name)
+        except ValueError as e:
+            raise ValueError(
+                f"{str(e)}. Choose one of the following  {[ d.value for d in SupportedDatasets]} or add a new entry into the SupportedDatasets enum."
+            )
         dataset_path = Path(dataset_path)
         if not dataset_path.exists():
             raise InvalidArgument(f"Dataset path {dataset_path} doesn't exist.")
