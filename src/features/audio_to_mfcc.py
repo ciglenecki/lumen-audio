@@ -19,7 +19,8 @@ class MFCC(AudioTransformBase):
         image_size: tuple[int, int],
         n_mels: int,
         use_rgb: bool = True,
-        normalize=True,
+        normalize_audio=True,
+        normalize_image=True,
         *args,
         **kwargs,
     ):
@@ -30,7 +31,8 @@ class MFCC(AudioTransformBase):
         self.image_size = image_size
         self.n_mels = n_mels
         self.use_rgb = use_rgb
-        self.normalize = normalize
+        self.normalize_audio = normalize_audio
+        self.normalize_audio_image = normalize_image
 
     def __call__(
         self,
@@ -48,7 +50,7 @@ class MFCC(AudioTransformBase):
             n_mels=self.n_mels,
         )
 
-        if self.normalize:
+        if self.normalize_audio:
             mfcc = self.normalize_mfcc(mfcc)
 
         if self.spectrogram_augmentation is not None:

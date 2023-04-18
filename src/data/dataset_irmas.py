@@ -38,6 +38,7 @@ class IRMASDatasetTrain(Dataset):
         num_classes=config_defaults.DEFAULT_NUM_LABELS,
         sampling_rate=config.sampling_rate,
         normalize_audio=config.normalize_audio,
+        normalize_image=config.normalize_image,
         sum_two_samples: bool = False,
         concat_n_samples: int | None = None,
         train_override_csvs: list[Path] | None = config.train_override_csvs,
@@ -64,6 +65,7 @@ class IRMASDatasetTrain(Dataset):
         self.num_classes = num_classes
         self.sampling_rate = sampling_rate
         self.normalize_audio = normalize_audio
+        self.normalize_image = normalize_image
         self.sum_two_samples = sum_two_samples
         self.concat_n_samples = concat_n_samples
         self.instrument_idx_list: dict[str, list[int]] = {}
@@ -309,6 +311,7 @@ class IRMASDatasetTest(Dataset):
         num_classes=config_defaults.DEFAULT_NUM_LABELS,
         sampling_rate=config.sampling_rate,
         normalize_audio=config.normalize_audio,
+        normalize_image=config.normalize_image,
     ):
         self.num_classes = num_classes
         self.audio_transform = audio_transform
@@ -316,6 +319,7 @@ class IRMASDatasetTest(Dataset):
         self.dataset_dir = dataset_dir
         self.sampling_rate = sampling_rate
         self.normalize_audio = normalize_audio
+        self.normalize_image = normalize_image
 
         self._populate_dataset()
 

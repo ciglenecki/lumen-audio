@@ -44,6 +44,7 @@ if __name__ == "__main__":
         val_audio_transform=get_audio_transform(config, config.audio_transform),
         collate_fn=get_collate_fn(config),
         normalize_audio=config.normalize_audio,
+        normalize_image=config.normalize_image,
         train_only_dataset=config.train_only_dataset,
         concat_n_samples=(
             config.aug_kwargs["concat_n_samples"]

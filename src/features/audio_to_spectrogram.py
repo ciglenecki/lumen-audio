@@ -35,7 +35,8 @@ class MelSpectrogram(AudioTransformBase):
         n_mels: int,
         image_size: tuple[int, int],
         use_rgb: bool = True,
-        normalize=True,
+        normalize_audio=True,
+        normalize_image=True,
         *args,
         **kwargs,
     ):
@@ -45,7 +46,8 @@ class MelSpectrogram(AudioTransformBase):
         self.n_mels = n_mels
         self.image_size = image_size
         self.use_rgb = use_rgb
-        self.normalize = normalize
+        self.normalize_audio = normalize_audio
+        self.normalize_image = normalize_image
 
     def __call__(
         self,
@@ -71,8 +73,9 @@ class MelSpectrogram(AudioTransformBase):
             self.image_size, spectrogram, "repeat"
         )
 
-        if self.normalize:
+        if self.normalize_image:
             spectrogram_chunks = self.normalize_spectrogram(spectrogram_chunks)
+
         if self.use_rgb:
             spectrogram_chunks = add_rgb_channel(spectrogram_chunks)
 
@@ -115,7 +118,7 @@ def test_chunking():
         spectrogram_augmentation=None,
         waveform_augmentation=None,
         max_num_width_samples=config.max_num_width_samples,
-        normalize=True,
+        normalize_audio=True,
     )
     spectrogram_original = librosa.feature.melspectrogram(
         y=audio,
@@ -158,7 +161,7 @@ if __name__ == "__main__":
         spectrogram_augmentation=None,
         waveform_augmentation=None,
         max_num_width_samples=config.max_num_width_samples,
-        normalize=False,
+        normalize_audio=False,
     )
     spectrogram = transform(audio)
     out = collate_fn_spectrogram(

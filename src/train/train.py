@@ -115,6 +115,7 @@ if __name__ == "__main__":
         val_audio_transform=val_audio_transform,
         collate_fn=collate_fn,
         normalize_audio=config.normalize_audio,
+        normalize_image=config.normalize_image,
         train_only_dataset=config.train_only_dataset,
         concat_n_samples=concat_n_samples,
         sum_two_samples=SupportedAugmentations.SUM_TWO_SAMPLES in config.augmentations,
