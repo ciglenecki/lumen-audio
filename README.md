@@ -163,7 +163,11 @@ Create and populate the [virtual environment](https://docs.python.org/3/library/
 **Step 1: Execute the following command:**
 
 ```bash
-python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt && pip install -r requirements-dev.txt
+python3 -m venv venv --prompt $(basename "$PWD")
+source venv/bin/activate
+sleep 1
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
 **Step 2: Install current directory as a editable Python module:**
