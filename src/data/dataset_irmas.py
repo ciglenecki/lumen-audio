@@ -16,8 +16,8 @@ import src.config.config_defaults as config_defaults
 from src.features.audio_transform_base import AudioTransformBase
 from src.utils.utils_audio import load_audio_from_file, play_audio
 from src.utils.utils_dataset import (
-    decode_instrument_label,
     encode_instruments,
+    instrument_multihot_to_idx,
     multi_hot_encode,
 )
 
@@ -293,7 +293,7 @@ class IRMASDatasetTrain(Dataset):
         #         config_defaults.INSTRUMENT_TO_FULLNAME[
         #             config_defaults.IDX_TO_INSTRUMENT[i]
         #         ]
-        #         for i in decode_instrument_label(labels)
+        #         for i in instrument_multihot_to_idx(labels)
         #     ]
         # )
         # print("first time")

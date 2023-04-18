@@ -15,7 +15,7 @@ from src.utils.utils_exceptions import InvalidArgument
 def parse():
     parser = ArgParseWithConfig()
     args, config, pl_args = parser.parse_args()
-    config._validate_dataset_paths()
+    config.parse_dataset_paths()
     return args, config
 
 
