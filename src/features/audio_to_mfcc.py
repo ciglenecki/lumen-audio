@@ -4,7 +4,8 @@ import torch
 
 from src.config.config_defaults import DEFAULT_MFCC_MEAN, DEFAULT_MFCC_STD
 from src.features.audio_transform_base import AudioTransformBase
-from src.features.chunking import add_rgb_channel, chunk_image_by_width
+from src.features.chunking import chunk_image_by_width
+from src.utils.utils_dataset import add_rgb_channel
 
 
 class MFCC(AudioTransformBase):
@@ -18,7 +19,8 @@ class MFCC(AudioTransformBase):
         image_size: tuple[int, int],
         n_mels: int,
         use_rgb: bool = True,
-        normalize=True,
+        normalize_audio=True,
+        normalize_image=True,
         *args,
         **kwargs,
     ):
@@ -29,9 +31,10 @@ class MFCC(AudioTransformBase):
         self.image_size = image_size
         self.n_mels = n_mels
         self.use_rgb = use_rgb
-        self.normalize = normalize
+        self.normalize_audio = normalize_audio
+        self.normalize_image = normalize_image
 
-    def process(
+    def __call__(
         self,
         audio: torch.Tensor | np.ndarray,
     ) -> tuple[torch.Tensor]:
@@ -47,7 +50,7 @@ class MFCC(AudioTransformBase):
             n_mels=self.n_mels,
         )
 
-        if self.normalize:
+        if self.normalize_image:
             mfcc = self.normalize_mfcc(mfcc)
 
         if self.spectrogram_augmentation is not None:
@@ -55,7 +58,7 @@ class MFCC(AudioTransformBase):
         else:
             mfcc = torch.tensor(mfcc)
 
-        mfcc_chunks = chunk_image_by_width(self.image_size, mfcc)
+        mfcc_chunks = chunk_image_by_width(self.image_size, mfcc, DEFAULT_MFCC_MEAN)
 
         if self.use_rgb:
             mfcc_chunks = add_rgb_channel(mfcc_chunks)

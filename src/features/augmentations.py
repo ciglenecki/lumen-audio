@@ -1,7 +1,9 @@
+import audiomentations as AA
 import librosa
 import numpy as np
 import torch
 import torch_audiomentations
+from audiomentations import AddGaussianNoise, Compose, PitchShift, Shift, TimeStretch
 from torchaudio.transforms import FrequencyMasking, TimeMasking
 from torchvision.transforms import RandomErasing
 
@@ -47,6 +49,17 @@ class WaveformAugmentation:
             # size_before = len(audio)
             audio = librosa.effects.time_stretch(y=audio, rate=stretch_rate)
             # audio = audio[:size_before]
+
+        # train_transforms = AA.Compose(
+        #     [
+        #         AA.SevenBandParametricEQ(p=1, min_gain_db=-12, max_gain_db=12),
+        #         TimeStretch(
+        #             min_rate=0.8, max_rate=1.2, p=1, leave_length_unchanged=False
+        #         ),
+        #         AA.PitchShift(min_semitones=-2, max_semitones=2, p=0.5),
+        #     ]
+        # )
+        # audio = train_transforms(audio, sample_rate=self.sampling_rate)
 
         audio = torch.tensor(audio[np.newaxis, np.newaxis, :])
 

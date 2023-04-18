@@ -16,8 +16,8 @@ import src.config.config_defaults as config_defaults
 from src.features.audio_transform_base import AudioTransformBase
 from src.utils.utils_audio import load_audio_from_file, play_audio
 from src.utils.utils_dataset import (
-    decode_instrument_label,
     encode_instruments,
+    instrument_multihot_to_idx,
     multi_hot_encode,
 )
 
@@ -38,6 +38,7 @@ class IRMASDatasetTrain(Dataset):
         num_classes=config_defaults.DEFAULT_NUM_LABELS,
         sampling_rate=config.sampling_rate,
         normalize_audio=config.normalize_audio,
+        normalize_image=config.normalize_image,
         sum_two_samples: bool = False,
         concat_n_samples: int | None = None,
         train_override_csvs: list[Path] | None = config.train_override_csvs,
@@ -64,6 +65,7 @@ class IRMASDatasetTrain(Dataset):
         self.num_classes = num_classes
         self.sampling_rate = sampling_rate
         self.normalize_audio = normalize_audio
+        self.normalize_image = normalize_image
         self.sum_two_samples = sum_two_samples
         self.concat_n_samples = concat_n_samples
         self.instrument_idx_list: dict[str, list[int]] = {}
@@ -280,9 +282,9 @@ class IRMASDatasetTrain(Dataset):
         ) or self.sum_two_samples:
             audio, labels = self.concat_and_sum_random_negative_samples(audio, labels)
         if self.audio_transform is None:
-            return audio, labels
+            return audio, labels, index
 
-        features = self.audio_transform.process(audio)
+        features = self.audio_transform(audio)
         labels = torch.tensor(labels).float()
 
         # Uncomment for playing audio
@@ -291,7 +293,7 @@ class IRMASDatasetTrain(Dataset):
         #         config_defaults.INSTRUMENT_TO_FULLNAME[
         #             config_defaults.IDX_TO_INSTRUMENT[i]
         #         ]
-        #         for i in decode_instrument_label(labels)
+        #         for i in instrument_multihot_to_idx(labels)
         #     ]
         # )
         # print("first time")
@@ -309,6 +311,7 @@ class IRMASDatasetTest(Dataset):
         num_classes=config_defaults.DEFAULT_NUM_LABELS,
         sampling_rate=config.sampling_rate,
         normalize_audio=config.normalize_audio,
+        normalize_image=config.normalize_image,
     ):
         self.num_classes = num_classes
         self.audio_transform = audio_transform
@@ -316,6 +319,7 @@ class IRMASDatasetTest(Dataset):
         self.dataset_dir = dataset_dir
         self.sampling_rate = sampling_rate
         self.normalize_audio = normalize_audio
+        self.normalize_image = normalize_image
 
         self._populate_dataset()
 
@@ -373,9 +377,9 @@ class IRMASDatasetTest(Dataset):
         )
 
         if self.audio_transform is None:
-            return audio, labels
+            return audio, labels, index
 
-        features = self.audio_transform.process(audio)
+        features = self.audio_transform(audio)
 
         labels = torch.tensor(labels).float()
 
