@@ -22,6 +22,8 @@ def get_data_input_type(model_enum: SupportedModels) -> ModelInputDataType:
         return ModelInputDataType.WAVEFORM
     elif model_enum == SupportedModels.WAV2VEC_CNN:
         return ModelInputDataType.WAVEFORM
+    elif model_enum == SupportedModels.LSTM_BASELINE:
+        return ModelInputDataType.IMAGE
     raise UnsupportedModel(
         f"Each model should have it's own ModelInputDataType. Create a new `elif` for the model {model_enum}."
     )

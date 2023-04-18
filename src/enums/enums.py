@@ -12,6 +12,7 @@ class SupportedModels(Enum):
     RESNEXT101_64X4D = "resnext101_64x4d"
     WAV2VEC = "wav2vec"
     WAV2VEC_CNN = "wav2vec_cnn"
+    LSTM_BASELINE = "lstm_baseline"
 
 
 class SupportedHeads(Enum):

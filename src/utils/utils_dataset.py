@@ -2,10 +2,41 @@ from pathlib import Path
 
 import numpy as np
 import torch
+import pandas as pd
 
 from src.config import config_defaults
 from src.enums.enums import SupportedDatasets
 from src.utils.utils_exceptions import InvalidArgument, InvalidDataException
+
+
+def assign_guitars_random(openmic:pd.DataFrame)->pd.DataFrame:
+    """
+    Randomly assigns accoustic or electic guitar labels 
+    to gutiar instanes in openmic
+    """
+    openmic.insert(openmic.shape[1],"gel",0)
+    openmic.insert(openmic.shape[1],"gac",0)
+    gel_idx = openmic.loc[openmic["git"]!=0].sample(frac=0.5).index
+    gac_idx = openmic.loc[openmic["git"]!=0].drop(gel_idx).index
+    openmic.loc[gel_idx,"gel"]=1
+    openmic.loc[gac_idx,"gac"]=1
+    return openmic
+
+
+def get_label_columns(as_irmas):
+    instrument_names = []
+    if as_irmas:
+        return [instrument.value for instrument in config_defaults.InstrumentKeys]
+
+    for instrument in config_defaults.OpenMicInstumentKeys:
+        instrument_names.append(instrument.value)
+    return instrument_names
+
+
+
+
+
+
 
 
 def encode_instruments(instruments: list[str]) -> np.ndarray:

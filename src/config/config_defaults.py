@@ -45,6 +45,20 @@ class InstrumentEnums(Enum):
     VOICE = "voi"
 
 
+class OpenMicInstumentKeys(Enum):
+    CELLO = "cel"
+    CLARINET = "cla"
+    FLUTE = "flu"
+    GUITAR = "git"
+    ORGAN = "org"
+    PIANO = "pia"
+    SAXOPHONE = "sax"
+    TRUMPET = "tru"
+    VIOLIN = "vio"
+    VOICE = "voi"
+
+
+
 INSTRUMENT_TO_IDX = {
     InstrumentEnums.CELLO.value: 0,
     InstrumentEnums.CLARINET.value: 1,
