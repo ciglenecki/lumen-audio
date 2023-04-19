@@ -66,6 +66,7 @@ def main():
         for e_idx, e in enumerate(embedding):
             embeddings[f"e{e_idx}"].append(e)
 
+        # WARNING: ADDING ONLY ONE/FIRST INSTRUMENT!
         all_instrument_names.append(instrument_names[0])
         sample_paths.append(sample_path)
 

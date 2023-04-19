@@ -290,3 +290,6 @@ class IRMASDataModule(pl.LightningDataModule):
             collate_fn=self.collate_fn,
             pin_memory=True,
         )
+
+    def predict_dataloader(self) -> EVAL_DATALOADERS:
+        return super().predict_dataloader()

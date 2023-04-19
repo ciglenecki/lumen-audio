@@ -206,6 +206,9 @@ class ConfigDefault(Serializable):
     val_dirs: list[str] | None = create(None)
     """Dataset root directories that will be used for validation in the following format: --val-dirs irmas:/path/to/dataset openmic:/path/to/dataset"""
 
+    test_dirs: list[str] | None = create(None)
+    """Dataset root directories that will be used for testing in the following format: --test-dirs irmas:/path/to/dataset openmic:/path/to/dataset"""
+
     train_only_dataset: bool = create(False)
     """Use only the train portion of the dataset and split it 0.8 0.2"""
 
@@ -420,21 +423,28 @@ class ConfigDefault(Serializable):
                 dict(path_background_noise=self.path_background_noise)
             )
 
-    def parse_dataset_paths(self):
-        """Output directory of the model and report file."""
-        # We can't put where other default values live because we can't reference `self.path_irmas_test` until the user sets irmas directory.
-        if self.train_dirs is None:
-            self.train_dirs = [f"irmas:{str(self.path_irmas_train)}"]
-        if self.val_dirs is None:
-            self.val_dirs = [f"irmas:{str(self.path_irmas_test)}"]
-
+    def _parse_dataset_paths(self, data_dir) -> tuple[SupportedDatasets, Path]:
         # Parse strings to dataset type and path
         try:
-            self.train_dirs = [self.dir_to_enum_and_path(d) for d in self.train_dirs]
-            self.val_dirs = [self.dir_to_enum_and_path(d) for d in self.val_dirs]
+            return [self.dir_to_enum_and_path(d) for d in data_dir]
         except InvalidArgument as e:
             msg = f"Usage:\t--train-dirs <TYPE>:/path/to/dataset\n\t--val-dirs <TYPE>:/path/to/dataset.\nSupported <TYPE>: {[ d.value for d in SupportedDatasets]}"
             raise InvalidArgument(f"{str(e)}\n{msg}")
+
+    def parse_train_dirs(self):
+        if self.train_dirs is None:
+            self.train_dirs = [f"irmas:{str(self.path_irmas_train)}"]
+        self.train_dirs = self._parse_dataset_paths(self.train_dirs)
+
+    def parse_val_dirs(self):
+        if self.val_dirs is None:
+            self.val_dirs = [f"irmas:{str(self.path_irmas_test)}"]
+        self.val_dirs = self._parse_dataset_paths(self.val_dirs)
+
+    def parse_test_dirs(self):
+        if self.test_dirs is None:
+            self.test_dirs = [f"irmas:{str(self.path_irmas_test)}"]
+        self.test_dirs = self._parse_dataset_paths(self.test_dirs)
 
     def _validate_train_args(self):
         """This function validates arguments before training."""

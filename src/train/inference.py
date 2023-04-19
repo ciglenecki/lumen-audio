@@ -44,65 +44,62 @@ from src.utils.utils_functions import (
 )
 from src.utils.utils_model import print_modules
 
+# def experiment_setup(config: ConfigDefault, pl_args: Namespace):
+#     """Create experiment directory."""
+#     timestamp = get_timestamp()
+#     experiment_codeword = random_codeword()
+#     experiment_name = f"{timestamp}_{experiment_codeword}_{config.model.value}"
 
-def experiment_setup(config: ConfigDefault, pl_args: Namespace):
-    """Create experiment directory."""
-    timestamp = get_timestamp()
-    experiment_codeword = random_codeword()
-    experiment_name = f"{timestamp}_{experiment_codeword}_{config.model.value}"
+#     output_dir = Path(config.output_dir)
+#     output_dir.mkdir(exist_ok=True)
+#     experiment_dir = Path(output_dir, experiment_name)
+#     experiment_dir.mkdir(exist_ok=True)
 
-    output_dir = Path(config.output_dir)
-    output_dir.mkdir(exist_ok=True)
-    experiment_dir = Path(output_dir, experiment_name)
-    experiment_dir.mkdir(exist_ok=True)
+#     filename_config = Path(experiment_dir, "config.yaml")
+#     with open(filename_config, "w") as outfile:
+#         yaml.dump(config, outfile)
+#     filename_report = Path(output_dir, experiment_name, "log.txt")
 
-    filename_config = Path(experiment_dir, "config.yaml")
-    with open(filename_config, "w") as outfile:
-        yaml.dump(config, outfile)
-    filename_report = Path(output_dir, experiment_name, "log.txt")
-
-    stdout_to_file(filename_report)
-    print()
-    print("Created experiment directory:", str(experiment_dir))
-    print("Created log file:", str(filename_report))
-    print()
-    print("================== Config ==================\n\n", config)
-    print()
-    print(
-        "================== PyTorch Lightning ==================\n\n",
-        to_yaml(vars(pl_args)),
-    )
-    input("Review the config above. Press enter if you wish to continue: ")
-    return experiment_name, experiment_dir, output_dir
+#     stdout_to_file(filename_report)
+#     print()
+#     print("Created experiment directory:", str(experiment_dir))
+#     print("Created log file:", str(filename_report))
+#     print()
+#     print("================== Config ==================\n\n", config)
+#     print()
+#     print(
+#         "================== PyTorch Lightning ==================\n\n",
+#         to_yaml(vars(pl_args)),
+#     )
+#     input("Review the config above. Press enter if you wish to continue: ")
+#     return experiment_name, experiment_dir, output_dir
 
 
 if __name__ == "__main__":
     parser = ArgParseWithConfig()
     args, config, pl_args = parser.parse_args()
+
     if config.model is None:
         raise InvalidArgument(f"--model is required {list(SupportedModels)}")
     if config.model not in model_constructor_map:
         raise UnsupportedModel(
             f"Model {config.model} is not in the model_constructor_map. Add the model enum to the model_constructor_map."
         )
+    config.parse_dataset_paths()
+
     model_constructor: pl.LightningModule = model_constructor_map[config.model]
     model = model_constructor.load_from_checkpoint(config.ckpt)
-    print(model)
-    exit(1)
+    model_config = model.config
+
     # TODO continue here
     (
         train_spectrogram_augmentation,
         train_waveform_augmentation,
         val_spectrogram_augmentation,
         val_waveform_augmentation,
-    ) = get_augmentations(config)
+    ) = get_augmentations(model_config)
 
-    train_audio_transform: AudioTransformBase = get_audio_transform(
-        config,
-        spectrogram_augmentation=train_spectrogram_augmentation,
-        waveform_augmentation=train_waveform_augmentation,
-    )
-    val_audio_transform: AudioTransformBase = get_audio_transform(
+    inference_audio_transform: AudioTransformBase = get_audio_transform(
         config,
         spectrogram_augmentation=val_spectrogram_augmentation,
         waveform_augmentation=val_waveform_augmentation,
@@ -122,14 +119,15 @@ if __name__ == "__main__":
         num_workers=config.num_workers,
         dataset_fraction=config.dataset_fraction,
         drop_last_sample=config.drop_last,
-        train_audio_transform=train_audio_transform,
-        val_audio_transform=val_audio_transform,
+        train_audio_transform=None,
+        val_audio_transform=None,
         collate_fn=collate_fn,
         normalize_audio=config.normalize_audio,
         train_only_dataset=config.train_only_dataset,
         concat_n_samples=concat_n_samples,
         sum_two_samples=SupportedAugmentations.SUM_TWO_SAMPLES in config.augmentations,
         use_weighted_train_sampler=config.use_weighted_train_sampler,
+        normalize_image=config.normalize_image,
     )
 
     if config.loss_function == SupportedLossFunctions.CROSS_ENTROPY:
@@ -142,19 +140,8 @@ if __name__ == "__main__":
         loss_function = torch.nn.BCEWithLogitsLoss(**kwargs)
 
     model = get_model(config, loss_function=loss_function)
-    print_modules(model)
 
     # ================= SETUP CALLBACKS (auto checkpoint, tensorboard, early stopping...)========================
-    metric_mode_str = MetricMode(config.metric_mode).value
-    optimizer_metric_str = OptimizeMetric(config.metric).value
-
-    tensorboard_logger = pl_loggers.TensorBoardLogger(
-        save_dir=str(output_dir),
-        name=experiment_name,
-        default_hp_metric=False,  # Enables a placeholder metric with key `hp_metric` when `log_hyperparams` is called without a metric (otherwise calls to log_hyperparams without a metric are ignored).
-        log_graph=True,
-        version=".",
-    )
 
     train_dataloader_size = len(datamodule.train_dataloader())
     bar_refresh_rate = int(train_dataloader_size / config.bar_update)
