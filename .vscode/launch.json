@@ -50,6 +50,15 @@
 			"justMyCode": false
 		},
 		{
+			"name": "Check pretraining",
+			"type": "python",
+			"request": "launch",
+			"program": "src/pretrain/pretrain.py",
+			"console": "integratedTerminal",
+			"args": "--model RESNEXT50_32X4D --audio-transform MEL_SPECTROGRAM",
+			"justMyCode": false
+		},
+		{
 			"name": "Save embeddings",
 			"type": "python",
 			"request": "launch",

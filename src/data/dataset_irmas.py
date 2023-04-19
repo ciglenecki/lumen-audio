@@ -304,6 +304,21 @@ class IRMASDatasetTrain(Dataset):
         return features, labels, index
 
 
+class IRMASDatasetPreTrain(IRMASDatasetTrain):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def __getitem__(self, index: int):
+        features, _, _ = super().__getitem__(index)
+
+        valid_indices = np.arange(len(self.dataset))
+        valid_indices = valid_indices[valid_indices != index]
+        random_index = np.random.choice(valid_indices, 1)[0]
+        features_random, _, _ = super().__getitem__(random_index)
+
+        return features, features_random
+
+
 class IRMASDatasetTest(Dataset):
     def __init__(
         self,
