@@ -204,10 +204,13 @@ class ConfigDefault(Serializable):
     """Dataset root directories that will be used for training in the following format: --train-dirs irmas:/path/to/dataset or openmic:/path/to/dataset"""
 
     val_dirs: list[str] | None = create(None)
-    """Dataset root directories that will be used for validation in the following format: --val-dirs irmas:/path/to/dataset openmic:/path/to/dataset"""
+    """Dataset root directories that will be used for validation in the following format: --val-dirs irmas:/path/to/dataset openmic:/path/to/dataset. If --test-dirs is not provided val dir will be split to val and test."""
 
     test_dirs: list[str] | None = create(None)
     """Dataset root directories that will be used for testing in the following format: --test-dirs irmas:/path/to/dataset openmic:/path/to/dataset"""
+
+    predict_dirs: list[str] | None = create(None)
+    """Dataset root directories that will be used for predicting in the following format: --test-dirs irmas:/path/to/dataset openmic:/path/to/dataset"""
 
     train_only_dataset: bool = create(False)
     """Use only the train portion of the dataset and split it 0.8 0.2"""
@@ -442,14 +445,19 @@ class ConfigDefault(Serializable):
         self.val_dirs = self._parse_dataset_paths(self.val_dirs)
 
     def parse_test_dirs(self):
-        if self.test_dirs is None:
-            self.test_dirs = [f"irmas:{str(self.path_irmas_test)}"]
-        self.test_dirs = self._parse_dataset_paths(self.test_dirs)
+        if self.test_dirs is not None:
+            self.test_dirs = self._parse_dataset_paths(self.test_dirs)
+
+    def parse_predict_dirs(self):
+        if self.predict_dirs is not None:
+            self.predict_dirs = self._parse_dataset_paths(self.predict_dirs)
 
     def _validate_train_args(self):
         """This function validates arguments before training."""
 
-        self.parse_dataset_paths()
+        self.parse_train_dirs()
+        self.parse_val_dirs()
+        self.parse_test_dirs()
 
         if self.model is None:
             raise InvalidArgument(f"--model is required {list(SupportedModels)}")

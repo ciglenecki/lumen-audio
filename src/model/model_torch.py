@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torchmetrics
 from pytorch_lightning.loggers import TensorBoardLogger
+from torch_scatter import scatter_max
 from torchmetrics.classification import MultilabelF1Score
 from torchvision.models import (
     ResNet,
@@ -183,3 +184,37 @@ class TorchvisionModel(ModelBase):
 
     def test_step(self, batch, batch_idx):
         return self._step(batch, batch_idx, type="test")
+
+    def predict_step(self, batch, batch_idx: int, dataloader_idx: int = 0):
+        images, y, file_indices, item_index = batch
+
+        sub_batches = torch.split(images, self.batch_size, dim=0)
+        loss = 0
+        y_pred_prob = torch.zeros((len(images), self.num_labels), device=self.device)
+        y_pred = torch.zeros((len(images), self.num_labels), device=self.device)
+
+        passed_images = 0
+        for sub_batch_image in sub_batches:
+            b_size = len(sub_batch_image)
+            start = passed_images
+            end = passed_images + b_size
+
+            b_y = y[start:end]
+            b_logits_pred = self.forward(sub_batch_image)
+            b_loss = self.loss_function(b_logits_pred, b_y)
+
+            b_y_pred_prob = torch.sigmoid(b_logits_pred)
+            b_y_pred = (b_y_pred_prob >= 0.5).float()
+
+            loss += b_loss * b_size
+            y_pred_prob[start:end] = b_y_pred_prob
+            y_pred[start:end] = b_y_pred
+
+            passed_images += b_size
+
+        y_final_out, _ = scatter_max(y_pred, file_indices, dim=0)
+
+        loss = loss / len(images)
+        return self.log_and_return_loss_step(
+            loss=loss, y_pred=y_pred, y_true=y, type=type
+        )

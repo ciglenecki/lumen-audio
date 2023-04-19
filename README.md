@@ -108,22 +108,6 @@ Caculate features for train for EACH instrument:
 - librosa.feature.mfcc (n_mfcc=10, which means this produces 10 features for the whole sequence, no matter how long it is)
 - use np.mean() to reduce any time/temporal dimension to one feature.
 
-**Dataframe for one instrument (guitar):**
-
-|                            | spectral_centroid | spectral_bandwidth |  ... | mfcc_1 | mfcc_2 | ... | mfcc_10 |
-| -------------------------- | ----------------: | -----------------: | ---: | -----: | -----: | --- | ------- |
-| 0 (guitar.wav from train)  |               0.3 |                0.1 |  ... |    0.5 |      3 | ... | 10      |
-| 1 (guitar2.wav from train) |               0.5 |               0.11 |  ... |   0.15 |      7 | ... | 0.3     |
-
-**Dataframe for whole train dataset**
-
-|                    | guitar | flute | **drums** | **is_drum_known** | spectral_centroid | spectral_bandwidth |  ... | mfcc_1 | mfcc_2 | ... | mfcc_10 |
-| ------------------ | ------ | ----- | --------- | --------- | ----------------: | -----------------: | ---: | -----: | -----: | --- | ------- |
-| 0 (wav from train) | 1      | 0     | 1         | 1         |               0.3 |                0.1 |  ... |    0.5 |      3 | ... | 10      |
-| 1 (wav from train) | 0      | 1     | 1         | 1         |               0.5 |               0.11 |  ... |   0.15 |      7 | ... | 0.3     |
-| 2 (wav from train) | 1      | 0     | 0         | 0         |               0.1 |               0.12 |  ... |   0.23 |      1 | ... | 0.34    |
-
-
 Caculate **correlation and covariance matrix** using the dataframe above.
 
 Add musical key finder https://github.com/jackmcarthur/musical-key-finder, which tonalities happen a lot?
@@ -523,6 +507,24 @@ Tasks:
     - electra, is the patch shuffled?
 - [x] **augmentations**: time shift, pitch shift, sox
   - [x] add normalization after augmentations
+
+
+**Dataframe for one instrument (guitar):**
+
+|                            | spectral_centroid | spectral_bandwidth |  ... | mfcc_1 | mfcc_2 | ... | mfcc_10 |
+| -------------------------- | ----------------: | -----------------: | ---: | -----: | -----: | --- | ------- |
+| 0 (guitar.wav from train)  |               0.3 |                0.1 |  ... |    0.5 |      3 | ... | 10      |
+| 1 (guitar2.wav from train) |               0.5 |               0.11 |  ... |   0.15 |      7 | ... | 0.3     |
+
+**Dataframe for whole train dataset**
+
+|                    | guitar | flute | **drums** | **is_drum_known** | spectral_centroid | spectral_bandwidth |  ... | mfcc_1 | mfcc_2 | ... | mfcc_10 |
+| ------------------ | ------ | ----- | --------- | --------- | ----------------: | -----------------: | ---: | -----: | -----: | --- | ------- |
+| 0 (wav from train) | 1      | 0     | 1         | 1         |               0.3 |                0.1 |  ... |    0.5 |      3 | ... | 10      |
+| 1 (wav from train) | 0      | 1     | 1         | 1         |               0.5 |               0.11 |  ... |   0.15 |      7 | ... | 0.3     |
+| 2 (wav from train) | 1      | 0     | 0         | 0         |               0.1 |               0.12 |  ... |   0.23 |      1 | ... | 0.34    |
+
+
 ______________________________________________________________________
 
 ## 🏆 Team members
