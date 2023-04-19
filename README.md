@@ -12,8 +12,6 @@ Check the code architecture drawing: https://docs.google.com/drawings/d/1DDG480M
 ## Notes
 
 ## Tasks:
-- [ ] create eval script which will caculate ALL metrics for the whole dataset
-- [ ] use validation examples in train (without data leakage), check what's the total time of audio in train and val
 - [ ] add a feature that uses different features per channel - convolutional models expect a 3-channel tensor, so lets make full use of those 3 channels
 
 Low priority tasks:
@@ -28,22 +26,57 @@ Low priority tasks:
 - [ ] compare Mirko's wavelet transform with scipy's native transformation
   - run experiments in both cases
 - [ ] make sure augmetantions happen in batch
-- [ ] pretraning: SparK https://github.com/keyu-tian/SparK
 - [ ] read why this loss might be a problem at the article ((classification + perceptual distance (centroid of the class in AST latent space, https://hav4ik.github.io/articles/deep-metric-learning-survey)
+- [ ] add Contrastive loss from here https://kevinmusgrave.github.io/pytorch-metric-learning/losses/#contrastiveloss
 
 ## Matej:
 
 - [ ] ❗create backend API/inference
   - [ ] load model in inference, caculate metrics the whole test irmas dataset (analitics)
     - [ ] should reuse the train.py script, just use different modes?
+    - [ ] create eval script which will caculate ALL metrics for the whole dataset
   - [ ] any dataset/csv loader
   - [ ] http server with some loaded model which returns responses
 - [ ] ❗create technical documentation
 - [ ] ❗create docker container
-- [ ] **augmentations**: time shift, pitch shift, sox
-  - [ ] add normalization after augmentations
 - [ ] ⚠️ check for all models edge cases (0.1 sec, 2h)
 - [ ] ⚠️ download the whole IRMAS dataset
+- [ ] **visualize embedded features**: for each model with tensorboard embedder https://projector.tensorflow.org/
+- [ ] ⚠️ check the assumption that label instrument is present thought the whole audio (check n=200 samples and check how many occourances) VALIDATION
+  - holds up for most cases?
+  - [ ] 🖊️ report your findings in Google Docs
+- [ ] **Train Wav2Vec2 Transformer**: "m3hrdadfi/wav2vec2-base-100k-gtzan-music-genres"
+  - [ ] nothing better than simple CNN?
+- [ ] pretraning: SparK https://github.com/keyu-tian/SparK
+
+## Mirko:
+- [ ] ⚠️ create a CSV which splits IRMAS validation to train and validation. First, group the .wav examples by the same song and find union of labels. Apply http://scikit.ml/stratification.html Multi-label data stratification to split the data.
+- [ ] **arcface**: add arcface loss (`src/model/loss_function.py`) in our codebase and RUN the train.py. Don't use pure arcface!. Run experiment with and without arcface.
+  - [ ] 🖊️ report your findings in Google Docs
+- [ ] create attention visualization
+- ![](img/attention_weights.png)
+- [ ] **Fluffy**: Directly compare Fluffy to non. Fluffy (include metrics)
+  - [ ] 🖊️ report your findings in Google Docs
+- [ ] Train OpenMIC with Wav2Vec2 CNN:
+  - if Fluffy showed no improvement in previous step then don't use Fluffy
+  - if Fluffy showed improvement train with Fluffy and no Fluffy
+  - [ ] 🖊️ report your findings in Google Docs
+- [ ] **OpenMIC guitars**: use cleanlab and Kmeans to find guitars. Openmic has 1 guitar label. Take pretrained AST and do feature extraction on IRMAS train only on electric and aucustic guitar examples. Create a script which takes the AST features and creates Kmeans between two classes. Cluster OpenMIC guitars, take the most confident examples and save the examples (and new labels).
+
+
+## Rep:
+- [ ] **gradcam plots** create gradcam plots for trained model
+  - [ ] 🖊️ report your findings in Google Docs
+- [ ] train  ResNeXt 50_32x4d on MelSpectrogram
+  - [ ] Compare how augmentations affect the final metrics:
+    - [ ] with no augmentations
+    - [ ] with augmentations
+    - [ ] 🖊️ report your findings in Google Docs
+- [ ] train  ResNeXt 50_32x4d on MFCC
+  - [ ] Compare how augmentations affect the final metrics:
+    - [ ] with no augmentations
+    - [ ] with augmentations
+    - [ ] 🖊️ report your findings in Google Docs
 - [ ] **train with relabeled data (rep):** Include Ivan's relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
   - [ ] 🖊️ report your findings in Google Docs
 - [ ] **train with relabeled data (cleanlab):** Include train override csv. No augmentations. Compare both models metrics.
@@ -52,83 +85,23 @@ Low priority tasks:
   - check if all instruments are correct
   - check if at least one instrument is correct
   - [ ] 🖊️ report your findings in Google Docs
-- [ ] **visualize embedded features**: for each model with tensorboard embedder https://projector.tensorflow.org/
-- [ ] ⚠️ check the assumption that label instrument is present thought the whole audio (check n=200 samples and check how many occourances) VALIDATION
-  - holds up for most cases?
-  - [ ] 🖊️ report your findings in Google Docs
-- [ ] **ESC50:** download non instrument audio files and write data loader which are NOT instruments (@matej) this might not be important since the model usually gives [0,0,0,0,0] anyways: download ESC50 non instrument audio files and write data loader which are NOT instruments (@matej)
-- [ ] **Train Wav2Vec2 Transformer**: "m3hrdadfi/wav2vec2-base-100k-gtzan-music-genres"
-  - [ ] nothing better than simple CNN?
-
-## Mirko:
-- [ ] Directly compare Fluffy to non. Fluffy (include metrics)
-  - [ ] 🖊️ report your findings in Google Docs
-- [ ] Train OpenMIC with Wav2Vec2 CNN:
-  - if Fluffy showed no improvement in previous step then don't use Fluffy
-  - if Fluffy showed improvement train with Fluffy and no Fluffy
-  - [ ] 🖊️ report your findings in Google Docs
-- [ ] add new metric loss function inside `src/model/loss_function.py` and train model using it. Compare metrics.
-  - [ ] 🖊️ report your findings in Google Docs
-- [ ] add Contrastive loss from here https://kevinmusgrave.github.io/pytorch-metric-learning/losses/#contrastiveloss
-  - [ ] 🖊️ report your findings in Google Docs
-  - [ ] implement dataset anchor, positive and negative based on a given loss function, should work for all
-    - [ ] how do you sample positive and negative? Is it uniform acorss dataset, uniform across classes or p=0.5 positive/negative
-- [ ] add ArcFace loss and repeat everything for the above
-  - [ ] report your findings in Google Docs
-- [ ] create attention visualization
-- ![](img/attention_weights.png)
-
-## Ivan:
-- [ ] train  ResNeXt 50_32x4d on MelSpectrogram
-  - [ ] Compare how augmentations affect the final metrics:
-    - [ ] with no augmentations
-    - [ ] with augmentations
-- [ ] train  ResNeXt 50_32x4d on MFCC
-  - [ ] Compare how augmentations affect the final metrics:
-    - [ ] with no augmentations
-    - [ ] with augmentations
-
-- [ ] add gradient/activation visualization for a predicted image. Which parts of the image light up during inference?
-- [ ] add gradcam for multiple trained models
-  - [ ] 🖊️ report your findings in Google Docs
-- ![](img/cnn_activations.png)
-
 
 ## Vinko:
 
-Hyperparams:
+
+- [ ] use the `get_metrics` functions from `src/train/metrics.py` to caculate metrics for each sample. The function returns mean metrics and metrics per instrument (make sure to use =True argument)
+- [ ] train 22 SVMs (RBF and lienar) using IRMAS training data
+  - [ ] 🖊️ document the process, intution behind features and metrics
+- [ ] make sure the model gets saved to a file when the training is over. It would also be good to save the hyperparameters of the model (to a filename or whatever). Run with only 5 examples just to check that everything works before doing full-on training.
+- [ ] Create a script/notebook for plotting SVM results. There should be a total of 22 plots. You can reduce dimensionality with t-SNE and PCA from `sklearn`. Save the plots to .png so we can easily include it in the documentation. (`plot_2d_svc_problem` at https://github.com/ir2718/machine-learning-1/blob/main/SU1_2021_08_09_10_SVM.ipynb or any other better plot function!)
+  - [ ] 🖊️ add plots to the documentation
+- [ ] 🖊️ document everything about the distribution of the dataset (things you already did)
+- [ ] create a corr matrix for features which show the highest amount of variance!
+  - [ ] 🖊️ document which features make most sense to use.
 - sampling_rate = 16_000
 - n_fft = 400
 - hop_length = 400
 
-Caculate features for train for EACH instrument:
-- librosa.feature.spectral_centroid
-- librosa.feature.spectral_bandwidth
-- librosa.feature.spectral_contrast
-- librosa.feature.spectral_flatness
-- librosa.feature.spectral_rolloff
-- librosa.feature.mfcc (n_mfcc=10, which means this produces 10 features for the whole sequence, no matter how long it is)
-- use np.mean() to reduce any time/temporal dimension to one feature.
-
-**Dataframe for one instrument (guitar):**
-
-|                            | spectral_centroid | spectral_bandwidth |  ... | mfcc_1 | mfcc_2 | ... | mfcc_10 |
-| -------------------------- | ----------------: | -----------------: | ---: | -----: | -----: | --- | ------- |
-| 0 (guitar.wav from train)  |               0.3 |                0.1 |  ... |    0.5 |      3 | ... | 10      |
-| 1 (guitar2.wav from train) |               0.5 |               0.11 |  ... |   0.15 |      7 | ... | 0.3     |
-
-**Dataframe for whole train dataset**
-
-|                    | guitar | flute | **drums** | **is_drum_known** | spectral_centroid | spectral_bandwidth |  ... | mfcc_1 | mfcc_2 | ... | mfcc_10 |
-| ------------------ | ------ | ----- | --------- | --------- | ----------------: | -----------------: | ---: | -----: | -----: | --- | ------- |
-| 0 (wav from train) | 1      | 0     | 1         | 1         |               0.3 |                0.1 |  ... |    0.5 |      3 | ... | 10      |
-| 1 (wav from train) | 0      | 1     | 1         | 1         |               0.5 |               0.11 |  ... |   0.15 |      7 | ... | 0.3     |
-| 2 (wav from train) | 1      | 0     | 0         | 0         |               0.1 |               0.12 |  ... |   0.23 |      1 | ... | 0.34    |
-
-
-Caculate **correlation and covariance matrix** using the dataframe above.
-
-Add musical key finder https://github.com/jackmcarthur/musical-key-finder, which tonalities happen a lot?
 
 Search kaggle and medium for exploratory data analysis audio
 - [ ] https://librosa.org/doc/main/feature.html
@@ -137,6 +110,8 @@ Search kaggle and medium for exploratory data analysis audio
   - [ ] best accuracy = all zeros
   - [ ] best f1 = randomly mark 2-4 instruments as True
   - [ ] best recall = all ones
+
+Add musical key finder https://github.com/jackmcarthur/musical-key-finder, which tonalities happen a lot?
 
 
 Else
@@ -496,6 +471,10 @@ https://github.com/janmyler/web-audio-editor
 ## Done tasks
 
 Tasks:
+- [ ] use validation examples in train (without data leakage), check what's the total time of audio in train and val
+- [x] **augmentations**: time shift, pitch shift, sox
+  - [x] add normalization after augmentations
+- [x] add gradient/activation visualization for a predicted image
 - [x] write summary of Wavelet transform and how it affects the results
 - [x] Wav2Vec results, and train
 - [x] write summary of LSTM results
@@ -523,6 +502,24 @@ Tasks:
   - Shuffle parts of the spectrogram in the following way: (16x16 grid)
     - shuffle 15% of patches
     - electra, is the patch shuffled?
+- [x] **ESC50:** download non instrument audio files and write data loader which are NOT instruments (@matej) this might not be important since the model usually gives [0,0,0,0,0] anyways: download ESC50 non instrument audio files and write data loader which are NOT instruments (@matej)
+
+**Dataframe for one instrument (guitar):**
+
+|                            | spectral_centroid | spectral_bandwidth |  ... | mfcc_1 | mfcc_2 | ... | mfcc_10 |
+| -------------------------- | ----------------: | -----------------: | ---: | -----: | -----: | --- | ------- |
+| 0 (guitar.wav from train)  |               0.3 |                0.1 |  ... |    0.5 |      3 | ... | 10      |
+| 1 (guitar2.wav from train) |               0.5 |               0.11 |  ... |   0.15 |      7 | ... | 0.3     |
+
+**Dataframe for whole train dataset**
+
+|                    | guitar | flute | **drums** | **is_drum_known** | spectral_centroid | spectral_bandwidth |  ... | mfcc_1 | mfcc_2 | ... | mfcc_10 |
+| ------------------ | ------ | ----- | --------- | --------- | ----------------: | -----------------: | ---: | -----: | -----: | --- | ------- |
+| 0 (wav from train) | 1      | 0     | 1         | 1         |               0.3 |                0.1 |  ... |    0.5 |      3 | ... | 10      |
+| 1 (wav from train) | 0      | 1     | 1         | 1         |               0.5 |               0.11 |  ... |   0.15 |      7 | ... | 0.3     |
+| 2 (wav from train) | 1      | 0     | 0         | 0         |               0.1 |               0.12 |  ... |   0.23 |      1 | ... | 0.34    |
+
+
 ______________________________________________________________________
 
 ## 🏆 Team members
