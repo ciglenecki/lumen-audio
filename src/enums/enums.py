@@ -22,17 +22,26 @@ class SupportedHeads(Enum):
 class SupportedAugmentations(Enum):
     """List of supported spectrogram augmentations we use."""
 
-    TIME_STRETCH = "time_stretch"
-    FREQ_MASK = "freq_mask"
-    TIME_MASK = "time_mask"
-    RANDOM_ERASE = "random_erase"
-    RANDOM_PIXELS = "radnom_pixels"
-    COLOR_NOISE = "color_noise"
-    BANDPASS_FILTER = "bandpass"  # Dangerous: changes the distribution of the sample in a meaningful way.
-    PITCH = "pitch"
-    TIMEINV = "timeinv"
+    # Dataset
     CONCAT_N_SAMPLES = "concat_n"
     SUM_TWO_SAMPLES = "sum_two_samples"
+
+    BACKGROUND_NOISE = "background_noise"
+    TIME_STRETCH = "time_stretch"
+    TIME_SHIFT = "time_shift"
+    PITCH = "pitch"
+
+    COLOR_NOISE = "color_noise"
+    TIMEINV = "timeinv"
+    TIME_MASK = "time_mask"
+    SEVEN_BAND_EQ = "seven_band_eq"
+    CLIPPING = "clipping"
+    NORM_AFTER_TIME_AUGS = "norm_after_time_augs"
+
+    # SPEC
+    FREQ_MASK = "freq_mask"
+    RANDOM_ERASE = "random_erase"
+    RANDOM_PIXELS = "radnom_pixels"
 
 
 class SupportedScheduler(Enum):

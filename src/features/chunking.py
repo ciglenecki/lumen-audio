@@ -93,8 +93,12 @@ def chunk_image_by_width(
 
     # [1, 384, 2048]
     # [Batch, height, width]
+    interpolation = torchvision.transforms.functional.InterpolationMode.NEAREST_EXACT
     image = torchvision.transforms.functional.resize(
-        image, size=(pre_resize_height, pre_resize_width), antialias=False
+        image,
+        size=(pre_resize_height, pre_resize_width),
+        interpolation=interpolation,
+        antialias=False,
     )
 
     # Chunk by last dimension (width)

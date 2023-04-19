@@ -100,30 +100,34 @@ def load_audio_from_file(
     return waveform, return_sr
 
 
-def spectrogram_batchify(
+def spectrogram_to_list(
     spectrograms: np.ndarray | torch.Tensor | list[np.ndarray | torch.Tensor],
     n_mels: int,
 ) -> np.ndarray:
     """Send one or multiple spectrograms [height, weight] and return as [batch, height, weight]"""
-    if isinstance(spectrograms, list):
-        spectrograms = np.array(spectrograms)
-    if isinstance(spectrograms, torch.Tensor):
-        spectrograms = spectrograms.detach().cpu().numpy()
-    if not isinstance(spectrograms, np.ndarray):
-        assert False, "Invalid type"
-    if len(spectrograms.shape) == 2:
-        spectrograms = [spectrograms]
-    elif len(spectrograms.shape) > 3:
-        assert False, "spectrograms has to be 1D or 2D (batch) {spectrograms.shape}"
-    # Make all spectrograms equal size
-    spectrograms = torch.tensor(spectrograms)
-    spectrograms = pad_sequence(spectrograms, batch_first=True)
+    if isinstance(spectrograms, np.ndarray):
+        spectrograms = torch.tensor(spectrograms)
 
-    # Make sure it's [batch, height, width]
-    if spectrograms.shape[1] != n_mels:
-        spectrograms = torch.permute(spectrograms, (0, 2, 1))
-    if spectrograms.shape[1] != n_mels:
-        assert False, f"Check spectrogram dimensions {spectrograms.shape}"
+    if isinstance(spectrograms, torch.Tensor) and len(spectrograms.shape) == 2:
+        spectrograms = spectrograms.unsqueeze(0)
+
+    if isinstance(spectrograms, torch.Tensor) and len(spectrograms.shape) == 3:
+        spectrograms = [s for s in spectrograms]
+
+    if isinstance(spectrograms, np.ndarray) and len(spectrograms.shape) == 3:
+        spectrograms = [torch.tensor(s) for s in spectrograms]
+
+    if isinstance(spectrograms, np.ndarray):
+        spectrograms = torch.tensor(spectrograms)
+
+    if isinstance(spectrograms, list) and isinstance(spectrograms[0], np.ndarray):
+        spectrograms = [torch.tensor(s) for s in spectrograms]
+
+    spectrograms = [s.T for s in spectrograms]  # [w, h]
+    spectrograms = pad_sequence(spectrograms, batch_first=True)  # [w, h]
+    spectrograms = [s.T for s in spectrograms]  # [h, w]
+    spectrograms = torch.stack(spectrograms)  # [b, h, w]
+
     return spectrograms.numpy()
 
 
@@ -136,9 +140,10 @@ def plot_spectrograms(
     titles: list[str] | None = None,
     y_axis: Literal[None, "linear", "fft", "hz", "log", "mel"] = "mel",
     use_power_to_db=True,
+    block_plot=True,
 ):
     """Plot one or multiple spectrograms."""
-    spectrograms = spectrogram_batchify(spectrograms, n_mels)
+    spectrograms = spectrogram_to_list(spectrograms, n_mels)
 
     # Prepare sizes, nrows, ncols
     batch_size = len(spectrograms)
@@ -177,7 +182,7 @@ def plot_spectrograms(
         fig.colorbar(img, cax=cax, format=format_str)
 
     plt.tight_layout()
-    plt.show()
+    plt.show(block=block_plot)
     # plt.close()
 
 

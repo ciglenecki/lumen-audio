@@ -37,7 +37,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --val-dirs irmas:data/irmas/test --audio-transform MEL_SPECTROGRAM --model RESNEXT50_32X4D --backbone-after backbone.fc --head-after backbone.fc --quick",
+			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --val-dirs irmas:data/irmas/test --audio-transform MEL_SPECTROGRAM --model RESNEXT50_32X4D --backbone-after backbone.layer1.2 --head-after backbone.fc --num-workers 1 --batch-size 4",
 			"justMyCode": false
 		},
 		{

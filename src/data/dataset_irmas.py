@@ -120,7 +120,7 @@ class IRMASDatasetTrain(Dataset):
             # drums_vector = encode_drums(drums)
             # genre_vector = encode_genre(genre)
 
-            self.dataset.append((str(path), labels))
+            self.dataset.append((path, labels))
 
             for instrument in item_instruments:
                 self.instrument_idx_list[instrument].append(item_idx)
@@ -281,6 +281,7 @@ class IRMASDatasetTrain(Dataset):
             self.concat_n_samples is not None and self.concat_n_samples > 1
         ) or self.sum_two_samples:
             audio, labels = self.concat_and_sum_random_negative_samples(audio, labels)
+
         if self.audio_transform is None:
             return audio, labels, index
 
@@ -368,13 +369,6 @@ class IRMASDatasetTest(Dataset):
 
     def __getitem__(self, index) -> tuple[torch.Tensor, torch.Tensor]:
         audio, labels, audio_path = self.load_sample(index)
-
-        audio, _ = load_audio_from_file(
-            audio_path,
-            target_sr=self.sampling_rate,
-            method="librosa",
-            normalize=self.normalize_audio,
-        )
 
         if self.audio_transform is None:
             return audio, labels, index
