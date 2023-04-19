@@ -62,7 +62,7 @@ def get_config() -> tuple[ConfigDefault, Namespace]:
     args = parser.parse_args()
     args_dict = vars(args)
     config: ConfigDefault = args_dict.pop(user_dest)
-    config._validate_train_args()
+    config._check_train_args()
     pl_args = Namespace(**args_dict)
 
     # Dynamically set some PyTorch lightning arguments

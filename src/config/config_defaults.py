@@ -420,6 +420,51 @@ class ConfigDefault(Serializable):
                 dict(path_background_noise=self.path_background_noise)
             )
 
+        # Dynamically set the RGB option based on model's architecture
+        if self.model is not None and self.use_rgb is None:
+            USE_RGB = {
+                SupportedModels.AST: False,
+                SupportedModels.WAV2VEC_CNN: None,
+                SupportedModels.WAV2VEC: None,
+                SupportedModels.EFFICIENT_NET_V2_S: True,
+                SupportedModels.EFFICIENT_NET_V2_M: True,
+                SupportedModels.EFFICIENT_NET_V2_L: True,
+                SupportedModels.RESNEXT50_32X4D: True,
+                SupportedModels.RESNEXT101_32X8D: True,
+                SupportedModels.RESNEXT101_64X4D: True,
+            }
+            self.use_rgb = USE_RGB[self.model]
+
+        # Dynamically set pretrained tag
+        if self.model is not None and self.pretrained and self.pretrained_tag is None:
+            if self.model not in DEFAULT_PRETRAINED_TAG_MAP:
+                raise InvalidArgument(
+                    f"Couldn't find pretrained tag for pretrained model {self.model}. Add a new tag to the DEFAULT_PRETRAINED_TAG_MAP map or pass the --pretrained-tag <tag> argument."
+                )
+            self.pretrained_tag = DEFAULT_PRETRAINED_TAG_MAP[self.model]
+
+        # Dynamically AST DSP attributes and augmentations
+        if (
+            self.model == SupportedModels.AST
+            and self.pretrained
+            and self.pretrained_tag == TAG_AST_AUDIOSET
+        ):
+            self.n_fft = 400
+            self.hop_length = 160
+            self.n_mels = 128
+
+            if self.augmentations == get_default_value_for_field("augmentations", self):
+                _augmentations_set = set(self.augmentations)
+                _augmentations_set.add(SupportedAugmentations.CONCAT_N_SAMPLES)
+                _augmentations_set.add(SupportedAugmentations.SUM_TWO_SAMPLES)
+                self.augmentations = list(_augmentations_set)
+
+        # Set typical weight decay for optimizers.
+        if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAM:
+            self.weight_decay = 0
+        if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAMW:
+            self.weight_decay = 1e-2
+
     def parse_dataset_paths(self):
         """Output directory of the model and report file."""
         # We can't put where other default values live because we can't reference `self.path_irmas_test` until the user sets irmas directory.
@@ -436,7 +481,7 @@ class ConfigDefault(Serializable):
             msg = f"Usage:\t--train-dirs <TYPE>:/path/to/dataset\n\t--val-dirs <TYPE>:/path/to/dataset.\nSupported <TYPE>: {[ d.value for d in SupportedDatasets]}"
             raise InvalidArgument(f"{str(e)}\n{msg}")
 
-    def _validate_train_args(self):
+    def _check_train_args(self):
         """This function validates arguments before training."""
 
         self.parse_dataset_paths()
@@ -504,51 +549,6 @@ class ConfigDefault(Serializable):
                 SupportedModels.RESNEXT101_64X4D: None,
             }
             self.max_num_width_samples = MAX_NUM_WIDTH_SAMPLE[self.model]
-
-        # Dynamically set pretrained tag
-        if self.model is not None and self.pretrained and self.pretrained_tag is None:
-            if self.model not in DEFAULT_PRETRAINED_TAG_MAP:
-                raise InvalidArgument(
-                    f"Couldn't find pretrained tag for pretrained model {self.model}. Add a new tag to the DEFAULT_PRETRAINED_TAG_MAP map or pass the --pretrained-tag <tag> argument."
-                )
-            self.pretrained_tag = DEFAULT_PRETRAINED_TAG_MAP[self.model]
-
-        # Dynamically set the RGB option based on model's architecture
-        if self.model is not None and self.use_rgb is None:
-            USE_RGB = {
-                SupportedModels.AST: False,
-                SupportedModels.WAV2VEC_CNN: None,
-                SupportedModels.WAV2VEC: None,
-                SupportedModels.EFFICIENT_NET_V2_S: True,
-                SupportedModels.EFFICIENT_NET_V2_M: True,
-                SupportedModels.EFFICIENT_NET_V2_L: True,
-                SupportedModels.RESNEXT50_32X4D: True,
-                SupportedModels.RESNEXT101_32X8D: True,
-                SupportedModels.RESNEXT101_64X4D: True,
-            }
-            self.use_rgb = USE_RGB[self.model]
-
-        # Dynamically AST DSP attributes and augmentations
-        if (
-            self.model == SupportedModels.AST
-            and self.pretrained
-            and self.pretrained_tag == TAG_AST_AUDIOSET
-        ):
-            self.n_fft = 400
-            self.hop_length = 160
-            self.n_mels = 128
-
-            if self.augmentations == get_default_value_for_field("augmentations", self):
-                _augmentations_set = set(self.augmentations)
-                _augmentations_set.add(SupportedAugmentations.CONCAT_N_SAMPLES)
-                _augmentations_set.add(SupportedAugmentations.SUM_TWO_SAMPLES)
-                self.augmentations = list(_augmentations_set)
-
-        # Set typical weight decay for optimizers.
-        if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAM:
-            self.weight_decay = 0
-        if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAMW:
-            self.weight_decay = 1e-2
 
         if self.finetune_head and (self.finetune_head_epochs >= self.epochs):
             raise InvalidArgument(

@@ -9,6 +9,7 @@ from src.config import config_defaults
 from src.data.datamodule import IRMASDataModule
 from src.enums.enums import SupportedAugmentations
 from src.features.audio_transform import get_audio_transform
+from src.features.augmentations import get_augmentations
 from src.features.chunking import get_collate_fn
 from src.grad_vis.parser import parse
 from src.model.model import get_model
@@ -26,12 +27,16 @@ class MultiLabelBinaryClassifierOutputTarget:
 
 if __name__ == "__main__":
     args, config = parse()
+    config.parse_dataset_paths()
     model_type = get_model(config, torch.nn.BCEWithLogitsLoss())
     model = model_type.load_from_checkpoint(args.path_to_model)
     model.eval()
 
     target_module = [operator.attrgetter(args.target_layer)(model)]
     cam = GradCAM(model=model, target_layers=target_module, use_cuda=args.device)
+
+    train_audio_transform = get_audio_transform(config, None, None)
+    val_audio_transform = get_audio_transform(config, None, None)
 
     datamodule = IRMASDataModule(
         train_dirs=config.train_dirs,
@@ -40,8 +45,8 @@ if __name__ == "__main__":
         num_workers=config.num_workers,
         dataset_fraction=config.dataset_fraction,
         drop_last_sample=config.drop_last,
-        train_audio_transform=get_audio_transform(config, config.audio_transform),
-        val_audio_transform=get_audio_transform(config, config.audio_transform),
+        train_audio_transform=train_audio_transform,
+        val_audio_transform=val_audio_transform,
         collate_fn=get_collate_fn(config),
         normalize_audio=config.normalize_audio,
         normalize_image=config.normalize_image,
