@@ -22,7 +22,11 @@ from src.model.optimizers import (
 )
 from src.train.metrics import get_metrics
 from src.utils.utils_functions import add_prefix_to_keys
-from src.utils.utils_model import count_module_params, get_all_modules_after
+from src.utils.utils_model import (
+    count_module_params,
+    get_all_modules_after,
+    proper_weight_decay,
+)
 
 
 class ModelBase(pl.LightningModule, ABC):
@@ -339,8 +343,10 @@ class ModelBase(pl.LightningModule, ABC):
             scheduler_epochs = self.epochs
             total_lr_sch_steps = self.num_of_steps_in_epoch * self.epochs
 
+        module_params = proper_weight_decay(self.parameters(), self.weight_decay)
+
         out = our_configure_optimizers(
-            list_of_module_params=[self.parameters()],
+            list_of_module_params=[module_params],
             scheduler_type=self.scheduler_type,
             metric_mode=self.metric_mode,
             plateau_epoch_patience=(self.early_stopping_metric_patience // 2) + 1,
