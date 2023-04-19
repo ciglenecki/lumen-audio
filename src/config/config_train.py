@@ -55,7 +55,7 @@ def get_config() -> tuple[ConfigDefault, Namespace]:
     lightning_parser = pl.Trainer.add_argparse_args(parser)
     lightning_parser.set_defaults(
         accelerator="gpu" if torch.cuda.is_available() else "cpu",
-        devices=-1,  # use all devices
+        devices=-1 if torch.cuda.is_available() else 1,  # use all devices
     )
 
     # Parse and split in two: config and pytorch lightning args

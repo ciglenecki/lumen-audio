@@ -343,7 +343,7 @@ class ModelBase(pl.LightningModule, ABC):
             scheduler_epochs = self.epochs
             total_lr_sch_steps = self.num_of_steps_in_epoch * self.epochs
 
-        module_params = proper_weight_decay(self.parameters(), self.weight_decay)
+        module_params = proper_weight_decay(self, self.weight_decay)
 
         out = our_configure_optimizers(
             list_of_module_params=[module_params],

@@ -25,7 +25,7 @@ class ArgParseWithConfig(simple_parsing.ArgumentParser):
         lightning_parser = pl.Trainer.add_argparse_args(self)
         lightning_parser.set_defaults(
             accelerator="gpu" if torch.cuda.is_available() else "cpu",
-            devices=-1,
+            devices=-1 if torch.cuda.is_available() else 1,
         )
 
     def add_argument(self, *name_or_flags: str, **kwargs):
