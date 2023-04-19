@@ -1,6 +1,6 @@
 """Default global config.
 
-Important: 0 dependencies except to enums!
+Important: 0 dependencies except to enums and log!
 """
 
 from __future__ import annotations
@@ -10,9 +10,9 @@ from enum import Enum
 from pathlib import Path
 
 import pyrootutils
-import torch
 from simple_parsing.helpers import Serializable
 
+from src.config.logger import log
 from src.enums.enums import (
     AudioTransforms,
     MetricMode,
@@ -116,8 +116,10 @@ NUM_RGB_CHANNELS = 3
 
 DEFAULT_MFCC_MEAN = -7.3612
 DEFAULT_MFCC_STD = 56.4464
-DEFAULT_MEL_SPECTROGRAM_MEAN = 0.4125
-DEFAULT_MEL_SPECTROGRAM_STD = 2.3365
+# DEFAULT_MEL_SPECTROGRAM_MEAN = 0.4125 # with some augmentations?
+# DEFAULT_MEL_SPECTROGRAM_STD = 2.3365 # with some augmentations?
+DEFAULT_MEL_SPECTROGRAM_MEAN = 0.413
+DEFAULT_MEL_SPECTROGRAM_STD = 2.582
 DEFAULT_AST_MEAN = -4.2677393
 DEFAULT_AST_STD = 4.5689974
 DEFAULT_AUDIO_EXTENSIONS = ["wav"]
@@ -141,7 +143,7 @@ _default_augmentations_set = set(SupportedAugmentations)
 _default_augmentations_set.discard(SupportedAugmentations.RANDOM_ERASE)
 _default_augmentations_set.discard(SupportedAugmentations.CONCAT_N_SAMPLES)
 _default_augmentations_set.discard(SupportedAugmentations.SUM_TWO_SAMPLES)
-_default_augmentations_set.discard(SupportedAugmentations.BANDPASS_FILTER)
+_default_augmentations_set.discard(SupportedAugmentations.NORM_AFTER_TIME_AUGS)
 _default_augmentations_list = list(_default_augmentations_set)
 
 TAG_AST_AUDIOSET = "MIT/ast-finetuned-audioset-10-10-0.4593"
@@ -168,6 +170,15 @@ def create(arg, **kwargs):
     return field(default_factory=lambda: arg, **kwargs)
 
 
+def default_path(path: Path | None, default_value: Path):
+    """Return default value if object is none."""
+    if path is None and Path(default_value).exists():
+        return default_value
+    elif path is None and not Path(default_value).exists():
+        return None
+    return path
+
+
 @dataclass
 class ConfigDefault(Serializable):
     path_workdir: Path = create(
@@ -187,12 +198,13 @@ class ConfigDefault(Serializable):
     path_openmic: Path | None = create(None)
     path_models: Path | None = create(None)
     path_models_quick: Path | None = create(None)
+    path_background_noise: Path | None = create(None)
 
     train_dirs: list[str] | None = create(None)
-    """Dataset root directories that will be used for training in the following format: --train-dirs irmas:/path/to openmic:/path/to"""
+    """Dataset root directories that will be used for training in the following format: --train-dirs irmas:/path/to/dataset or openmic:/path/to/dataset"""
 
     val_dirs: list[str] | None = create(None)
-    """Dataset root directories that will be used for validation in the following format: --val-dirs irmas:/path/to openmic:/path/to"""
+    """Dataset root directories that will be used for validation in the following format: --val-dirs irmas:/path/to/dataset openmic:/path/to/dataset"""
 
     train_only_dataset: bool = create(False)
     """Use only the train portion of the dataset and split it 0.8 0.2"""
@@ -229,6 +241,9 @@ class ConfigDefault(Serializable):
     normalize_audio: bool = create(True)
     """Do normalize audio"""
 
+    normalize_image: bool = create(True)
+    """Do image audio"""
+
     max_num_width_samples: float | None = create(None)
     """Maximum number samples along the time dimension. For spectrogram: width truncation, for audio: waveform truncation. Useful for limiting transformer input size."""
 
@@ -237,16 +252,16 @@ class ConfigDefault(Serializable):
 
     aug_kwargs: dict | str = create(
         dict(
-            stretch_factors=[0.6, 1.4],
-            time_inversion_p=0.2,
+            stretch_factors=[0.8, 1.25],
+            time_inversion_p=0.5,
             freq_mask_param=30,
-            time_mask_param=30,
             hide_random_pixels_p=0.25,
             std_noise=0.01,
             concat_n_samples=3,
+            path_background_noise=None,
         )
     )
-    """Arguments are split by space, mutiple values are sep'ed by comma (,). E.g. stretch_factors=0.8,1.2 freq_mask_param=30 time_mask_param=30 hide_random_pixels_p=0.5"""
+    """Arguments are split by space, mutiple values are sep'ed by comma (,). E.g. stretch_factors=0.8,1.2 freq_mask_param=30 hide_random_pixels_p=0.5"""
 
     # ======================== TRAIN ===========================
 
@@ -340,13 +355,13 @@ class ConfigDefault(Serializable):
     loss_function_kwargs: dict | dict = create({})
     """Loss function kwargs"""
 
-    lr: float = create(1e-4)
+    lr: float = create(5e-4)
     """Learning rate"""
 
-    lr_onecycle_max: float = create(5e-4)
+    lr_onecycle_max: float = create(3e-3)
     """Maximum lr OneCycle scheduler reaches"""
 
-    lr_warmup: float = create(1e-4)
+    lr_warmup: float = create(5e-4)
     """warmup learning rate"""
 
     use_multiple_optimizers: bool = create(False)
@@ -365,24 +380,48 @@ class ConfigDefault(Serializable):
     def __post_init__(self):
         """This function dynamically changes some of the arguments based on other arguments."""
 
-        self.path_data: Path = Path(self.path_workdir, "data").relative_to(
-            self.path_workdir
+        self.path_data = default_path(self.path_data, Path("data"))
+        self.path_irmas = default_path(self.path_irmas, Path("data", "irmas"))
+        self.path_irmas_train = default_path(
+            self.path_irmas_train, Path("data", "irmas", "train")
         )
-        self.path_irmas: Path = Path(self.path_data, "irmas")
-        self.path_irmas_train: Path = Path(self.path_irmas, "train")
-        self.path_irmas_test: Path = Path(self.path_irmas, "test")
-        self.path_irmas_train_features: Path = Path(self.path_irmas, "train_features")
-        self.path_irmas_sample: Path = Path(self.path_data, "irmas_sample")
-        self.path_openmic: Path = Path(self.path_data, "openmic")
-        self.path_models: Path = Path(self.path_workdir, "models").relative_to(
-            self.path_workdir
+        self.path_irmas_test = default_path(
+            self.path_irmas_test, Path("data", "irmas", "test")
         )
-        self.path_models_quick: Path = Path(
-            self.path_workdir, "models_quick"
-        ).relative_to(self.path_workdir)
-        self.output_dir: Path = self.path_models
-        """Output directory of the model and report file."""
+        self.path_irmas_sample = default_path(
+            self.path_irmas_sample, Path("data", "irmas_sample")
+        )
+        self.path_openmic = default_path(self.path_openmic, Path("data", "openmic"))
 
+        self.path_models = default_path(
+            self.path_models,
+            Path("models"),
+        )
+        self.path_models_quick = default_path(
+            self.path_models_quick,
+            Path("models_quick"),
+        )
+        self.path_background_noise = default_path(
+            self.path_background_noise, Path("data", "ecs50")
+        )
+
+        self.output_dir = self.path_models
+
+        if (
+            self.path_background_noise is None
+            and SupportedAugmentations.BACKGROUND_NOISE in self.augmentations
+        ):
+            log.warning(
+                "Removing BACKGROUND_NOISE augmentation because path_background_noise directory is not found. You can set it with --path-background-noise."
+            )
+            self.augmentations.remove(SupportedAugmentations.BACKGROUND_NOISE)
+        elif self.path_background_noise is not None:
+            self.aug_kwargs.update(
+                dict(path_background_noise=self.path_background_noise)
+            )
+
+    def parse_dataset_paths(self):
+        """Output directory of the model and report file."""
         # We can't put where other default values live because we can't reference `self.path_irmas_test` until the user sets irmas directory.
         if self.train_dirs is None:
             self.train_dirs = [f"irmas:{str(self.path_irmas_train)}"]
@@ -390,32 +429,49 @@ class ConfigDefault(Serializable):
             self.val_dirs = [f"irmas:{str(self.path_irmas_test)}"]
 
         # Parse strings to dataset type and path
-        self.train_dirs = [self.dir_to_enum_and_path(d) for d in self.train_dirs]
-        self.val_dirs = [self.dir_to_enum_and_path(d) for d in self.val_dirs]
+        try:
+            self.train_dirs = [self.dir_to_enum_and_path(d) for d in self.train_dirs]
+            self.val_dirs = [self.dir_to_enum_and_path(d) for d in self.val_dirs]
+        except InvalidArgument as e:
+            msg = f"Usage:\t--train-dirs <TYPE>:/path/to/dataset\n\t--val-dirs <TYPE>:/path/to/dataset.\nSupported <TYPE>: {[ d.value for d in SupportedDatasets]}"
+            raise InvalidArgument(f"{str(e)}\n{msg}")
 
     def _validate_train_args(self):
         """This function validates arguments before training."""
 
+        self.parse_dataset_paths()
+
         if self.model is None:
-            raise InvalidArgument(
-                f"--model is required for training {list(SupportedModels)}"
-            )
+            raise InvalidArgument(f"--model is required {list(SupportedModels)}")
         if self.audio_transform is None:
             raise InvalidArgument(
-                f"--audio-transform is required for training {list(AudioTransforms)}"
+                f"--audio-transform is required {list(AudioTransforms)}"
             )
+
         if self.metric and not self.metric_mode:
             raise InvalidArgument("Can't pass --metric without passing --metric-mode")
 
         # aug_kwargs can be either a dictionary or a string which will be parsed as kwargs dict
         if isinstance(self.aug_kwargs, str):
-            override_kwargs = self.parse_kwargs(self.aug_kwargs)
+            try:
+                override_kwargs = self.parse_kwargs(self.aug_kwargs)
+            except Exception as e:
+                raise InvalidArgument(
+                    f"{str(e)}\n. --aug-kwargs should have the following structure: 'key=value1,value2 key2=value3' e.g. 'stretch_factors=0.8,1.2 freq_mask_param=30'"
+                )
+
             self.aug_kwargs = get_default_value_for_field("aug_kwargs", self)
             self.aug_kwargs.update(override_kwargs)
 
         # loss_function_kwargs can be either a dictionary or a string which will be parsed as kwargs dict
         if isinstance(self.loss_function_kwargs, str):
-            override_kwargs = self.parse_kwargs(self.loss_function_kwargs)
+            try:
+                override_kwargs = self.parse_kwargs(self.loss_function_kwargs)
+            except Exception as e:
+                raise InvalidArgument(
+                    f"{str(e)}\n. --loss-function-kwargs should have the following structure: 'key=value1 key2=value2'"
+                )
+
             self.loss_function_kwargs = get_default_value_for_field(
                 "loss_function_kwargs", self
             )
@@ -456,6 +512,7 @@ class ConfigDefault(Serializable):
                     f"Couldn't find pretrained tag for pretrained model {self.model}. Add a new tag to the DEFAULT_PRETRAINED_TAG_MAP map or pass the --pretrained-tag <tag> argument."
                 )
             self.pretrained_tag = DEFAULT_PRETRAINED_TAG_MAP[self.model]
+
         # Dynamically set the RGB option based on model's architecture
         if self.model is not None and self.use_rgb is None:
             USE_RGB = {
@@ -483,8 +540,6 @@ class ConfigDefault(Serializable):
 
             if self.augmentations == get_default_value_for_field("augmentations", self):
                 _augmentations_set = set(self.augmentations)
-                _augmentations_set.discard(SupportedAugmentations.TIME_STRETCH)
-                _augmentations_set.discard(SupportedAugmentations.BANDPASS_FILTER)
                 _augmentations_set.add(SupportedAugmentations.CONCAT_N_SAMPLES)
                 _augmentations_set.add(SupportedAugmentations.SUM_TWO_SAMPLES)
                 self.augmentations = list(_augmentations_set)
@@ -509,14 +564,23 @@ class ConfigDefault(Serializable):
             string: irmas:/path/to/irmas
             return (SupportedDatasets.IRMAS, Path("/path/to/irmas"))
         """
-
-        pair = string.split(":")
+        delimiter = ":"
+        pair = string.split(delimiter)
         if len(pair) != 2:
             raise InvalidArgument(
-                f"Pair {pair} needs to have two elements. First arg is {list(SupportedDatasets)} and the second is the path "
+                f"Pair {pair} needs to have two elements split with '{delimiter}'."
             )
         dataset_name, dataset_path = pair
-        dataset = SupportedDatasets(dataset_name)
+        if len(pair) != 2:
+            raise InvalidArgument(
+                f"Pair {pair} needs to have two elements split with '{delimiter}'."
+            )
+        try:
+            dataset = SupportedDatasets(dataset_name)
+        except ValueError as e:
+            raise ValueError(
+                f"{str(e)}. Choose one of the following  {[ d.value for d in SupportedDatasets]} or add a new entry into the SupportedDatasets enum."
+            )
         dataset_path = Path(dataset_path)
         if not dataset_path.exists():
             raise InvalidArgument(f"Dataset path {dataset_path} doesn't exist.")
@@ -570,6 +634,7 @@ class ConfigDefault(Serializable):
             value = [parse_value(v) for v in value.split(list_sep)]
             value = value if len(value) > 1 else value[0]
             kwargs[key] = value
+
         return kwargs
 
     def __str__(self):

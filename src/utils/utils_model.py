@@ -3,6 +3,7 @@ from typing import Callable, Union
 import pytorch_lightning.callbacks
 import torch.nn as nn
 from torchmetrics.metric import Metric
+from transformers.trainer_pt_utils import get_parameter_names
 
 from src.utils.utils_exceptions import InvalidModuleStr
 
@@ -104,3 +105,25 @@ def print_modules(module: Union[nn.ModuleList, nn.Module]):
         )
         print(sub_module_name, "requires_grad:", sub_module_req_grad)
     print()
+
+
+def proper_weight_decay(model: nn.Module, weight_decay: float):
+    decay_parameters = get_parameter_names(model, [nn.LayerNorm])
+    decay_parameters = [name for name in decay_parameters if "bias" not in name]
+
+    weight_decay_params = [
+        p for n, p in model.named_parameters() if n in decay_parameters
+    ]
+    non_weight_decay_params = [
+        p for n, p in model.named_parameters() if n not in decay_parameters
+    ]
+    return [
+        {
+            "params": weight_decay_params,
+            "weight_decay": weight_decay,
+        },
+        {
+            "params": non_weight_decay_params,
+            "weight_decay": 0.0,
+        },
+    ]

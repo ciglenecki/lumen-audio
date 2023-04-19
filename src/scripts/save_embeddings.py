@@ -1,5 +1,7 @@
-"""python3 src/scripts/save_embeddings.py  --model EFFICIENT_NET_V2_S --audio-transform
-MEL_SPECTROGRAM.
+"""python3 src/scripts/save_embeddings.py --model AST --audio-transform AST --pretrained-tag
+MIT/ast-finetuned-audioset-10-10-0.4593 --train-dirs irmas:data/irmas/train --batch-size 1.
+
+python3 src/scripts/save_embeddings.py  --model EFFICIENT_NET_V2_S --audio-transform MEL_SPECTROGRAM
 
 python3 src/scripts/save_embeddings.py --checkpoint models/04-13-14-20-12_GoodSinisa_ast/checkpoints/04-13-14-20-12_GoodSinisa_ast_val_acc_0.0000_val_loss_0.6611.ckpt --model AST --audio-transform AST
 
@@ -25,6 +27,7 @@ from src.enums.enums import AudioTransforms, SupportedModels
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
 from src.features.chunking import get_collate_fn
 from src.model.model import get_model, model_constructor_map
+from src.utils.utils_dataset import instrument_multihot_to_idx
 from src.utils.utils_exceptions import InvalidArgument, UnsupportedModel
 
 
@@ -50,6 +53,7 @@ def parse_args():
             "Please provide either --pretrained-tag or --checkpoint <PATH>"
         )
 
+    config.parse_dataset_paths()
     return args, config, pl_args
 
 
@@ -117,7 +121,7 @@ if __name__ == "__main__":
     base_experiment_name = (
         Path(args.checkpoint).stem
         if args.checkpoint
-        else config.model.value + config.pretrained_tag
+        else f'{config.model.value}_{config.pretrained_tag.replace("/", "-")}'
     )
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -145,6 +149,7 @@ if __name__ == "__main__":
         val_audio_transform=val_audio_transform,
         collate_fn=collate_fn,
         normalize_audio=config.normalize_audio,
+        normalize_image=config.normalize_image,
         train_only_dataset=False,
         concat_n_samples=None,
         sum_two_samples=False,
@@ -160,8 +165,8 @@ if __name__ == "__main__":
     model, forward_kwargs = get_feature_extractor(
         model, model_enum=config.model, target_model_layer=args.target_model_layer
     )
-    model.eval()
     model = model.to(device)
+    model.eval()
 
     print("Saving embeddings to directory:", args.output_dir)
 
@@ -170,33 +175,36 @@ if __name__ == "__main__":
 
     for data_loader in [train_data_loader, val_data_loader]:
         for data in tqdm(data_loader, total=len(data_loader)):
-            spectrogram, onehot_labels, file_indices, item_indices = data
+            spectrogram, multihot_labels, file_indices, item_indices = data
 
             # Transfer to device
-            spectrogram, onehot_labels, file_indices = (
+            spectrogram, multihot_labels, file_indices = (
                 spectrogram.to(device),
-                onehot_labels.to(device),
+                multihot_labels.to(device),
                 file_indices.to(device),
             )
 
             # Get exact label n label number
-            labels = torch.argmax(onehot_labels, dim=-1)
+            indices_list: list[list[int]] = []
+            for multihot in multihot_labels:
+                multihot = multihot.cpu().numpy()
+                indices = instrument_multihot_to_idx(multihot).tolist()
+                indices_list.append(indices)
 
             # Create and merge embeddings for each  file
             # spectrogram = prepare_model_input(spectrogram)
-            embeddings = model.forward(spectrogram, **forward_kwargs)
+            with torch.no_grad():
+                embeddings = model.forward(spectrogram, **forward_kwargs)
             embeddings = extract_embeddings(embeddings, config.model)
             embeddings = torch_scatter.scatter_mean(embeddings, file_indices, dim=0)
-            labels = torch_scatter.scatter_max(labels, file_indices, dim=0)
 
             # Data convesions
             item_indices = item_indices.detach().cpu().tolist()
             embeddings_list = embeddings.detach().cpu().tolist()
-            labels_list = [int(label.detach().cpu()) for label in labels]
 
             # Iterate over each sample from the batch
-            for item_index, embedding, label in zip(
-                item_indices, embeddings_list, labels_list
+            for item_index, embedding, indices in zip(
+                item_indices, embeddings_list, indices_list
             ):
                 # Find the exact dataset which the file originate from
                 dataset_idx = bisect.bisect_right(
@@ -217,15 +225,16 @@ if __name__ == "__main__":
 
                 stem = Path(audio_path).stem  # e.g. [cel][cla]0001__1
                 audio_path = str(Path(audio_path))
-                instrument_idx = label
-                instrument = config_defaults.IDX_TO_INSTRUMENT[instrument_idx]
-                instrument_name = config_defaults.INSTRUMENT_TO_FULLNAME[instrument]
+                instruments = [config_defaults.IDX_TO_INSTRUMENT[i] for i in indices]
+                instrument_names = [
+                    config_defaults.INSTRUMENT_TO_FULLNAME[n] for n in instruments
+                ]
 
                 json_item = dict(
                     sample_path=audio_path,
-                    label=instrument_idx,
-                    instrument=instrument,
-                    instrument_name=instrument_name,
+                    indices=indices,
+                    instruments=instruments,
+                    instrument_names=instrument_names,
                     embedding=embedding,
                 )
 

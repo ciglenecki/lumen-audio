@@ -1,38 +1,61 @@
+"""python3 src/scripts/tsv_features.py --input-dir embeddings/astMIT-ast-finetuned-
+audioset-10-10-0.4593_irmas_train/"""
+import bisect
 import json
+import os
 from pathlib import Path
 
 import pandas as pd
 from tqdm import tqdm
 
-from src.config.config_defaults import get_default_config
+from src.config.argparse_with_config import ArgParseWithConfig
+from src.config.config_defaults import INSTRUMENT_TO_FULLNAME, get_default_config
+
+
+def parse_args():
+    parser = ArgParseWithConfig()
+    parser.add_argument(
+        "--input-dir",
+        type=Path,
+        help="Directory which has a 'embeddings' subdirectory which contains jsons.",
+    )
+    args, config, pl_args = parser.parse_args()
+    config.parse_dataset_paths()
+    assert os.path.isdir(args.input_dir), "Input directory should exist."
+    return args, config, pl_args
 
 
 def main():
-    config = get_default_config()
+    args, _, _ = parse_args()
+    input_dir = Path(args.input_dir)
+    embeddings_dir = Path(input_dir, "embeddings")
+    assert os.path.isdir(
+        args.input_dir
+    ), "Please provide --input-dir directory which has an 'embeddings' directory inside of it. 'embeddings' directory contains .json files."
 
-    OUT_DIR = embeddings_dir = config.path_irmas_train_features
+    out_dir = input_dir
 
     embeddings = None
     sample_paths = []
-    instrument_names = []
+    all_instrument_names = []
 
     def get_fields(item):
         embedding = item["embedding"]
         sample_path = item["sample_path"]
-        label = item["label"]
-        instrument = item["instrument"]
-        instrument_name = item["instrument_name"]
-        return embedding, sample_path, label, instrument, instrument_name
+        indices = item["indices"]
+        instruments = item["instruments"]
+        instrument_names = item["instrument_names"]
+        return embedding, sample_path, indices, instruments, instrument_names
 
     embeddings = {}
-    for i, json_path in tqdm(enumerate(embeddings_dir.glob("*.json"))):
+    for _, json_path in tqdm(enumerate(embeddings_dir.glob("*.json"))):
         item = json.load(open(json_path))
         (
             embedding,
             sample_path,
-            label,
-            instrument,
-            instrument_name,
+            indices,
+            instruments,
+            instrument_names,
         ) = get_fields(item)
 
         # Create embeddings dict if it isn't created yet
@@ -43,7 +66,7 @@ def main():
         for e_idx, e in enumerate(embedding):
             embeddings[f"e{e_idx}"].append(e)
 
-        instrument_names.append(instrument_name)
+        all_instrument_names.append(instrument_names[0])
         sample_paths.append(sample_path)
 
     dict = {
@@ -51,15 +74,15 @@ def main():
     }
 
     dict_metadata = {
-        "instrument": instrument_names,
+        "instrument": all_instrument_names,
         "path": sample_paths,
     }
 
     df = pd.DataFrame.from_dict(dict)
     df_metadata = pd.DataFrame.from_dict(dict_metadata)
 
-    df_path = Path(OUT_DIR, "ast_embeddings.tsv")
-    df_meta_path = Path(OUT_DIR, "ast_embeddings_meta.tsv")
+    df_path = Path(out_dir, "embeddings.tsv")
+    df_meta_path = Path(out_dir, "embeddings_meta.tsv")
 
     df.to_csv(
         df_path,

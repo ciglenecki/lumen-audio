@@ -65,7 +65,7 @@ class AudioTransformAST(AudioTransformBase):
         spectrogram = spectrogram.transpose(-2, -1)
         return spectrogram
 
-    def process(
+    def __call__(
         self, audio: torch.Tensor | np.ndarray
     ) -> tuple[torch.Tensor, torch.Tensor]:
         if self.waveform_augmentation is not None:
@@ -105,7 +105,7 @@ if __name__ == "__main__":
         spectrogram_augmentation=None,
         waveform_augmentation=None,
     )
-    spectrogram = transform.process(audio)
+    spectrogram = transform(audio)
     spectrogram = spectrogram
     plot_spectrograms(
         spectrogram,

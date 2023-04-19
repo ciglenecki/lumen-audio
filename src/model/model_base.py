@@ -7,7 +7,9 @@ import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 from pytorch_lightning.callbacks import BaseFinetuning
+from pytorch_lightning.core.optimizer import LightningOptimizer
 from pytorch_lightning.loggers import TensorBoardLogger
+from pytorch_lightning.utilities.types import LRSchedulerPLType
 
 import src.config.config_defaults as config_defaults
 from src.config.config_defaults import ConfigDefault
@@ -20,11 +22,18 @@ from src.model.optimizers import (
 )
 from src.train.metrics import get_metrics
 from src.utils.utils_functions import add_prefix_to_keys
-from src.utils.utils_model import count_module_params, get_all_modules_after
+from src.utils.utils_model import (
+    count_module_params,
+    get_all_modules_after,
+    proper_weight_decay,
+)
 
 
 class ModelBase(pl.LightningModule, ABC):
     loggers: list[TensorBoardLogger]
+    optimizers_list: list[LightningOptimizer]
+    schedulers_list: list[LRSchedulerPLType]
+    finetuning_step: int
 
     def __init__(
         self,
@@ -149,6 +158,7 @@ class ModelBase(pl.LightningModule, ABC):
 
         if self.finetune_head:
             self._set_finetune_until_step()
+        self.finetuning_step = 0
         return out
 
     def log_and_return_loss_step(self, loss, y_pred, y_true, type):
@@ -235,7 +245,7 @@ class ModelBase(pl.LightningModule, ABC):
             return False
 
         return (self.finetune_until_step is not None) and (
-            self.global_step < self.finetune_until_step
+            self.finetuning_step < self.finetune_until_step
         )
 
     def print_params(self):
@@ -290,7 +300,7 @@ class ModelBase(pl.LightningModule, ABC):
 
         Mupltiplicator is the finetune_lr_nominator
         """
-
+        self.finetuning_step += 1
         old_lr = self.trainer.optimizers[optimizer_idx].param_groups[0]["lr"]
         new_lr = old_lr * self.finetune_lr_nominator
         self._set_lr(new_lr)
@@ -315,6 +325,14 @@ class ModelBase(pl.LightningModule, ABC):
         super().on_fit_start()
         if self.lr_warmup:
             self._set_lr(self.lr_warmup)
+        optimizers = self.optimizers()
+        self.optimizers_list = (
+            optimizers if isinstance(optimizers, list) else [optimizers]
+        )
+        schedulers = self.lr_schedulers()
+        self.schedulers_list = (
+            schedulers if isinstance(schedulers, list) is list else [schedulers]
+        )
 
     def configure_optimizers(self):
         if self.finetune_head:
@@ -325,8 +343,10 @@ class ModelBase(pl.LightningModule, ABC):
             scheduler_epochs = self.epochs
             total_lr_sch_steps = self.num_of_steps_in_epoch * self.epochs
 
+        module_params = proper_weight_decay(self, self.weight_decay)
+
         out = our_configure_optimizers(
-            list_of_module_params=[self.parameters()],
+            list_of_module_params=[module_params],
             scheduler_type=self.scheduler_type,
             metric_mode=self.metric_mode,
             plateau_epoch_patience=(self.early_stopping_metric_patience // 2) + 1,

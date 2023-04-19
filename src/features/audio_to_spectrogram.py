@@ -2,8 +2,8 @@ import librosa
 import numpy as np
 import torch
 import torch.nn.functional
+import torchvision.transforms.functional
 
-from src.config.argparse_with_config import ArgParseWithConfig
 from src.config.config_defaults import (
     DEFAULT_MEL_SPECTROGRAM_MEAN,
     DEFAULT_MEL_SPECTROGRAM_STD,
@@ -11,14 +11,15 @@ from src.config.config_defaults import (
 )
 from src.features.audio_transform_base import AudioTransformBase
 from src.features.chunking import (
-    add_rgb_channel,
     chunk_image_by_width,
     collate_fn_spectrogram,
-    remove_rgb_channel,
     undo_image_chunking,
 )
-from src.utils.utils_audio import plot_spectrograms
-from src.utils.utils_dataset import get_example_val_sample
+from src.utils.utils_dataset import (
+    add_rgb_channel,
+    get_example_val_sample,
+    remove_rgb_channel,
+)
 
 
 class MelSpectrogram(AudioTransformBase):
@@ -32,7 +33,8 @@ class MelSpectrogram(AudioTransformBase):
         n_mels: int,
         image_size: tuple[int, int],
         use_rgb: bool = True,
-        normalize=True,
+        normalize_audio=True,
+        normalize_image=True,
         *args,
         **kwargs,
     ):
@@ -42,9 +44,10 @@ class MelSpectrogram(AudioTransformBase):
         self.n_mels = n_mels
         self.image_size = image_size
         self.use_rgb = use_rgb
-        self.normalize = normalize
+        self.normalize_audio = normalize_audio
+        self.normalize_image = normalize_image
 
-    def process(
+    def __call__(
         self,
         audio: torch.Tensor | np.ndarray,
     ) -> tuple[torch.Tensor]:
@@ -59,28 +62,53 @@ class MelSpectrogram(AudioTransformBase):
             n_mels=self.n_mels,
         )
 
-        if self.normalize:
-            spectrogram = self.normalize_spectrogram(spectrogram)
-
         if self.spectrogram_augmentation is not None:
             spectrogram = self.spectrogram_augmentation(spectrogram)
         else:
             spectrogram = torch.tensor(spectrogram)
 
-        spectrogram_chunks = chunk_image_by_width(self.image_size, spectrogram)
+        spectrogram_chunks = chunk_image_by_width(
+            self.image_size, spectrogram, "repeat"
+        )
+
+        if self.normalize_image:
+            spectrogram_chunks = self.normalize_spectrogram(spectrogram_chunks)
 
         if self.use_rgb:
             spectrogram_chunks = add_rgb_channel(spectrogram_chunks)
 
         return spectrogram_chunks
 
-    def normalize_spectrogram(self, spectrogram: torch.Tensor):
+    def undo(self, spectrogram: torch.Tensor):
+        if self.use_rgb:
+            spectrogram = remove_rgb_channel(spectrogram)
+
+        interpolation = (
+            torchvision.transforms.functional.InterpolationMode.NEAREST_EXACT
+        )
+        spectrogram = torchvision.transforms.functional.resize(
+            spectrogram,
+            size=(self.n_mels, spectrogram.shape[-1]),
+            interpolation=interpolation,
+            antialias=False,
+        )
+
+        if self.normalize_image:
+            spectrogram = (
+                spectrogram * DEFAULT_MEL_SPECTROGRAM_STD
+            ) + DEFAULT_MEL_SPECTROGRAM_MEAN
+
+        return spectrogram
+
+    @staticmethod
+    def normalize_spectrogram(spectrogram: torch.Tensor):
         # https://pytorch.org/vision/main/generated/torchvision.transforms.Normalize.html
         return (
             spectrogram - DEFAULT_MEL_SPECTROGRAM_MEAN
         ) / DEFAULT_MEL_SPECTROGRAM_STD
 
-    def undo_normalize_spectrogram(self, spectrogram: torch.Tensor):
+    @staticmethod
+    def undo_normalize_spectrogram(spectrogram: torch.Tensor):
         return (
             spectrogram * DEFAULT_MEL_SPECTROGRAM_STD
         ) + DEFAULT_MEL_SPECTROGRAM_MEAN
@@ -98,7 +126,7 @@ def test_chunking():
         spectrogram_augmentation=None,
         waveform_augmentation=None,
         max_num_width_samples=config.max_num_width_samples,
-        normalize=True,
+        normalize_audio=True,
     )
     spectrogram_original = librosa.feature.melspectrogram(
         y=audio,
@@ -117,7 +145,7 @@ def test_chunking():
         )
     ), "RGB spectrogram isn't good."
 
-    spectrogram = transform.process(audio)
+    spectrogram = transform(audio)
     spectrogram_unchunked = undo_image_chunking(spectrogram, config.n_mels)
     spectrogram_unchunked = spectrogram_unchunked[
         ..., : spectrogram_original_rgb.shape[-1]
@@ -129,35 +157,4 @@ def test_chunking():
 
 
 if __name__ == "__main__":
-    parser = ArgParseWithConfig()
-    args, config, pl_args = parser.parse_args()
-    audio = get_example_val_sample(config.sampling_rate)
-    transform = MelSpectrogram(
-        sampling_rate=config.sampling_rate,
-        hop_length=config.hop_length,
-        n_fft=config.n_fft,
-        n_mels=config.n_mels,
-        image_size=config.image_size,
-        spectrogram_augmentation=None,
-        waveform_augmentation=None,
-        max_num_width_samples=config.max_num_width_samples,
-        normalize=False,
-    )
-    spectrogram = transform.process(audio)
-    out = collate_fn_spectrogram(
-        [
-            (spectrogram, torch.ones(11), torch.tensor([1])),
-            (spectrogram, torch.ones(11), torch.tensor([3])),
-        ]
-    )
-    images, _, file_indices, _ = out
-    spectrogram_chunls = images[file_indices == 0]
-    spectrogram_reconstructed = undo_image_chunking(spectrogram_chunls, config.n_mels)
-    spectrogram_reconstructed = remove_rgb_channel(spectrogram_reconstructed)
-    plot_spectrograms(
-        spectrogram_reconstructed,
-        n_fft=config.n_fft,
-        sampling_rate=config.sampling_rate,
-        n_mels=config.n_mels,
-        hop_length=config.hop_length,
-    )
+    pass

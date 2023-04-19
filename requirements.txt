@@ -7,6 +7,8 @@ scipy==1.10.1
 librosa==0.10.0.post2
 ipykernel==6.22.0
 ConfigArgParse==1.5.3
+audiomentations
+pyloudnorm
 torch_audiomentations==0.11.0
 pydub==0.25.1
 pytest==7.3.0

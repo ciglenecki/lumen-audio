@@ -40,6 +40,8 @@ Low priority tasks:
   - [ ] http server with some loaded model which returns responses
 - [ ] ❗create technical documentation
 - [ ] ❗create docker container
+- [ ] **augmentations**: time shift, pitch shift, sox
+  - [ ] add normalization after augmentations
 - [ ] ⚠️ check for all models edge cases (0.1 sec, 2h)
 - [ ] ⚠️ download the whole IRMAS dataset
 - [ ] **train with relabeled data (rep):** Include Ivan's relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
@@ -85,10 +87,7 @@ Low priority tasks:
   - [ ] Compare how augmentations affect the final metrics:
     - [ ] with no augmentations
     - [ ] with augmentations
-- [ ] prototype pretraining phase:
-  - Shuffle parts of the spectrogram in the following way: (16x16 grid)
-    - shuffle 15% of patches
-    - electra, is the patch shuffled?
+
 - [ ] add gradient/activation visualization for a predicted image. Which parts of the image light up during inference?
 - [ ] add gradcam for multiple trained models
   - [ ] 🖊️ report your findings in Google Docs
@@ -166,7 +165,11 @@ Create and populate the [virtual environment](https://docs.python.org/3/library/
 **Step 1: Execute the following command:**
 
 ```bash
-python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt && pip install -r requirements-dev.txt
+python3 -m venv venv --prompt $(basename "$PWD")
+source venv/bin/activate
+sleep 1
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
 **Step 2: Install current directory as a editable Python module:**
@@ -378,7 +381,6 @@ As was already mentioned, we used only the feature extractor of the pretrained W
 #### Fluffy with entire Wav2Vec2
 This model has been trained for far fewer epochs ~7, and so far it exhibits the same issues as Fluffy with just the feature extractor. Perhaps more training would be needed, however using such large models requires considerable memory usage, and it's use durign __inference__ time might be limited.
 
-
 #### SVM
 
 Introduce SVM and train it additionally on high level features of spectrogram (MFCC). For example, one can caculate entropy of a audio/spectrogram for a given timeframe (@vinko)
@@ -517,7 +519,10 @@ Tasks:
 - [x] train some model Fluffy
 - [x] Wav2Vec2 feature extractor only
 - [x] move spectrogram chunking to collate
-
+- [x] prototype pretraining phase:
+  - Shuffle parts of the spectrogram in the following way: (16x16 grid)
+    - shuffle 15% of patches
+    - electra, is the patch shuffled?
 ______________________________________________________________________
 
 ## 🏆 Team members
