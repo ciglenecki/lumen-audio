@@ -142,7 +142,7 @@ IRMAS_TRAIN_CLASS_COUNT = {
 _default_augmentations_set = set(SupportedAugmentations)
 _default_augmentations_set.discard(SupportedAugmentations.RANDOM_ERASE)
 _default_augmentations_set.discard(SupportedAugmentations.CONCAT_N_SAMPLES)
-_default_augmentations_set.discard(SupportedAugmentations.SUM_TWO_SAMPLES)
+# _default_augmentations_set.discard(SupportedAugmentations.SUM_TWO_SAMPLES)
 _default_augmentations_set.discard(SupportedAugmentations.NORM_AFTER_TIME_AUGS)
 _default_augmentations_list = list(_default_augmentations_set)
 
@@ -383,9 +383,15 @@ class ConfigDefault(Serializable):
     log_every_n_steps: int = create(30)
     """How often (steps) to log metrics."""
 
-    def __post_init__(self):
-        """This function dynamically changes some of the arguments based on other arguments."""
+    def after_init(self):
+        """This function sets defaults, dynamically changes some of the arguments based on other
+        arguments.
 
+        This is different from __post_init__ because it's user's responsibility to call the
+        function.
+        """
+
+        # If user didn't send explict paths, set and create default directories.
         self.path_data = default_path(self.path_data, Path("data"))
         self.path_irmas = default_path(self.path_irmas, Path("data", "irmas"))
         self.path_irmas_train = default_path(
@@ -421,10 +427,58 @@ class ConfigDefault(Serializable):
                 "Removing BACKGROUND_NOISE augmentation because path_background_noise directory is not found. You can set it with --path-background-noise."
             )
             self.augmentations.remove(SupportedAugmentations.BACKGROUND_NOISE)
-        elif self.path_background_noise is not None:
+        elif (
+            self.path_background_noise is not None
+            and self.path_background_noise.exists()
+        ):
             self.aug_kwargs.update(
                 dict(path_background_noise=self.path_background_noise)
             )
+
+        # Default RGB option based on model's architecture
+        if self.model is not None and self.use_rgb is None:
+            USE_RGB = {
+                SupportedModels.AST: False,
+                SupportedModels.WAV2VEC_CNN: None,
+                SupportedModels.WAV2VEC: None,
+                SupportedModels.EFFICIENT_NET_V2_S: True,
+                SupportedModels.EFFICIENT_NET_V2_M: True,
+                SupportedModels.EFFICIENT_NET_V2_L: True,
+                SupportedModels.RESNEXT50_32X4D: True,
+                SupportedModels.RESNEXT101_32X8D: True,
+                SupportedModels.RESNEXT101_64X4D: True,
+            }
+            self.use_rgb = USE_RGB[self.model]
+
+        # Default pretrained tag for each model, if it's pretrained.
+        if self.model is not None and self.pretrained and self.pretrained_tag is None:
+            if self.model not in DEFAULT_PRETRAINED_TAG_MAP:
+                raise InvalidArgument(
+                    f"Couldn't find pretrained tag for pretrained model {self.model}. Add a new tag to the DEFAULT_PRETRAINED_TAG_MAP map or pass the --pretrained-tag <tag> argument."
+                )
+            self.pretrained_tag = DEFAULT_PRETRAINED_TAG_MAP[self.model]
+
+        # Dynamically AST DSP attributes and augmentations
+        if (
+            self.model == SupportedModels.AST
+            and self.pretrained
+            and self.pretrained_tag == TAG_AST_AUDIOSET
+        ):
+            self.n_fft = 400
+            self.hop_length = 160
+            self.n_mels = 128
+
+            if self.augmentations == get_default_value_for_field("augmentations", self):
+                _augmentations_set = set(self.augmentations)
+                _augmentations_set.add(SupportedAugmentations.CONCAT_N_SAMPLES)
+                _augmentations_set.add(SupportedAugmentations.SUM_TWO_SAMPLES)
+                self.augmentations = list(_augmentations_set)
+
+        # Set typical weight decay for optimizers.
+        if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAM:
+            self.weight_decay = 0
+        if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAMW:
+            self.weight_decay = 1e-2
 
     def _parse_dataset_paths(self, data_dir) -> tuple[SupportedDatasets, Path]:
         # Parse strings to dataset type and path
@@ -457,7 +511,9 @@ class ConfigDefault(Serializable):
 
         self.parse_train_dirs()
         self.parse_val_dirs()
-        self.parse_test_dirs()
+
+        if self.train_dirs is not None:
+            self.parse_test_dirs()
 
         if self.model is None:
             raise InvalidArgument(f"--model is required {list(SupportedModels)}")
