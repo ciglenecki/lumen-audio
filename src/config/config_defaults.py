@@ -170,13 +170,19 @@ def create(arg, **kwargs):
     return field(default_factory=lambda: arg, **kwargs)
 
 
-def default_path(path: Path | None, default_value: Path):
+def default_path(path: Path | None, default_value: Path, create_if_none=False):
     """Return default value if object is none."""
-    if path is None and Path(default_value).exists():
+    if path is not None:  # return explicit path
+        return path
+
+    if create_if_none:  # create and return default value
+        default_value.mkdir(parents=True, exist_ok=True)
         return default_value
-    elif path is None and not Path(default_value).exists():
-        return None
-    return path
+
+    if default_value.exists():  # return default path
+        return default_value
+
+    return None
 
 
 @dataclass
@@ -358,7 +364,7 @@ class ConfigDefault(Serializable):
     lr: float = create(5e-5)
     """Learning rate"""
 
-    lr_onecycle_max: float = create(1e-4)
+    lr_onecycle_max: float = create(5e-4)
     """Maximum lr OneCycle scheduler reaches"""
 
     lr_warmup: float = create(3e-4)
@@ -380,8 +386,10 @@ class ConfigDefault(Serializable):
     def __post_init__(self):
         """This function dynamically changes some of the arguments based on other arguments."""
 
-        self.path_data = default_path(self.path_data, Path("data"))
-        self.path_irmas = default_path(self.path_irmas, Path("data", "irmas"))
+        self.path_data = default_path(self.path_data, Path("data"), create_if_none=True)
+        self.path_irmas = default_path(
+            self.path_irmas, Path("data", "irmas"), create_if_none=True
+        )
         self.path_irmas_train = default_path(
             self.path_irmas_train, Path("data", "irmas", "train")
         )
@@ -394,12 +402,10 @@ class ConfigDefault(Serializable):
         self.path_openmic = default_path(self.path_openmic, Path("data", "openmic"))
 
         self.path_models = default_path(
-            self.path_models,
-            Path("models"),
+            self.path_models, Path("models"), create_if_none=True
         )
         self.path_models_quick = default_path(
-            self.path_models_quick,
-            Path("models_quick"),
+            self.path_models_quick, Path("models_quick"), create_if_none=True
         )
         self.path_background_noise = default_path(
             self.path_background_noise, Path("data", "ecs50")
