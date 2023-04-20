@@ -172,17 +172,17 @@ def create(arg, **kwargs):
 
 def default_path(path: Path | None, default_value: Path, create_if_none=False):
     """Return default value if object is none."""
-    if path is not None:
+    if path is not None:  # return explicit path
         return path
 
-    if create_if_none:
+    if create_if_none:  # create and return default value
         default_value.mkdir(parents=True, exist_ok=True)
         return default_value
 
-    if default_value.exists():
+    if default_value.exists():  # return default path
         return default_value
-    elif path is None and not Path(default_value).exists():
-        return None
+
+    return None
 
 
 @dataclass
