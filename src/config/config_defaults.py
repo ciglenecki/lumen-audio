@@ -355,13 +355,13 @@ class ConfigDefault(Serializable):
     loss_function_kwargs: dict | dict = create({})
     """Loss function kwargs"""
 
-    lr: float = create(5e-4)
+    lr: float = create(5e-5)
     """Learning rate"""
 
-    lr_onecycle_max: float = create(3e-3)
+    lr_onecycle_max: float = create(1e-4)
     """Maximum lr OneCycle scheduler reaches"""
 
-    lr_warmup: float = create(5e-4)
+    lr_warmup: float = create(3e-4)
     """warmup learning rate"""
 
     use_multiple_optimizers: bool = create(False)
