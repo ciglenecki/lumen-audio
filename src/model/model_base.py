@@ -1,5 +1,6 @@
 from abc import ABC
 from argparse import Namespace
+from re import split
 from typing import Any, Optional, Union
 
 import numpy as np
@@ -21,7 +22,6 @@ from src.model.optimizers import (
     our_configure_optimizers,
 )
 from src.train.metrics import get_metrics
-from src.utils.utils_functions import add_prefix_to_keys
 from src.utils.utils_model import (
     count_module_params,
     get_all_modules_after,
@@ -34,6 +34,8 @@ class ModelBase(pl.LightningModule, ABC):
     optimizers_list: list[LightningOptimizer]
     schedulers_list: list[LRSchedulerPLType]
     finetuning_step: int
+    instrument_key = "instruments"
+    instrument_key_len = len(instrument_key)
 
     def __init__(
         self,
@@ -183,12 +185,13 @@ class ModelBase(pl.LightningModule, ABC):
         # add "loss" metric which will be converted to "train/loss", "val/loss"...
         metric_dict.update({"loss": loss})
 
-        # skip adding "train" / "test" to per instrument metrics to avoid clutter in tensorboard
-        metric_dict = add_prefix_to_keys(
-            dict=metric_dict,
-            prefix=f"{type}/",
-            filter_fn=lambda x: x.startswith("instruments"),
-        )
+        # add prefix "trian" or "test" but skip adding "train" / "test" to per instrument metrics to avoid clutter in tensorboard
+        metric_dict = {
+            f"{k[:ModelBase.instrument_key_len]}/{type}{k[ModelBase.instrument_key_len:]}"
+            if k.startswith(ModelBase.instrument_key)
+            else f"{type}/{k}": v
+            for k, v in metric_dict.items()
+        }
 
         self.log_dict(
             metric_dict, on_step=True, on_epoch=True, logger=True, prog_bar=True
