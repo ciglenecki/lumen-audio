@@ -13,13 +13,10 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 
 import src.config.config_defaults as config_defaults
+from src.data.dataset_base import DatasetBase
 from src.features.audio_transform_base import AudioTransformBase
 from src.utils.utils_audio import load_audio_from_file, play_audio
-from src.utils.utils_dataset import (
-    encode_instruments,
-    instrument_multihot_to_idx,
-    multi_hot_encode,
-)
+from src.utils.utils_dataset import encode_instruments, multi_hot_encode
 
 # '*.(wav|mp3|flac)'
 # glob_expression = f"*\.({'|'.join(defaults.DEFAULT_AUDIO_EXTENSIONS)})"
@@ -28,25 +25,16 @@ glob_expression = "*.wav"
 config = config_defaults.get_default_config()
 
 
-class IRMASDatasetTrain(Dataset):
-    all_instrument_indices = np.array(list(config_defaults.INSTRUMENT_TO_IDX.values()))
-
+class IRMASDatasetTrain(DatasetBase):
     def __init__(
         self,
-        dataset_dir: Path = config.path_irmas_train,
-        audio_transform: AudioTransformBase | None = None,
-        num_classes=config_defaults.DEFAULT_NUM_LABELS,
-        sampling_rate=config.sampling_rate,
-        normalize_audio=config.normalize_audio,
-        normalize_image=config.normalize_image,
-        sum_two_samples: bool = False,
-        concat_n_samples: int | None = None,
-        train_override_csvs: list[Path] | None = config.train_override_csvs,
+        *args,
+        **kwargs,
     ):
         """_summary_
 
         Args:
-            dataset_dir: directory with the following structure:
+            dataset_path: directory with the following structure:
 
                 ├── cel
                 │   ├── 008__[cel][nod][cla]0058__1.wav
@@ -59,24 +47,13 @@ class IRMASDatasetTrain(Dataset):
                 └── voi
         """
 
-        self.dataset: list[tuple[Path, np.ndarray]] = []
-        self.dataset_dir = dataset_dir
-        self.audio_transform = audio_transform
-        self.num_classes = num_classes
-        self.sampling_rate = sampling_rate
-        self.normalize_audio = normalize_audio
-        self.normalize_image = normalize_image
-        self.sum_two_samples = sum_two_samples
-        self.concat_n_samples = concat_n_samples
-        self.instrument_idx_list: dict[str, list[int]] = {}
-        self.train_override_csvs = train_override_csvs
-        self._populate_dataset()
+        super().__init__(*args, **kwargs)  # sets self.dataset
 
         assert (
-            len(self.dataset) == config_defaults.DEFAULT_IRMAS_TRAIN_SIZE
+            len(self.dataset_list) == config_defaults.DEFAULT_IRMAS_TRAIN_SIZE
         ), f"IRMAS train set should contain {config_defaults.DEFAULT_IRMAS_TRAIN_SIZE} samples"
 
-    def _populate_dataset(self):
+    def create_dataset_list(self):
         """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)
         self.instrument_idx_list = {
             "guitar": [0, 3, 5, 9, 13, 15]
@@ -93,7 +70,7 @@ class IRMASDatasetTrain(Dataset):
             i.value: [] for i in config_defaults.InstrumentEnums
         }
 
-        for item_idx, path in tqdm(enumerate(self.dataset_dir.rglob(glob_expression))):
+        for item_idx, path in tqdm(enumerate(self.dataset_path.rglob(glob_expression))):
             filename = str(path.stem)
             characteristics = re.findall(
                 r"\[(.*?)\]", filename
@@ -120,223 +97,48 @@ class IRMASDatasetTrain(Dataset):
             # drums_vector = encode_drums(drums)
             # genre_vector = encode_genre(genre)
 
-            self.dataset.append((path, labels))
+            self.dataset_list.append((path, labels))
 
             for instrument in item_instruments:
                 self.instrument_idx_list[instrument].append(item_idx)
 
-    def __len__(self) -> int:
-        return len(self.dataset)
 
-    def load_sample(self, item_idx: int) -> tuple[np.ndarray, np.ndarray, Path]:
-        audio_path, labels = self.dataset[item_idx]
-        audio, _ = load_audio_from_file(
-            audio_path,
-            target_sr=self.sampling_rate,
-            method="librosa",
-            normalize=self.normalize_audio,
-        )
-        return audio, labels, audio_path
-
-    def get_random_sample_for_instrument(self, instrument_idx: int) -> int:
-        """Returns a random sample which contains the instrument with index instrument_idx."""
-        instrument = config_defaults.IDX_TO_INSTRUMENT[instrument_idx]
-        random_sample_idx = random.choice(self.instrument_idx_list[instrument])
-        return random_sample_idx
-
-    def sample_n_negative_samples(
-        self, n: int, original_labels: np.ndarray
-    ) -> tuple[list[np.ndarray], list[np.ndarray], list[Path]]:
-        # Take all instruments and exclude ones from the original label
-        negative_indices_pool = self.all_instrument_indices[
-            ~original_labels.astype(bool)
-        ]
-
-        allow_repeating_labels = False
-
-        # The pool of negative indices isn't large enough so we have to sample same negative indices mulitple times
-        if len(negative_indices_pool) < n:
-            allow_repeating_labels = True
-
-        negative_indices = np.random.choice(
-            negative_indices_pool,
-            size=n,
-            replace=allow_repeating_labels,
-        )
-
-        negative_audios = []
-        negative_labels = []
-        negative_paths = []
-        for instrument_idx in negative_indices:
-            sample_idx = self.get_random_sample_for_instrument(instrument_idx)
-            negative_audio, negative_label, negative_path = self.load_sample(sample_idx)
-            negative_audios.append(negative_audio)
-            negative_labels.append(negative_label)
-            negative_paths.append(negative_path)
-        return negative_audios, negative_labels, negative_paths
-
-    def _pad_with_zeros(self, audio: np.ndarray, desired_size: int):
-        pad_width = (0, desired_size - len(audio))
-        return np.pad(audio, pad_width, mode="constant", constant_values=0)
-
-    def concat_and_sum(
-        self,
-        audios: list[np.ndarray],
-        labels: list[np.ndarray],
-        use_concat: bool,
-        sum_two_samples: bool,
-    ) -> tuple[np.ndarray, np.ndarray]:
-        """Performs concaternation and summation of multiple audios and multiple labels.
-
-        Args:
-            audios: list[np.ndarray]
-            labels: list[np.ndarray]
-
-        Example 1:
-
-            use_concat: True
-            sum_two_samples: False
-
-            audios: __x__, __a__, __b__
-            returns: |__x__|__a__|__b__|
-
-        Example 2:
-
-            use_concat: False
-            sum_two_samples: True
-
-            audios: __x__, __a__
-            returns: |__xa__|
-
-        Example 1:
-
-            use_concat: 3
-            sum_two_samples: True
-
-            audios: __x__, __a__, __b__, ..., __e__
-
-            |block1 |block2 |block3 |
-            |___x___|___a___|___b___| (concated audio 1)
-            |___c___|___d___|___e___| (concated audio 2)
-
-            returns: |__xc__|__ad__|__be__| (summed audios)
-        """
-
-        n = len(audios)
-
-        if use_concat and not sum_two_samples:
-            audios = np.concatenate(audios)
-
-        # If we want to sum two samples, create two concatenated audios
-        # Otherwise use just one long big audio
-        if use_concat and sum_two_samples:
-            n_half = n // 2
-            top_audio = np.concatenate(audios[:n_half], axis=0)
-            bottom_audio = np.concatenate(audios[n_half:], axis=0)
-            audios = [top_audio, bottom_audio]
-
-        # If at this point we have more than one audio we want to sum them
-        # For summing, audios have to have equal size
-        # Pad every audio with 0 to the maximum length
-        if sum_two_samples:
-            max_len = max(len(a) for a in audios)
-            for i, audio in enumerate(audios):
-                if len(audio) != max_len:
-                    audios[i] = self._pad_with_zeros(audio, max_len)
-            # Now that they are equal in size we can create numpy array
-            audios = np.mean(audios, axis=0)
-
-        labels = np.logical_or.reduce(labels).astype(labels[0].dtype)
-        return audios, labels
-
-    def concat_and_sum_random_negative_samples(self, original_audio, original_labels):
-        """Finds (num_negative_sampels * 2) - 1 negative samples which are concated and summed to original audio. Negative audio sample doesn't share original audio's labels"""
-        num_negative_sampels = self.concat_n_samples
-        if self.sum_two_samples:
-            num_negative_sampels = num_negative_sampels * 2
-        num_negative_sampels = num_negative_sampels - 1  # exclude original audio
-
-        # Load negative samples
-        multiple_audios, multiple_labels, _ = self.sample_n_negative_samples(
-            num_negative_sampels, original_labels=original_labels
-        )
-
-        # Add original audio at the beggining
-        multiple_audios.insert(0, original_audio)
-        multiple_labels.insert(0, original_labels)
-
-        audio, labels = self.concat_and_sum(
-            multiple_audios,
-            multiple_labels,
-            use_concat=self.concat_n_samples is not None and self.concat_n_samples > 1,
-            sum_two_samples=self.sum_two_samples,
-        )
-
-        return audio, labels
-
-    def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
-        audio, labels, _ = self.load_sample(index)
-
-        if (
-            self.concat_n_samples is not None and self.concat_n_samples > 1
-        ) or self.sum_two_samples:
-            audio, labels = self.concat_and_sum_random_negative_samples(audio, labels)
-
-        if self.audio_transform is None:
-            return audio, labels, index
-
-        features = self.audio_transform(audio)
-        labels = torch.tensor(labels).float()
-
-        # Uncomment for playing audio
-        # print(
-        #     [
-        #         config_defaults.INSTRUMENT_TO_FULLNAME[
-        #             config_defaults.IDX_TO_INSTRUMENT[i]
-        #         ]
-        #         for i in instrument_multihot_to_idx(labels)
-        #     ]
-        # )
-        # print("first time")
-        # play_audio(audio, sampling_rate=self.sampling_rate)
-        # print("second time")
-        # play_audio(audio, sampling_rate=self.sampling_rate)
-        return features, labels, index
-
-
-class IRMASDatasetTest(Dataset):
+class IRMASDatasetTest(DatasetBase):
     def __init__(
         self,
-        dataset_dir: Path,
-        audio_transform: AudioTransformBase | None = None,
-        num_classes=config_defaults.DEFAULT_NUM_LABELS,
-        sampling_rate=config.sampling_rate,
-        normalize_audio=config.normalize_audio,
-        normalize_image=config.normalize_image,
+        *args,
+        **kwargs,
     ):
-        self.num_classes = num_classes
-        self.audio_transform = audio_transform
-        self.dataset: list[tuple[Path, np.ndarray]] = []
-        self.dataset_dir = dataset_dir
-        self.sampling_rate = sampling_rate
-        self.normalize_audio = normalize_audio
-        self.normalize_image = normalize_image
+        """_summary_
 
-        self._populate_dataset()
+        Args:
+            dataset_path: directory with the following structure:
+                ├── 008__[cel][nod][cla]0058__1.wav
+                ├── 008__[cel][nod][cla]0058__1.txt
+                ├── 008__[cel][nod][cla]0058__2.wav
+                ├── 008__[cel][nod][cla]0058__2.txt
+                ├── 008__[cel][nod][cla]0058__3.wav
+                ├── 008__[cel][nod][cla]0058__3.txt
+                ├── 012__[cel][nod][cla]0043__1.wav
+                ├── 012__[cel][nod][cla]0043__1.txt
+                ├── ...
+        """
+        super().__init__(*args, **kwargs)  # sets self.dataset
 
         assert (
-            len(self.dataset) == config_defaults.DEFAULT_IRMAS_TEST_SIZE
-        ), f"IRMAS test set should contain {config_defaults.DEFAULT_IRMAS_TEST_SIZE} samples"
+            len(self.dataset) == config_defaults.DEFAULT_IRMAS_TRAIN_SIZE
+        ), f"IRMAS train set should contain {config_defaults.DEFAULT_IRMAS_TRAIN_SIZE} samples"
 
-    def _populate_dataset(self):
+    def create_dataset_list(self) -> list[tuple[Path, np.ndarray]]:
         """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)"""
-        for audio_file in tqdm(self.dataset_dir.rglob(glob_expression)):
+        dataset: list[tuple[Path, np.ndarray]] = []
+        for audio_file in tqdm(self.dataset_path.rglob(glob_expression)):
             path_without_ext = os.path.splitext(audio_file)[0]
             txt_path = Path(path_without_ext + ".txt")
 
             if not txt_path.is_file():
                 raise FileNotFoundError(
-                    f"File {audio_file} doesn't have label file {txt_path}."
+                    f"File {audio_file} doesn't have label file {txt_path}. Please fix your dataset {self.dataset_path}"
                 )
 
             instrument_indices = []
@@ -352,32 +154,8 @@ class IRMASDatasetTest(Dataset):
                 config_defaults.DEFAULT_NUM_LABELS,
             )
 
-            self.dataset.append((str(audio_file), labels))
-
-    def load_sample(self, item_idx: int) -> tuple[np.ndarray, np.ndarray, Path]:
-        audio_path, labels = self.dataset[item_idx]
-        audio, _ = load_audio_from_file(
-            audio_path,
-            target_sr=self.sampling_rate,
-            method="librosa",
-            normalize=self.normalize_audio,
-        )
-        return audio, labels, audio_path
-
-    def __len__(self) -> int:
-        return len(self.dataset)
-
-    def __getitem__(self, index) -> tuple[torch.Tensor, torch.Tensor]:
-        audio, labels, audio_path = self.load_sample(index)
-
-        if self.audio_transform is None:
-            return audio, labels, index
-
-        features = self.audio_transform(audio)
-
-        labels = torch.tensor(labels).float()
-
-        return features, labels, index
+            dataset.append((audio_file, labels))
+        return dataset
 
 
 class InstrumentInference(Dataset):

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import bisect
 from itertools import combinations
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Literal
 
 import numpy as np
 import pytorch_lightning as pl
@@ -20,6 +21,7 @@ from torch.utils.data import (
 from tqdm import tqdm
 
 import src.config.config_defaults as config_defaults
+from src.data.dataset_base import DatasetBase, DatasetGetItem, DatasetInternalItem
 from src.data.dataset_irmas import IRMASDatasetTest, IRMASDatasetTrain
 from src.enums.enums import SupportedDatasets
 from src.features.audio_transform_base import AudioTransformBase
@@ -55,9 +57,9 @@ class IRMASDataModule(pl.LightningDataModule):
         train_audio_transform: AudioTransformBase,
         val_audio_transform: AudioTransformBase,
         collate_fn: Callable | None,
-        train_dirs: list[tuple[SupportedDatasets, Path]] | None,
-        val_dirs: list[tuple[SupportedDatasets, Path]] | None,
-        test_dirs: list[tuple[SupportedDatasets, Path]] | None,
+        train_paths: list[tuple[SupportedDatasets, Path]] | None,
+        val_paths: list[tuple[SupportedDatasets, Path]] | None,
+        test_paths: list[tuple[SupportedDatasets, Path]] | None,
         train_only_dataset: bool,
         normalize_audio: bool,
         normalize_image: bool,
@@ -73,9 +75,9 @@ class IRMASDataModule(pl.LightningDataModule):
         self.train_audio_transform: AudioTransformBase = train_audio_transform
         self.val_audio_transform: AudioTransformBase = val_audio_transform
         self.prepare_data_per_node = False
-        self.train_dirs = train_dirs
-        self.val_dirs = val_dirs
-        self.test_dirs = test_dirs
+        self.train_paths = train_paths
+        self.val_paths = val_paths
+        self.test_paths = test_paths
         self.train_only_dataset = train_only_dataset
         self.normalize_audio = normalize_audio
         self.normalize_image = normalize_image
@@ -86,12 +88,28 @@ class IRMASDataModule(pl.LightningDataModule):
         self._set_class_count_dict()
         self.setup()
 
+    def get_item_from_internal_structure(
+        self, item_index: int, split: Literal["train", "val", "test"]
+    ) -> DatasetInternalItem:
+        # Find which dataset (they are concated) the exact dataset which the file originate from
+        split_map = {
+            "train": self.train_dataloader,
+            "val": self.val_dataloader,
+            "test": self.test_dataloader,
+        }
+        data_loader = split_map[split]()
+        concated_dataset: ConcatDataset = data_loader.dataset  # type: ignore
+        dataset_idx = bisect.bisect_right(concated_dataset.cumulative_sizes, item_index)
+        exact_dataset: DatasetBase = concated_dataset.datasets[dataset_idx]  # type: ignore
+        audio_path, label = exact_dataset.dataset_list[item_index]
+        return audio_path, label
+
     def _set_class_count_dict(self):
         # f there is only one dataset and that dataset is IRMAS:
         if (
-            self.train_dirs is not None
-            and len(self.train_dirs) == 1
-            and self.train_dirs[0][0] == SupportedDatasets.IRMAS
+            self.train_paths is not None
+            and len(self.train_paths) == 1
+            and self.train_paths[0][0] == SupportedDatasets.IRMAS
         ):
             self.class_count_dict = config_defaults.IRMAS_TRAIN_CLASS_COUNT
         else:
@@ -126,12 +144,14 @@ class IRMASDataModule(pl.LightningDataModule):
         _, example_max_weight = examples_weights.max(dim=-1, keepdim=False)
         return example_max_weight
 
-    def _concat_datasets_from_tuples(self, dataset_dirs: list[tuple[SupportedDatasets, Path]], type:str) -> None | ConcatDataset :
-        datasets: list[Dataset]  = []
-        for dataset_enum, dataset_path in dataset_dirs:
+    def _concat_datasets_from_tuples(
+        self, dataset_paths: list[tuple[SupportedDatasets, Path]], type: str
+    ) -> None | ConcatDataset:
+        datasets: list[Dataset] = []
+        for dataset_enum, dataset_path in dataset_paths:
             if dataset_enum == SupportedDatasets.IRMAS and type == "train":
                 dataset = IRMASDatasetTrain(
-                    dataset_dir=dataset_path,
+                    dataset_path=dataset_path,
                     audio_transform=self.train_audio_transform,
                     normalize_audio=self.normalize_audio,
                     normalize_image=self.normalize_image,
@@ -141,7 +161,7 @@ class IRMASDataModule(pl.LightningDataModule):
                 datasets.append(dataset)
             if dataset_enum == SupportedDatasets.IRMAS and type in "val":
                 dataset = IRMASDatasetTest(
-                    dataset_dir=dataset_path,
+                    dataset_path=dataset_path,
                     audio_transform=self.val_audio_transform,
                     normalize_audio=self.normalize_audio,
                     normalize_image=self.normalize_image,
@@ -160,21 +180,14 @@ class IRMASDataModule(pl.LightningDataModule):
         return ConcatDataset(datasets)
 
     def _get_train_dataset_concated(self):
-        datasets = []
-        for dataset_enum, dataset_path in self.train_dirs:
-            if dataset_enum == SupportedDatasets.IRMAS:
-
-            if dataset_enum == SupportedDatasets.OPENMIC:
-                pass
-            datasets.append(dataset)
-        return ConcatDataset(datasets)
+        self.train_paths = self._concat_datasets_from_tuples(self.train_paths)
 
     def _get_val_dataset_concated(self):
         datasets = []
-        for dataset_enum, dataset_path in self.val_dirs:
+        for dataset_enum, dataset_path in self.val_paths:
             if dataset_enum == SupportedDatasets.IRMAS:
                 dataset = IRMASDatasetTest(
-                    dataset_dir=dataset_path,
+                    dataset_path=dataset_path,
                     audio_transform=self.val_audio_transform,
                     normalize_audio=self.normalize_audio,
                     normalize_image=self.normalize_image,
@@ -184,10 +197,10 @@ class IRMASDataModule(pl.LightningDataModule):
 
     def _get_test_dataset_concated(self):
         datasets = []
-        for dataset_enum, dataset_path in self.train_dirs:
+        for dataset_enum, dataset_path in self.train_paths:
             if dataset_enum == SupportedDatasets.IRMAS:
                 dataset = IRMASDatasetTest(
-                    dataset_dir=dataset_path,
+                    dataset_path=dataset_path,
                     audio_transform=self.val_audio_transform,
                     normalize_audio=self.normalize_audio,
                     normalize_image=self.normalize_image,
@@ -278,7 +291,7 @@ class IRMASDataModule(pl.LightningDataModule):
             self._log_indices()
 
         elif stage == "predict":
-            self.test_dirs
+            self.test_paths
             self.train_size = len(train_indices)
 
     def _sanity_check_difference(
@@ -313,7 +326,7 @@ class IRMASDataModule(pl.LightningDataModule):
         self.class_count_dict = output
         return output
 
-    def train_dataloader(self) -> DataLoader:
+    def train_dataloader(self) -> DataLoader[ConcatDataset[DatasetGetItem]]:
         return DataLoader(
             self.train_dataset,
             batch_size=self.batch_size,
@@ -324,7 +337,7 @@ class IRMASDataModule(pl.LightningDataModule):
             pin_memory=True,
         )
 
-    def val_dataloader(self) -> DataLoader:
+    def val_dataloader(self) -> DataLoader[ConcatDataset[DatasetGetItem]]:
         """Uses test dataset files but sampler takes care that validation and test get different
         files."""
         return DataLoader(
@@ -337,7 +350,7 @@ class IRMASDataModule(pl.LightningDataModule):
             pin_memory=True,
         )
 
-    def test_dataloader(self) -> DataLoader:
+    def test_dataloader(self) -> DataLoader[ConcatDataset[DatasetGetItem]]:
         return DataLoader(
             self.test_dataset,
             batch_size=self.batch_size,

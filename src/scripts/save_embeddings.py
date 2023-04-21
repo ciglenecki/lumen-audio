@@ -139,8 +139,8 @@ if __name__ == "__main__":
 
     collate_fn = get_collate_fn(config)
     datamodule = IRMASDataModule(
-        train_dirs=config.train_dirs,
-        val_dirs=config.val_dirs,
+        train_paths=config.train_paths,
+        val_paths=config.val_paths,
         batch_size=config.batch_size,
         num_workers=config.num_workers,
         dataset_fraction=config.dataset_fraction,
@@ -214,13 +214,13 @@ if __name__ == "__main__":
                 if isinstance(exact_dataset, IRMASDatasetTrain) or isinstance(
                     exact_dataset, IRMASDatasetTest
                 ):
-                    audio_path, _ = exact_dataset.dataset[item_index]
+                    audio_path, _ = exact_dataset.dataset_list[item_index]
                 else:
                     raise Exception(
                         "Add 'isinstance(exact, YourDataset) and use item index to unpack the path to the file"
                     )
 
-                dataset_enum, _ = datamodule.train_dirs[dataset_idx]
+                dataset_enum, _ = datamodule.train_paths[dataset_idx]
                 dataset_str = dataset_enum.value
 
                 stem = Path(audio_path).stem  # e.g. [cel][cla]0001__1

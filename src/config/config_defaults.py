@@ -200,16 +200,16 @@ class ConfigDefault(Serializable):
     path_models_quick: Path | None = create(None)
     path_background_noise: Path | None = create(None)
 
-    train_dirs: list[str] | None = create(None)
+    train_paths: list[str] | None = create(None)
     """Dataset root directories that will be used for training in the following format: --train-dirs irmas:/path/to/dataset or openmic:/path/to/dataset"""
 
-    val_dirs: list[str] | None = create(None)
-    """Dataset root directories that will be used for validation in the following format: --val-dirs irmas:/path/to/dataset openmic:/path/to/dataset. If --test-dirs is not provided val dir will be split to val and test."""
+    val_paths: list[str] | None = create(None)
+    """Dataset root directories that will be used for validation in the following format: --val-paths irmas:/path/to/dataset openmic:/path/to/dataset. If --test-dirs is not provided val dir will be split to val and test."""
 
-    test_dirs: list[str] | None = create(None)
+    test_paths: list[str] | None = create(None)
     """Dataset root directories that will be used for testing in the following format: --test-dirs irmas:/path/to/dataset openmic:/path/to/dataset"""
 
-    predict_dirs: list[str] | None = create(None)
+    predict_paths: list[str] | None = create(None)
     """Dataset root directories that will be used for predicting in the following format: --test-dirs irmas:/path/to/dataset openmic:/path/to/dataset"""
 
     train_only_dataset: bool = create(False)
@@ -485,35 +485,35 @@ class ConfigDefault(Serializable):
         try:
             return [self.dir_to_enum_and_path(d) for d in data_dir]
         except InvalidArgument as e:
-            msg = f"Usage:\t--train-dirs <TYPE>:/path/to/dataset\n\t--val-dirs <TYPE>:/path/to/dataset.\nSupported <TYPE>: {[ d.value for d in SupportedDatasets]}"
+            msg = f"Usage:\t--train-dirs <TYPE>:/path/to/dataset\n\t--val-paths <TYPE>:/path/to/dataset.\nSupported <TYPE>: {[ d.value for d in SupportedDatasets]}"
             raise InvalidArgument(f"{str(e)}\n{msg}")
 
-    def parse_train_dirs(self):
-        if self.train_dirs is None:
-            self.train_dirs = [f"irmas:{str(self.path_irmas_train)}"]
-        self.train_dirs = self._parse_dataset_paths(self.train_dirs)
+    def parse_train_paths(self):
+        if self.train_paths is None:
+            self.train_paths = [f"irmas:{str(self.path_irmas_train)}"]
+        self.train_paths = self._parse_dataset_paths(self.train_paths)
 
-    def parse_val_dirs(self):
-        if self.val_dirs is None:
-            self.val_dirs = [f"irmas:{str(self.path_irmas_test)}"]
-        self.val_dirs = self._parse_dataset_paths(self.val_dirs)
+    def parse_val_paths(self):
+        if self.val_paths is None:
+            self.val_paths = [f"irmas:{str(self.path_irmas_test)}"]
+        self.val_paths = self._parse_dataset_paths(self.val_paths)
 
-    def parse_test_dirs(self):
-        if self.test_dirs is not None:
-            self.test_dirs = self._parse_dataset_paths(self.test_dirs)
+    def parse_test_paths(self):
+        if self.test_paths is not None:
+            self.test_paths = self._parse_dataset_paths(self.test_paths)
 
-    def parse_predict_dirs(self):
-        if self.predict_dirs is not None:
-            self.predict_dirs = self._parse_dataset_paths(self.predict_dirs)
+    def parse_predict_paths(self):
+        if self.predict_paths is not None:
+            self.predict_paths = self._parse_dataset_paths(self.predict_paths)
 
     def _validate_train_args(self):
         """This function validates arguments before training."""
 
-        self.parse_train_dirs()
-        self.parse_val_dirs()
+        self.parse_train_paths()
+        self.parse_val_paths()
 
-        if self.train_dirs is not None:
-            self.parse_test_dirs()
+        if self.train_paths is not None:
+            self.parse_test_paths()
 
         if self.model is None:
             raise InvalidArgument(f"--model is required {list(SupportedModels)}")

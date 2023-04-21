@@ -51,8 +51,8 @@ if __name__ == "__main__":
     args, config = parse()
 
     datamodule = IRMASDataModule(
-        train_dirs=config.train_dirs,
-        val_dirs=config.val_dirs,
+        train_paths=config.train_paths,
+        val_paths=config.val_paths,
         batch_size=config.batch_size,
         num_workers=config.num_workers,
         dataset_fraction=config.dataset_fraction,

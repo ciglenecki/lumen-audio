@@ -1,0 +1,6 @@
+- .git
+- models_quick
+- models
+- venv
+- *cache
+- src.egg-info

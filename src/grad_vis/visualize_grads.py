@@ -34,8 +34,8 @@ if __name__ == "__main__":
     cam = GradCAM(model=model, target_layers=target_module, use_cuda=args.device)
 
     datamodule = IRMASDataModule(
-        train_dirs=config.train_dirs,
-        val_dirs=config.val_dirs,
+        train_paths=config.train_paths,
+        val_paths=config.val_paths,
         batch_size=config.batch_size,
         num_workers=config.num_workers,
         dataset_fraction=config.dataset_fraction,
