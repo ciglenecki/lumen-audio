@@ -1,5 +1,6 @@
 """python3 src/scripts/tsv_features.py --input-dir embeddings/astMIT-ast-finetuned-
 audioset-10-10-0.4593_irmas_train/"""
+
 import bisect
 import json
 import os
@@ -19,10 +20,10 @@ def parse_args():
         type=Path,
         help="Directory which has a 'embeddings' subdirectory which contains jsons.",
     )
-    args, config, pl_args = parser.parse_args()
-    config.parse_dataset_paths()
+    args, _, _ = parser.parse_args()
+
     assert os.path.isdir(args.input_dir), "Input directory should exist."
-    return args, config, pl_args
+    return args, _, _
 
 
 def main():

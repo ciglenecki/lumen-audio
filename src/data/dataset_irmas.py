@@ -13,9 +13,8 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 
 import src.config.config_defaults as config_defaults
-from src.data.dataset_base import DatasetBase
+from src.data.dataset_base import DatasetBase, DatasetInternalItem
 from src.features.audio_transform_base import AudioTransformBase
-from src.utils.utils_audio import load_audio_from_file, play_audio
 from src.utils.utils_dataset import encode_instruments, multi_hot_encode
 
 # '*.(wav|mp3|flac)'
@@ -53,14 +52,14 @@ class IRMASDatasetTrain(DatasetBase):
             len(self.dataset_list) == config_defaults.DEFAULT_IRMAS_TRAIN_SIZE
         ), f"IRMAS train set should contain {config_defaults.DEFAULT_IRMAS_TRAIN_SIZE} samples"
 
-    def create_dataset_list(self):
+    def create_dataset_list(self) -> list[DatasetInternalItem]:
         """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)
         self.instrument_idx_list = {
             "guitar": [0, 3, 5, 9, 13, 15]
             "flute": [2,4,6,7,8]
         }
         """
-
+        dataset_list = []
         if self.train_override_csvs:
             dfs = [pd.read_csv(csv_path) for csv_path in self.train_override_csvs]
             df = pd.concat(dfs, ignore_index=True)
@@ -97,10 +96,11 @@ class IRMASDatasetTrain(DatasetBase):
             # drums_vector = encode_drums(drums)
             # genre_vector = encode_genre(genre)
 
-            self.dataset_list.append((path, labels))
+            dataset_list.append((path, labels))
 
             # for instrument in item_instruments:
             #     self.instrument_idx_list[instrument].append(item_idx)
+        return dataset_list
 
 
 class IRMASDatasetTest(DatasetBase):
@@ -126,8 +126,8 @@ class IRMASDatasetTest(DatasetBase):
         super().__init__(*args, **kwargs)  # sets self.dataset
 
         assert (
-            len(self.dataset_list) == config_defaults.DEFAULT_IRMAS_TRAIN_SIZE
-        ), f"IRMAS train set should contain {config_defaults.DEFAULT_IRMAS_TRAIN_SIZE} samples"
+            len(self.dataset_list) == config_defaults.DEFAULT_IRMAS_TEST_SIZE
+        ), f"IRMAS test set should contain {config_defaults.DEFAULT_IRMAS_TEST_SIZE} samples"
 
     def create_dataset_list(self) -> list[tuple[Path, np.ndarray]]:
         """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)"""

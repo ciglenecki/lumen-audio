@@ -1,5 +1,5 @@
 """python3 src/scripts/save_embeddings.py --model AST --audio-transform AST --pretrained-tag
-MIT/ast-finetuned-audioset-10-10-0.4593 --train-paths irmas:data/irmas/train --batch-size 1.
+MIT/ast-finetuned-audioset-10-10-0.4593 --train-paths irmastrain:data/irmas/train --batch-size 1.
 
 python3 src/scripts/save_embeddings.py  --model EFFICIENT_NET_V2_S --audio-transform MEL_SPECTROGRAM
 
@@ -38,22 +38,14 @@ def parse_args():
     parser.add_argument("--target-model-layer", type=str)
 
     args, config, pl_args = parser.parse_args()
-
-    if config.model is None:
-        raise InvalidArgument(
-            f"Please provide --model {[e.name for e in SupportedModels]}"
-        )
-    if config.audio_transform is None:
-        raise InvalidArgument(
-            f"Please provide --audio-transform {[e.name for e in AudioTransforms]}"
-        )
+    config.required_test_paths()
+    config.required_model()
+    config.required_audio_transform()
 
     if int(config.pretrained_tag is not None) + int(args.checkpoint is not None) != 1:
         raise InvalidArgument(
             "Please provide either --pretrained-tag or --checkpoint <PATH>"
         )
-
-    config.parse_dataset_paths()
     return args, config, pl_args
 
 
@@ -141,6 +133,7 @@ if __name__ == "__main__":
     datamodule = IRMASDataModule(
         train_paths=config.train_paths,
         val_paths=config.val_paths,
+        test_paths=config.test_paths,
         batch_size=config.batch_size,
         num_workers=config.num_workers,
         dataset_fraction=config.dataset_fraction,

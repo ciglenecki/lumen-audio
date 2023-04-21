@@ -10,6 +10,8 @@ import librosa
 import numpy as np
 import pandas as pd
 import torch
+import yaml
+from simple_parsing.helpers import Serializable
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
@@ -26,8 +28,7 @@ class DatasetBase(Dataset[DatasetGetItem]):
     # list of tuples which contains
     #   - paths of audio files ("filename.wav")
     #   - multihot encoded labels ([1,0,0,0,0])
-    dataset_list: list[tuple[Path, np.ndarray]]  # [ ("file1.wav", [1,0,0,0,0])]
-    instrument_idx_list: dict[str, list[int]]
+    # [ ("file1.wav", [1,0,0,0,0])]
     all_instrument_indices = np.array(list(config_defaults.INSTRUMENT_TO_IDX.values()))
     dataset_path: Path
 
@@ -50,9 +51,12 @@ class DatasetBase(Dataset[DatasetGetItem]):
         self.sum_two_samples = sum_two_samples
         self.concat_n_samples = concat_n_samples
         self.train_override_csvs = train_override_csvs
-        self.dataset_list = self.create_dataset_list()
-        self.instrument_idx_list = self.create_instrument_idx_list()
-        print(self.get_statistics())
+        self.dataset_list: list[tuple[Path, np.ndarray]] = self.create_dataset_list()
+        self.instrument_idx_list: dict[
+            str, list[int]
+        ] = self.create_instrument_idx_list()
+        self.stats = self.caculate_stats()
+        print(yaml.dump(self.stats, default_flow_style=False))
         assert (
             self.dataset_list
         ), "Property `dataset_list` (type: list[tuple[Path, np.ndarray]]) should be set in create_dataset_list() function."
@@ -67,23 +71,27 @@ class DatasetBase(Dataset[DatasetGetItem]):
         pass
 
     def create_instrument_idx_list(self) -> dict[str, list[int]]:
-        instrument_idx_list = {i.value: [] for i in config_defaults.InstrumentEnums}
+        instrument_idx_list = {e.value: [] for e in config_defaults.InstrumentEnums}
 
         for item_idx, (_, labels) in enumerate(self.dataset_list):
             item_instruments = decode_instruments(labels)
             for instrument in item_instruments:
-                self.instrument_idx_list[instrument].append(item_idx)
+                instrument_idx_list[instrument].append(item_idx)
         return instrument_idx_list
 
     def __len__(self) -> int:
         return len(self.dataset_list)
 
-    def get_statistics(self):
+    def caculate_stats(self) -> dict:
         stats = {}
         for k, v in self.instrument_idx_list.items():
-            stats.update({config_defaults.INSTRUMENT_TO_FULLNAME[k]: len(v)})
+            # Set short and full name
+            stats.update(
+                {f"instrument {config_defaults.INSTRUMENT_TO_FULLNAME[k]}": len(v)}
+            )
+            # stats.update({k: len(v)})
 
-        num_of_instruments_per_sample = {f"{i} instruments": 0 for i in range(1, 6)}
+        num_of_instruments_per_sample = {}
         for _, label in self.dataset_list:
             n = np.sum(label).astype(int)
             key = f"{n} instruments"
@@ -92,6 +100,7 @@ class DatasetBase(Dataset[DatasetGetItem]):
             num_of_instruments_per_sample[key] += 1
         stats.update(num_of_instruments_per_sample)
         stats.update({"total size": len(self.dataset_list)})
+        return stats
 
     def load_sample(self, item_idx: int) -> tuple[np.ndarray, np.ndarray, Path]:
         audio_path, labels = self.dataset_list[item_idx]

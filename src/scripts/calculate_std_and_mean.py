@@ -15,7 +15,7 @@ from src.utils.utils_exceptions import InvalidArgument
 def parse():
     parser = ArgParseWithConfig()
     args, config, pl_args = parser.parse_args()
-    config.parse_dataset_paths()
+    config.required_train_paths()
     return args, config
 
 
@@ -53,6 +53,7 @@ if __name__ == "__main__":
     datamodule = IRMASDataModule(
         train_paths=config.train_paths,
         val_paths=config.val_paths,
+        test_paths=config.test_paths,
         batch_size=config.batch_size,
         num_workers=config.num_workers,
         dataset_fraction=config.dataset_fraction,

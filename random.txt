@@ -66,7 +66,7 @@ user_group.add_argument(
     metavar="dir",
     nargs="+",
     type=parse_dataset_enum_dirs,
-    help="Dataset root directories that will be used for training in the following format: --train-paths irmas:/path/to openmic:/path/to",
+    help="Dataset root directories that will be used for training in the following format: --train-paths irmastrain:/path/to openmic:/path/to",
     default=defaults.DEFAULT_TRAIN_DIRS,
 )
 

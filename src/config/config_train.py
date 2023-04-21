@@ -5,16 +5,9 @@ To see the list of all arguments call `pyhton3 src/train.py -h`
 
 from __future__ import annotations
 
-import argparse
 from argparse import Namespace
-from operator import attrgetter
 
-import pytorch_lightning as pl
-import simple_parsing
-import torch
-from simple_parsing import DashVariant
-
-from src.config.argparse_with_config import ArgParseWithConfig, SortingHelpFormatter
+from src.config.argparse_with_config import ArgParseWithConfig
 from src.config.config_defaults import ConfigDefault
 from src.enums.enums import all_enums
 
@@ -34,6 +27,7 @@ def get_config() -> tuple[ConfigDefault, Namespace]:
         epilog=get_epipolog(),
     )
     args, config, pl_args = parser.parse_args()
+    config.validate_train_args()
 
     # Dynamically set some PyTorch lightning arguments
     if config.log_every_n_steps:

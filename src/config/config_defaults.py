@@ -18,7 +18,7 @@ from src.enums.enums import (
     MetricMode,
     OptimizeMetric,
     SupportedAugmentations,
-    SupportedDatasets,
+    SupportedDatasetDirType,
     SupportedHeads,
     SupportedLossFunctions,
     SupportedModels,
@@ -164,6 +164,8 @@ DEFAULT_PRETRAINED_TAG_MAP = {
     SupportedModels.RESNEXT101_64X4D: TAG_IMAGENET1K_V1,
 }
 
+USAGE_TEXT_PATHS = f"Usage:\t--train-paths <TYPE>:/path/to/dataset\n\t--val-paths <TYPE>:/path/to/dataset.\nSupported <TYPE>: {[ d.value for d in SupportedDatasetDirType]}"
+
 
 def create(arg, **kwargs):
     """We need this useless helper function since you can't type augmentations: SupportedAugmentations = {} in ConfigDefault."""
@@ -177,6 +179,51 @@ def default_path(path: Path | None, default_value: Path):
     elif path is None and not Path(default_value).exists():
         return None
     return path
+
+
+def dir_to_enum_and_path(
+    string: str,
+) -> tuple[SupportedDatasetDirType, Path]:
+    """
+    Example:
+        string: irmas:/path/to/irmas
+        return (SupportedDatasetDirType.IRMAS, Path("/path/to/irmas"))
+    """
+    delimiter = ":"
+    pair = string.split(delimiter)
+    if len(pair) != 2:
+        raise InvalidArgument(
+            f"Pair {pair} needs to have two elements split with '{delimiter}'."
+        )
+    dataset_name, dataset_path = pair
+    if len(pair) != 2:
+        raise InvalidArgument(
+            f"Pair {pair} needs to have two elements split with '{delimiter}'."
+        )
+    try:
+        dataset = SupportedDatasetDirType(dataset_name)
+    except ValueError as e:
+        raise ValueError(
+            f"{str(e)}. Choose one of the following  {[ d.value for d in SupportedDatasetDirType]} (or if you are developing a new dataset, add a new entry into the SupportedDatasetDirType enum)"
+        )
+    dataset_path = Path(dataset_path)
+    if not dataset_path.exists():
+        raise InvalidArgument(f"Dataset path {dataset_path} doesn't exist.")
+    return dataset, dataset_path
+
+
+def parse_dataset_paths(
+    data_dir: str | list[str],
+) -> list[tuple[SupportedDatasetDirType, Path]]:
+    # Parse strings to dataset type and path
+    try:
+        if isinstance(data_dir, str):
+            return [dir_to_enum_and_path(data_dir)]
+        elif isinstance(data_dir, list):
+            return [dir_to_enum_and_path(d) for d in data_dir]
+    except InvalidArgument as e:
+        msg = USAGE_TEXT_PATHS
+        raise InvalidArgument(f"{str(e)}\n{msg}")
 
 
 @dataclass
@@ -201,7 +248,7 @@ class ConfigDefault(Serializable):
     path_background_noise: Path | None = create(None)
 
     train_paths: list[str] | None = create(None)
-    """Dataset root directories that will be used for training in the following format: --train-paths irmas:/path/to/dataset or openmic:/path/to/dataset"""
+    """Dataset root directories that will be used for training in the following format: --train-paths irmastrain:/path/to/dataset or openmic:/path/to/dataset"""
 
     val_paths: list[str] | None = create(None)
     """Dataset root directories that will be used for validation in the following format: --val-paths irmas:/path/to/dataset openmic:/path/to/dataset. If --val-paths is not provided val dir will be split to val and test."""
@@ -209,8 +256,8 @@ class ConfigDefault(Serializable):
     test_paths: list[str] | None = create(None)
     """Dataset root directories that will be used for testing in the following format: --val-paths irmas:/path/to/dataset openmic:/path/to/dataset"""
 
-    predict_paths: list[str] | None = create(None)
-    """Dataset root directories that will be used for predicting in the following format: --val-paths irmas:/path/to/dataset openmic:/path/to/dataset"""
+    # predict_paths: list[str] | None = create(None)
+    # """Dataset root directories that will be used for predicting in the following format: --val-paths irmas:/path/to/dataset openmic:/path/to/dataset"""
 
     train_only_dataset: bool = create(False)
     """Use only the train portion of the dataset and split it 0.8 0.2"""
@@ -480,47 +527,56 @@ class ConfigDefault(Serializable):
         if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAMW:
             self.weight_decay = 1e-2
 
-    def _parse_dataset_paths(self, data_dir) -> tuple[SupportedDatasets, Path]:
-        # Parse strings to dataset type and path
-        try:
-            return [self.dir_to_enum_and_path(d) for d in data_dir]
-        except InvalidArgument as e:
-            msg = f"Usage:\t--train-paths <TYPE>:/path/to/dataset\n\t--val-paths <TYPE>:/path/to/dataset.\nSupported <TYPE>: {[ d.value for d in SupportedDatasets]}"
-            raise InvalidArgument(f"{str(e)}\n{msg}")
+        self.set_train_paths()
+        self.set_val_paths()
+        self.set_test_paths()
 
-    def parse_train_paths(self):
+    def set_train_paths(self):
         if self.train_paths is None:
-            self.train_paths = [f"irmas:{str(self.path_irmas_train)}"]
-        self.train_paths = self._parse_dataset_paths(self.train_paths)
+            self.train_paths = [
+                f"{SupportedDatasetDirType.IRMAS_TRAIN.value}:{str(self.path_irmas_train)}"
+            ]
+        self.train_paths = parse_dataset_paths(self.train_paths)
 
-    def parse_val_paths(self):
+    def set_val_paths(self):
         if self.val_paths is None:
-            self.val_paths = [f"irmas:{str(self.path_irmas_test)}"]
-        self.val_paths = self._parse_dataset_paths(self.val_paths)
+            self.val_paths = [
+                f"{SupportedDatasetDirType.IRMAS_TEST.value}:{str(self.path_irmas_test)}"
+            ]
+        self.val_paths = parse_dataset_paths(self.val_paths)
 
-    def parse_test_paths(self):
+    def set_test_paths(self):
         if self.test_paths is not None:
-            self.test_paths = self._parse_dataset_paths(self.test_paths)
+            self.test_paths = parse_dataset_paths(self.test_paths)
 
-    def parse_predict_paths(self):
-        if self.predict_paths is not None:
-            self.predict_paths = self._parse_dataset_paths(self.predict_paths)
+    def required_train_paths(self):
+        if self.train_paths is None:
+            raise InvalidArgument(f"--train-paths is required\n{USAGE_TEXT_PATHS}")
 
-    def _validate_train_args(self):
-        """This function validates arguments before training."""
+    def required_val_paths(self):
+        if self.train_paths is None:
+            raise InvalidArgument(f"--val-paths is required\n{USAGE_TEXT_PATHS}")
 
-        self.parse_train_paths()
-        self.parse_val_paths()
+    def required_test_paths(self):
+        if self.train_paths is None:
+            raise InvalidArgument(f"--test-paths is required\n{USAGE_TEXT_PATHS}")
 
-        if self.train_paths is not None:
-            self.parse_test_paths()
-
+    def required_model(self):
         if self.model is None:
             raise InvalidArgument(f"--model is required {list(SupportedModels)}")
+
+    def required_audio_transform(self):
         if self.audio_transform is None:
             raise InvalidArgument(
                 f"--audio-transform is required {list(AudioTransforms)}"
             )
+
+    def validate_train_args(self):
+        """This function validates arguments before training."""
+        self.required_train_paths()
+        self.required_val_paths()
+        self.required_model()
+        self.required_audio_transform()
 
         if self.metric and not self.metric_mode:
             raise InvalidArgument("Can't pass --metric without passing --metric-mode")
@@ -628,37 +684,6 @@ class ConfigDefault(Serializable):
             raise InvalidArgument(
                 "Please set --finetune-heads-epochs int so it's less than --epochs int."
             )
-
-    def dir_to_enum_and_path(
-        self,
-        string: str,
-    ) -> tuple[SupportedDatasets, Path]:
-        """
-        Example:
-            string: irmas:/path/to/irmas
-            return (SupportedDatasets.IRMAS, Path("/path/to/irmas"))
-        """
-        delimiter = ":"
-        pair = string.split(delimiter)
-        if len(pair) != 2:
-            raise InvalidArgument(
-                f"Pair {pair} needs to have two elements split with '{delimiter}'."
-            )
-        dataset_name, dataset_path = pair
-        if len(pair) != 2:
-            raise InvalidArgument(
-                f"Pair {pair} needs to have two elements split with '{delimiter}'."
-            )
-        try:
-            dataset = SupportedDatasets(dataset_name)
-        except ValueError as e:
-            raise ValueError(
-                f"{str(e)}. Choose one of the following  {[ d.value for d in SupportedDatasets]} or add a new entry into the SupportedDatasets enum."
-            )
-        dataset_path = Path(dataset_path)
-        if not dataset_path.exists():
-            raise InvalidArgument(f"Dataset path {dataset_path} doesn't exist.")
-        return dataset, dataset_path
 
     def isfloat(self, x: str):
         try:

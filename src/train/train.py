@@ -125,6 +125,7 @@ if __name__ == "__main__":
         sum_two_samples=SupportedAugmentations.SUM_TWO_SAMPLES in config.augmentations,
         use_weighted_train_sampler=config.use_weighted_train_sampler,
     )
+    datamodule.setup("fit")  # fit, test
 
     if config.loss_function == SupportedLossFunctions.CROSS_ENTROPY:
         loss_function = torch.nn.BCEWithLogitsLoss(**config.loss_function_kwargs)
@@ -136,7 +137,6 @@ if __name__ == "__main__":
         loss_function = torch.nn.BCEWithLogitsLoss(**kwargs)
 
     model = get_model(config, loss_function=loss_function)
-    print_modules(model)
 
     # ================= SETUP CALLBACKS (auto checkpoint, tensorboard, early stopping...)========================
     metric_mode_str = MetricMode(config.metric_mode).value
@@ -179,9 +179,6 @@ if __name__ == "__main__":
     log_dictionary = {
         **add_prefix_to_keys(vars(config), "user_args/"),
         **add_prefix_to_keys(vars(pl_args), "lightning_args/"),
-        "train_size": len(datamodule.train_dataloader().dataset),
-        "val_size": len(datamodule.val_dataloader().dataset),
-        "test_size": len(datamodule.test_dataloader().dataset),
     }
 
     callbacks = [

@@ -4,8 +4,7 @@ import numpy as np
 import torch
 
 from src.config import config_defaults
-from src.config.config_defaults import NUM_RGB_CHANNELS
-from src.enums.enums import SupportedDatasets
+from src.enums.enums import SupportedDatasetDirType
 from src.utils.utils_audio import load_audio_from_file
 from src.utils.utils_exceptions import InvalidArgument, InvalidDataException
 
@@ -16,7 +15,7 @@ def create_and_repeat_channel(images: torch.Tensor, num_repeat: int):
 
 
 def add_rgb_channel(images: torch.Tensor):
-    return create_and_repeat_channel(images, NUM_RGB_CHANNELS)
+    return create_and_repeat_channel(images, 3)
 
 
 def remove_rgb_channel(images: torch.Tensor):
@@ -170,22 +169,6 @@ def multi_hot_encode(indices: np.ndarray | list, size: int) -> np.ndarray:
     array = np.zeros(size, dtype=np.int8)
     array[indices] = 1
     return array
-
-
-def parse_dataset_enum_dirs(
-    string: str,
-) -> list[tuple[SupportedDatasets, Path]]:
-    pair = string.split(":")
-    if len(pair) != 2:
-        raise InvalidArgument(
-            f"Pair {pair} needs to have two elements. First arg is {list(SupportedDatasets)} and the second is the path "
-        )
-    dataset_name, dataset_path = pair
-    dataset = SupportedDatasets(dataset_name)
-    dataset_path = Path(dataset_path)
-    if not dataset_path.exists():
-        raise InvalidArgument(f"Dataset path {dataset_path} doesn't exist.")
-    return dataset, dataset_path
 
 
 def calc_instrument_weight(per_instrument_count: dict[str, int], as_tensor=True):
