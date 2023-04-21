@@ -62,20 +62,20 @@ user_group.add_argument(
 
 
 user_group.add_argument(
-    "--train-dirs",
+    "--train-paths",
     metavar="dir",
     nargs="+",
     type=parse_dataset_enum_dirs,
-    help="Dataset root directories that will be used for training in the following format: --train-dirs irmas:/path/to openmic:/path/to",
+    help="Dataset root directories that will be used for training in the following format: --train-paths irmas:/path/to openmic:/path/to",
     default=defaults.DEFAULT_TRAIN_DIRS,
 )
 
 user_group.add_argument(
-    "--test-dirs",
+    "--val-paths",
     metavar="dir",
     nargs="+",
     type=parse_dataset_enum_dirs,
-    help="Dataset root directories that will be used for validation in the following format: --test-dirs irmas:/path/to openmic:/path/to",
+    help="Dataset root directories that will be used for validation in the following format: --val-paths irmas:/path/to openmic:/path/to",
     default=defaults.DEFAULT_VAL_DIRS,
 )
 

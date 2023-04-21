@@ -10,7 +10,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/AAA --test-dirs irmas:data/irmas/test --backbone-after backbone.classifier --head-after backbone.classifier --model AST --audio-transform AST --finetune-head-epochs 2 --epochs 25 --batch-size 4 --num-workers 4 --quick",
+			"args": "--accelerator gpu --devices -1 --train-paths irmas:data/irmas/AAA --val-paths irmas:data/irmas/test --backbone-after backbone.classifier --head-after backbone.classifier --model AST --audio-transform AST --finetune-head-epochs 2 --epochs 25 --batch-size 4 --num-workers 4 --quick",
 			"justMyCode": false
 		},
 		{
@@ -19,7 +19,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --test-dirs irmas:data/irmas/test --backbone-after backbone.classifier --head-after backbone.classifier --model AST --audio-transform AST --quick --train-override-csv data/irmas_sample/normalized_random_samples_relabeling.csv",
+			"args": "--accelerator gpu --devices -1 --train-paths irmas:data/irmas/train --val-paths irmas:data/irmas/test --backbone-after backbone.classifier --head-after backbone.classifier --model AST --audio-transform AST --quick --train-override-csv data/irmas_sample/normalized_random_samples_relabeling.csv",
 			"justMyCode": false
 		},
 		{
@@ -28,7 +28,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --lr 5e-5 --batch-size 2 --num-workers 4 --audio-transform WAV2VEC --model WAV2VEC --epochs 40  --backbone-after layers.9 --head-after deep_head --quick",
+			"args": "--accelerator gpu --devices -1 --train-paths irmas:data/irmas/train --lr 5e-5 --batch-size 2 --num-workers 4 --audio-transform WAV2VEC --model WAV2VEC --epochs 40  --backbone-after layers.9 --head-after deep_head --quick",
 			"justMyCode": false
 		},
 		{
@@ -37,7 +37,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --test-dirs irmas:data/irmas/test --audio-transform MEL_SPECTROGRAM --model RESNEXT50_32X4D --backbone-after backbone.layer1.2 --head-after backbone.fc --num-workers 1 --batch-size 4",
+			"args": "--accelerator gpu --devices -1 --train-paths irmas:data/irmas/train --val-paths irmas:data/irmas/test --audio-transform MEL_SPECTROGRAM --model RESNEXT50_32X4D --backbone-after backbone.layer1.2 --head-after backbone.fc --num-workers 1 --batch-size 4",
 			"justMyCode": false
 		},
 		{
@@ -46,7 +46,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --test-dirs irmas:data/irmas/test --audio-transform WAV2VEC_CNN --model WAV2VEC_CNN --use-fluffy --head ATTENTION_HEAD --use-multiple-optimizers --loss-function CROSS_ENTROPY_POS_WEIGHT --backbone-after classifier.heads --head-after classifier.heads --quick",
+			"args": "--accelerator gpu --devices -1 --train-paths irmas:data/irmas/train --val-paths irmas:data/irmas/test --audio-transform WAV2VEC_CNN --model WAV2VEC_CNN --use-fluffy --head ATTENTION_HEAD --use-multiple-optimizers --loss-function CROSS_ENTROPY_POS_WEIGHT --backbone-after classifier.heads --head-after classifier.heads --quick",
 			"justMyCode": false
 		},
 		{
@@ -55,7 +55,7 @@
 			"request": "launch",
 			"program": "src/scripts/save_embeddings.py",
 			"console": "integratedTerminal",
-			"args": "--model AST --audio-transform AST --pretrained-tag MIT/ast-finetuned-audioset-10-10-0.4593 --train-dirs irmas:data/irmas/train --batch-size 2",
+			"args": "--model AST --audio-transform AST --pretrained-tag MIT/ast-finetuned-audioset-10-10-0.4593 --train-paths irmas:data/irmas/train --batch-size 2",
 			"justMyCode": false
 		},
 		{

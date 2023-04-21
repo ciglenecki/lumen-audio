@@ -66,6 +66,7 @@ class IRMASDataModule(pl.LightningDataModule):
         concat_n_samples: int | None,
         sum_two_samples: bool,
         use_weighted_train_sampler,
+        init_stage="fit",
     ):
         super().__init__()
         self.batch_size = batch_size
@@ -86,7 +87,7 @@ class IRMASDataModule(pl.LightningDataModule):
         self.use_weighted_train_sampler = use_weighted_train_sampler
         self.collate_fn = collate_fn
         self._set_class_count_dict()
-        self.setup()
+        self.setup(init_stage)
 
     def get_item_from_internal_structure(
         self, item_index: int, split: Literal["train", "val", "test"]
@@ -145,8 +146,12 @@ class IRMASDataModule(pl.LightningDataModule):
         return example_max_weight
 
     def _concat_datasets_from_tuples(
-        self, dataset_paths: list[tuple[SupportedDatasets, Path]], type: str
+        self, dataset_paths: list[tuple[SupportedDatasets, Path]] | None, type: str
     ) -> None | ConcatDataset:
+        # TODO: MATEJ EHRE
+        if dataset_paths is None:
+            return None
+
         datasets: list[Dataset] = []
         for dataset_enum, dataset_path in dataset_paths:
             if dataset_enum == SupportedDatasets.IRMAS and type == "train":
@@ -180,33 +185,17 @@ class IRMASDataModule(pl.LightningDataModule):
         return ConcatDataset(datasets)
 
     def _get_train_dataset_concated(self):
-        self.train_paths = self._concat_datasets_from_tuples(self.train_paths)
+        self.train_dataset = self._concat_datasets_from_tuples(
+            self.train_paths, type="train"
+        )
 
     def _get_val_dataset_concated(self):
-        datasets = []
-        for dataset_enum, dataset_path in self.val_paths:
-            if dataset_enum == SupportedDatasets.IRMAS:
-                dataset = IRMASDatasetTest(
-                    dataset_path=dataset_path,
-                    audio_transform=self.val_audio_transform,
-                    normalize_audio=self.normalize_audio,
-                    normalize_image=self.normalize_image,
-                )
-            datasets.append(dataset)
-        return ConcatDataset(datasets)
+        self.val_dataset = self._concat_datasets_from_tuples(self.val_paths, type="val")
 
     def _get_test_dataset_concated(self):
-        datasets = []
-        for dataset_enum, dataset_path in self.train_paths:
-            if dataset_enum == SupportedDatasets.IRMAS:
-                dataset = IRMASDatasetTest(
-                    dataset_path=dataset_path,
-                    audio_transform=self.val_audio_transform,
-                    normalize_audio=self.normalize_audio,
-                    normalize_image=self.normalize_image,
-                )
-            datasets.append(dataset)
-        return ConcatDataset(datasets)
+        self.test_dataset = self._concat_datasets_from_tuples(
+            self.test_paths, type="test"
+        )
 
     def _log_indices(self):
         train_indices = self.train_sampler.indices
@@ -239,7 +228,7 @@ class IRMASDataModule(pl.LightningDataModule):
 
     def setup(self, stage=None):
         super().setup(stage)
-        if stage == "fit":  # train + validate
+        if stage in ["fit"]:  # train + validate
             self.train_dataset = self._get_train_dataset_concated()
 
             if self.train_only_dataset:

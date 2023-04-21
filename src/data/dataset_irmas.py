@@ -66,9 +66,9 @@ class IRMASDatasetTrain(DatasetBase):
             df = pd.concat(dfs, ignore_index=True)
             df.set_index("filename", inplace=True)
 
-        self.instrument_idx_list = {
-            i.value: [] for i in config_defaults.InstrumentEnums
-        }
+        # self.instrument_idx_list = {
+        #     i.value: [] for i in config_defaults.InstrumentEnums
+        # }
 
         for item_idx, path in tqdm(enumerate(self.dataset_path.rglob(glob_expression))):
             filename = str(path.stem)
@@ -99,8 +99,8 @@ class IRMASDatasetTrain(DatasetBase):
 
             self.dataset_list.append((path, labels))
 
-            for instrument in item_instruments:
-                self.instrument_idx_list[instrument].append(item_idx)
+            # for instrument in item_instruments:
+            #     self.instrument_idx_list[instrument].append(item_idx)
 
 
 class IRMASDatasetTest(DatasetBase):
@@ -126,12 +126,12 @@ class IRMASDatasetTest(DatasetBase):
         super().__init__(*args, **kwargs)  # sets self.dataset
 
         assert (
-            len(self.dataset) == config_defaults.DEFAULT_IRMAS_TRAIN_SIZE
+            len(self.dataset_list) == config_defaults.DEFAULT_IRMAS_TRAIN_SIZE
         ), f"IRMAS train set should contain {config_defaults.DEFAULT_IRMAS_TRAIN_SIZE} samples"
 
     def create_dataset_list(self) -> list[tuple[Path, np.ndarray]]:
         """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)"""
-        dataset: list[tuple[Path, np.ndarray]] = []
+        dataset_list: list[tuple[Path, np.ndarray]] = []
         for audio_file in tqdm(self.dataset_path.rglob(glob_expression)):
             path_without_ext = os.path.splitext(audio_file)[0]
             txt_path = Path(path_without_ext + ".txt")
@@ -154,8 +154,8 @@ class IRMASDatasetTest(DatasetBase):
                 config_defaults.DEFAULT_NUM_LABELS,
             )
 
-            dataset.append((audio_file, labels))
-        return dataset
+            dataset_list.append((audio_file, labels))
+        return dataset_list
 
 
 class InstrumentInference(Dataset):

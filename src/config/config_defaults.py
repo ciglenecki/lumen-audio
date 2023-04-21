@@ -201,16 +201,16 @@ class ConfigDefault(Serializable):
     path_background_noise: Path | None = create(None)
 
     train_paths: list[str] | None = create(None)
-    """Dataset root directories that will be used for training in the following format: --train-dirs irmas:/path/to/dataset or openmic:/path/to/dataset"""
+    """Dataset root directories that will be used for training in the following format: --train-paths irmas:/path/to/dataset or openmic:/path/to/dataset"""
 
     val_paths: list[str] | None = create(None)
-    """Dataset root directories that will be used for validation in the following format: --val-paths irmas:/path/to/dataset openmic:/path/to/dataset. If --test-dirs is not provided val dir will be split to val and test."""
+    """Dataset root directories that will be used for validation in the following format: --val-paths irmas:/path/to/dataset openmic:/path/to/dataset. If --val-paths is not provided val dir will be split to val and test."""
 
     test_paths: list[str] | None = create(None)
-    """Dataset root directories that will be used for testing in the following format: --test-dirs irmas:/path/to/dataset openmic:/path/to/dataset"""
+    """Dataset root directories that will be used for testing in the following format: --val-paths irmas:/path/to/dataset openmic:/path/to/dataset"""
 
     predict_paths: list[str] | None = create(None)
-    """Dataset root directories that will be used for predicting in the following format: --test-dirs irmas:/path/to/dataset openmic:/path/to/dataset"""
+    """Dataset root directories that will be used for predicting in the following format: --val-paths irmas:/path/to/dataset openmic:/path/to/dataset"""
 
     train_only_dataset: bool = create(False)
     """Use only the train portion of the dataset and split it 0.8 0.2"""
@@ -485,7 +485,7 @@ class ConfigDefault(Serializable):
         try:
             return [self.dir_to_enum_and_path(d) for d in data_dir]
         except InvalidArgument as e:
-            msg = f"Usage:\t--train-dirs <TYPE>:/path/to/dataset\n\t--val-paths <TYPE>:/path/to/dataset.\nSupported <TYPE>: {[ d.value for d in SupportedDatasets]}"
+            msg = f"Usage:\t--train-paths <TYPE>:/path/to/dataset\n\t--val-paths <TYPE>:/path/to/dataset.\nSupported <TYPE>: {[ d.value for d in SupportedDatasets]}"
             raise InvalidArgument(f"{str(e)}\n{msg}")
 
     def parse_train_paths(self):

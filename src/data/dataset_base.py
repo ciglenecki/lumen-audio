@@ -16,6 +16,7 @@ from tqdm import tqdm
 import src.config.config_defaults as config_defaults
 from src.features.audio_transform_base import AudioTransformBase
 from src.utils.utils_audio import load_audio_from_file, play_audio
+from src.utils.utils_dataset import decode_instruments, encode_instruments
 
 DatasetInternalItem = tuple[Path, np.ndarray]
 DatasetGetItem = tuple[torch.Tensor, torch.Tensor, torch.Tensor]
@@ -26,6 +27,7 @@ class DatasetBase(Dataset[DatasetGetItem]):
     #   - paths of audio files ("filename.wav")
     #   - multihot encoded labels ([1,0,0,0,0])
     dataset_list: list[tuple[Path, np.ndarray]]  # [ ("file1.wav", [1,0,0,0,0])]
+    instrument_idx_list: dict[str, list[int]]
     all_instrument_indices = np.array(list(config_defaults.INSTRUMENT_TO_IDX.values()))
     dataset_path: Path
 
@@ -47,9 +49,10 @@ class DatasetBase(Dataset[DatasetGetItem]):
         self.normalize_audio = normalize_audio
         self.sum_two_samples = sum_two_samples
         self.concat_n_samples = concat_n_samples
-        self.instrument_idx_list: dict[str, list[int]] = {}
         self.train_override_csvs = train_override_csvs
         self.dataset_list = self.create_dataset_list()
+        self.instrument_idx_list = self.create_instrument_idx_list()
+        print(self.get_statistics())
         assert (
             self.dataset_list
         ), "Property `dataset_list` (type: list[tuple[Path, np.ndarray]]) should be set in create_dataset_list() function."
@@ -63,8 +66,32 @@ class DatasetBase(Dataset[DatasetGetItem]):
         """
         pass
 
+    def create_instrument_idx_list(self) -> dict[str, list[int]]:
+        instrument_idx_list = {i.value: [] for i in config_defaults.InstrumentEnums}
+
+        for item_idx, (_, labels) in enumerate(self.dataset_list):
+            item_instruments = decode_instruments(labels)
+            for instrument in item_instruments:
+                self.instrument_idx_list[instrument].append(item_idx)
+        return instrument_idx_list
+
     def __len__(self) -> int:
         return len(self.dataset_list)
+
+    def get_statistics(self):
+        stats = {}
+        for k, v in self.instrument_idx_list.items():
+            stats.update({config_defaults.INSTRUMENT_TO_FULLNAME[k]: len(v)})
+
+        num_of_instruments_per_sample = {f"{i} instruments": 0 for i in range(1, 6)}
+        for _, label in self.dataset_list:
+            n = np.sum(label).astype(int)
+            key = f"{n} instruments"
+            if key not in num_of_instruments_per_sample:
+                num_of_instruments_per_sample[key] = 0
+            num_of_instruments_per_sample[key] += 1
+        stats.update(num_of_instruments_per_sample)
+        stats.update({"total size": len(self.dataset_list)})
 
     def load_sample(self, item_idx: int) -> tuple[np.ndarray, np.ndarray, Path]:
         audio_path, labels = self.dataset_list[item_idx]

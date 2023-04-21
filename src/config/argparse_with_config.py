@@ -9,16 +9,6 @@ from simple_parsing import DashVariant
 from src.config.config_defaults import ConfigDefault
 
 
-class SortingHelpFormatter(
-    simple_parsing.SimpleHelpFormatter, argparse.RawTextHelpFormatter
-):
-    """Alphabetically sort -h."""
-
-    def add_arguments(self, actions):
-        actions = sorted(actions, key=attrgetter("option_strings"))
-        super().add_arguments(actions)
-
-
 class ArgParseWithConfig(simple_parsing.ArgumentParser):
     """Class which connects the ConfigDefault class and argparse.
 
@@ -54,9 +44,9 @@ class ArgParseWithConfig(simple_parsing.ArgumentParser):
     ) -> tuple[argparse.Namespace, ConfigDefault, argparse.Namespace]:
         args = super().parse_args(*n_args, **kwargs)
 
-        config = getattr(args, ArgParseWithConfig.config_dest_str)
+        config: ConfigDefault = getattr(args, ArgParseWithConfig.config_dest_str)
         delattr(args, ArgParseWithConfig.config_dest_str)
-        config.on_after_parse()
+        config.after_init()
 
         args_dict: dict[str, argparse.Namespace] = {}
         for group in self._action_groups:
@@ -71,6 +61,16 @@ class ArgParseWithConfig(simple_parsing.ArgumentParser):
             args_dict[ArgParseWithConfig.pl_group_name],
         )
         return args, config, pl_args
+
+
+class SortingHelpFormatter(
+    simple_parsing.SimpleHelpFormatter, argparse.RawTextHelpFormatter
+):
+    """Alphabetically sort -h."""
+
+    def add_arguments(self, actions):
+        actions = sorted(actions, key=attrgetter("option_strings"))
+        super().add_arguments(actions)
 
 
 def test_args_parse_with_config():

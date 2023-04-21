@@ -1,5 +1,5 @@
 """python3 src/scripts/save_embeddings.py --model AST --audio-transform AST --pretrained-tag
-MIT/ast-finetuned-audioset-10-10-0.4593 --train-dirs irmas:data/irmas/train --batch-size 1.
+MIT/ast-finetuned-audioset-10-10-0.4593 --train-paths irmas:data/irmas/train --batch-size 1.
 
 python3 src/scripts/save_embeddings.py  --model EFFICIENT_NET_V2_S --audio-transform MEL_SPECTROGRAM
 
