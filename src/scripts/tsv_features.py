@@ -1,7 +1,6 @@
 """python3 src/scripts/tsv_features.py --input-dir embeddings/astMIT-ast-finetuned-
 audioset-10-10-0.4593_irmas_train/"""
 
-import bisect
 import json
 import os
 from pathlib import Path
@@ -10,7 +9,6 @@ import pandas as pd
 from tqdm import tqdm
 
 from src.config.argparse_with_config import ArgParseWithConfig
-from src.config.config_defaults import INSTRUMENT_TO_FULLNAME, get_default_config
 
 
 def parse_args():

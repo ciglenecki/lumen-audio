@@ -1,13 +1,9 @@
-from functools import partial
 from pathlib import Path
-from typing import Callable
 
 import audiomentations as AA
-import librosa
 import numpy as np
 import torch
 import torch_audiomentations
-from audiomentations.core.transforms_interface import BaseWaveformTransform
 from torchvision.transforms import RandomErasing
 
 from src.config.config_defaults import ConfigDefault

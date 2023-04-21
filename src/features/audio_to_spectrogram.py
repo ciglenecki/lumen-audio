@@ -10,11 +10,7 @@ from src.config.config_defaults import (
     get_default_config,
 )
 from src.features.audio_transform_base import AudioTransformBase
-from src.features.chunking import (
-    chunk_image_by_width,
-    collate_fn_spectrogram,
-    undo_image_chunking,
-)
+from src.features.chunking import chunk_image_by_width, undo_image_chunking
 from src.utils.utils_dataset import (
     add_rgb_channel,
     get_example_val_sample,

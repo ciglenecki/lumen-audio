@@ -5,7 +5,6 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from torch_scatter import scatter_max
 from torchmetrics.classification import MultilabelF1Score
 from torchvision.models import (
-    ResNet,
     efficientnet_v2_l,
     efficientnet_v2_m,
     efficientnet_v2_s,

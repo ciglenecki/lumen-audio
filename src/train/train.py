@@ -41,7 +41,6 @@ from src.utils.utils_functions import (
     stdout_to_file,
     to_yaml,
 )
-from src.utils.utils_model import print_modules
 
 
 def experiment_setup(config: ConfigDefault, pl_args: Namespace):

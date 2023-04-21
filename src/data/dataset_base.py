@@ -1,24 +1,18 @@
 from __future__ import annotations
 
-import os
 import random
-import re
-from abc import abstractclassmethod, abstractmethod
+from abc import abstractmethod
 from pathlib import Path
 
-import librosa
 import numpy as np
-import pandas as pd
 import torch
 import yaml
-from simple_parsing.helpers import Serializable
 from torch.utils.data import Dataset
-from tqdm import tqdm
 
 import src.config.config_defaults as config_defaults
 from src.features.audio_transform_base import AudioTransformBase
-from src.utils.utils_audio import load_audio_from_file, play_audio
-from src.utils.utils_dataset import decode_instruments, encode_instruments
+from src.utils.utils_audio import load_audio_from_file
+from src.utils.utils_dataset import decode_instruments
 
 DatasetInternalItem = tuple[Path, np.ndarray]
 DatasetGetItem = tuple[torch.Tensor, torch.Tensor, torch.Tensor]
@@ -68,7 +62,6 @@ class DatasetBase(Dataset[DatasetGetItem]):
 
         Use `self.dataset_path` (directory or a .csv file) to load and save files to a list.
         """
-        pass
 
     def create_instrument_idx_list(self) -> dict[str, list[int]]:
         instrument_idx_list = {e.value: [] for e in config_defaults.InstrumentEnums}

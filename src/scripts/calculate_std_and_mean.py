@@ -1,15 +1,11 @@
-import argparse
-
 import librosa
-import simple_parsing
 import torch
 from tqdm import tqdm
 
 from src.config.argparse_with_config import ArgParseWithConfig
-from src.config.config_defaults import NUM_RGB_CHANNELS, ConfigDefault
+from src.config.config_defaults import ConfigDefault
 from src.data.datamodule import IRMASDataModule
-from src.utils.utils_dataset import add_rgb_channel, create_and_repeat_channel
-from src.utils.utils_exceptions import InvalidArgument
+from src.utils.utils_dataset import create_and_repeat_channel
 
 
 def parse():

@@ -1,7 +1,6 @@
 import argparse
 
 import simple_parsing
-import torch
 
 from src.config.config_defaults import ConfigDefault
 

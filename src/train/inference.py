@@ -1,10 +1,5 @@
-from argparse import Namespace
-from pathlib import Path
-
 import pytorch_lightning as pl
 import torch
-import yaml
-from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import (
     EarlyStopping,
     ModelCheckpoint,
@@ -13,12 +8,8 @@ from pytorch_lightning.callbacks import (
 )
 
 from src.config.argparse_with_config import ArgParseWithConfig
-from src.config.config_defaults import ConfigDefault
-from src.config.config_train import get_config
 from src.data.datamodule import IRMASDataModule
 from src.enums.enums import (
-    MetricMode,
-    OptimizeMetric,
     SupportedAugmentations,
     SupportedLossFunctions,
     SupportedScheduler,
@@ -35,14 +26,7 @@ from src.train.callbacks import (
 )
 from src.utils.utils_dataset import calc_instrument_weight
 from src.utils.utils_exceptions import InvalidArgument, UnsupportedModel
-from src.utils.utils_functions import (
-    add_prefix_to_keys,
-    get_timestamp,
-    random_codeword,
-    stdout_to_file,
-    to_yaml,
-)
-from src.utils.utils_model import print_modules
+from src.utils.utils_functions import add_prefix_to_keys
 
 # def experiment_setup(config: ConfigDefault, pl_args: Namespace):
 #     """Create experiment directory."""
