@@ -1,0 +1,88 @@
+{
+	// Use IntelliSense to learn about possible attributes.
+	// Hover to view descriptions of existing attributes.
+	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Train AST",
+			"type": "python",
+			"request": "launch",
+			"program": "src/train/train.py",
+			"console": "integratedTerminal",
+			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --val-dirs irmas:data/irmas/test --backbone-after backbone.classifier --head-after backbone.classifier --model AST --audio-transform AST --finetune-head-epochs 1 --batch-size 4 --num-workers 4",
+			"justMyCode": false
+		},
+		{
+			"name": "Train AST fixed labels",
+			"type": "python",
+			"request": "launch",
+			"program": "src/train/train.py",
+			"console": "integratedTerminal",
+			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --val-dirs irmas:data/irmas/test --backbone-after backbone.classifier --head-after backbone.classifier --model AST --audio-transform AST --quick --train-override-csv data/irmas_sample/normalized_random_samples_relabeling.csv",
+			"justMyCode": false
+		},
+		{
+			"name": "Train Wav2vec",
+			"type": "python",
+			"request": "launch",
+			"program": "src/train/train.py",
+			"console": "integratedTerminal",
+			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --lr 5e-5 --batch-size 2 --num-workers 4 --audio-transform WAV2VEC --model WAV2VEC --epochs 40  --backbone-after layers.9 --head-after deep_head --quick",
+			"justMyCode": false
+		},
+		{
+			"name": "Train TorchModel",
+			"type": "python",
+			"request": "launch",
+			"program": "src/train/train.py",
+			"console": "integratedTerminal",
+			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --val-dirs irmas:data/irmas/test --audio-transform MEL_SPECTROGRAM --model RESNEXT50_32X4D --backbone-after backbone.layer1.2 --head-after backbone.fc --num-workers 1 --batch-size 4",
+			"justMyCode": false
+		},
+		{
+			"name": "Train Wav2Vec CNN",
+			"type": "python",
+			"request": "launch",
+			"program": "src/train/train.py",
+			"console": "integratedTerminal",
+			"args": "--accelerator gpu --devices -1 --train-dirs irmas:data/irmas/train --val-dirs irmas:data/irmas/test --audio-transform WAV2VEC_CNN --model WAV2VEC_CNN --use-fluffy --head ATTENTION_HEAD --use-multiple-optimizers --loss-function CROSS_ENTROPY_POS_WEIGHT --backbone-after classifier.heads --head-after classifier.heads --quick",
+			"justMyCode": false
+		},
+		{
+			"name": "Check pretraining",
+			"type": "python",
+			"request": "launch",
+			"program": "src/pretrain/pretrain.py",
+			"console": "integratedTerminal",
+			"args": "--model RESNEXT50_32X4D --audio-transform MEL_SPECTROGRAM",
+			"justMyCode": false
+		},
+		{
+			"name": "Save embeddings",
+			"type": "python",
+			"request": "launch",
+			"program": "src/scripts/save_embeddings.py",
+			"console": "integratedTerminal",
+			"args": "--model AST --audio-transform AST --pretrained-tag MIT/ast-finetuned-audioset-10-10-0.4593 --train-dirs irmas:data/irmas/train --batch-size 2",
+			"justMyCode": false
+		},
+		{
+			"name": "Gradcam",
+			"type": "python",
+			"request": "launch",
+			"program": "src/grad_vis/visualize_grads.py",
+			"console": "integratedTerminal",
+			"args": "--path_to_model ./models/04-19-18-16-08_WorthMike_resnext50_32x4d/checkpoints/04-19-18-16-08_WorthMike_resnext50_32x4d_val_acc_0.0000_val_loss_0.4678.ckpt --target_layer backbone.avgpool --model RESNEXT50_32X4D --audio-transform MFCC --label vio --train-dirs irmas:data/irmas/train --batch-size 2",
+			"justMyCode": false
+		},
+		{
+			"name": "Python: Current File",
+			"type": "python",
+			"request": "launch",
+			"program": "${file}",
+			"console": "integratedTerminal",
+			"justMyCode": true
+		},
+	]
+}

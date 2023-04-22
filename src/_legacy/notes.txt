@@ -1,0 +1,5 @@
+
+        """
+        window_shift = int(sample_frequency * frame_shift * MILLISECONDS_TO_SECONDS) = 160
+        window_size = int(sample_frequency * frame_length * MILLISECONDS_TO_SECONDS) = 400
+        """

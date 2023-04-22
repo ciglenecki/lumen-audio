@@ -4,8 +4,18 @@
 
 data/**/*.txt
 data/**/*.wav
-models/**
+data/**/*.ogg
+data/**/*.json
+data/irmas/train_features/**/*.tsv
+data/irmas/train_features/**/*.json
 
+data/openmic
+data/nsynth-train
+models/**
+models_archive/
+models_quick/
+embeddings/
+data/esc*
 # =============================================
 # Ignore files
 # =============================================
@@ -16,8 +26,9 @@ models/**
 *.wav
 *.zip
 .directory
-.vscode
-
+.vscode/
+.vscode/*
+*.tar*
 # =============================================
 # https://raw.githubusercontent.com/github/gitignore/main/Python.gitignore
 # =============================================

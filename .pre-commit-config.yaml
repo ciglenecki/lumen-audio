@@ -1,5 +1,5 @@
 default_language_version:
-  python: python3
+  python: python3.10
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -16,7 +16,6 @@ repos:
       - id: check-toml
       - id: check-case-conflict
       - id: check-added-large-files
-
   # python code formatting
   - repo: https://github.com/psf/black
     rev: 22.6.0
@@ -56,7 +55,7 @@ repos:
     rev: "1.7.1"
     hooks:
       - id: bandit
-        args: ["-s", "B101,B311"]
+        args: ["-s", "B101,B311,B603,B404"]
 
   # yaml formatting
   - repo: https://github.com/pre-commit/mirrors-prettier
@@ -70,19 +69,6 @@ repos:
     rev: v0.8.0.4
     hooks:
       - id: shellcheck
-
-  # md formatting
-  - repo: https://github.com/executablebooks/mdformat
-    rev: 0.7.14
-    hooks:
-      - id: mdformat
-        args: ["--number"]
-        additional_dependencies:
-          - mdformat-gfm
-          - mdformat-tables
-          - mdformat_frontmatter
-          # - mdformat-toc
-          # - mdformat-black
 
   # jupyter notebook cell output clearing
   - repo: https://github.com/kynan/nbstripout
