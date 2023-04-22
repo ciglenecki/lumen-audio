@@ -41,6 +41,7 @@ from src.utils.utils_functions import (
     stdout_to_file,
     to_yaml,
 )
+from utils.utils_model import print_modules
 
 
 def experiment_setup(config: ConfigDefault, pl_args: Namespace):
@@ -139,6 +140,7 @@ if __name__ == "__main__":
         loss_function = torch.nn.BCEWithLogitsLoss(**kwargs)
 
     model = get_model(config, loss_function=loss_function)
+    print_modules(model)
 
     # ================= SETUP CALLBACKS (auto checkpoint, tensorboard, early stopping...)========================
     metric_mode_str = MetricMode(config.metric_mode).value
