@@ -10,7 +10,7 @@ from transformers.modeling_outputs import SequenceClassifierOutput
 import src.config.config_defaults as config_defaults
 from src.config.argparse_with_config import ArgParseWithConfig
 from src.model.model_base import ModelBase
-from src.utils.utils_audio import load_audio_from_file, play_audio
+from src.utils.utils_audio import load_audio_from_file, play_audio, plot_spectrograms
 from src.utils.utils_dataset import get_example_val_sample
 
 
@@ -67,7 +67,7 @@ class ASTModelWrapper(ModelBase):
         images, y, file_indices, item_indices = batch
 
         # plot_spectrograms(
-        #     images,
+        #     images.detach().cpu(),
         #     sampling_rate=self.config.sampling_rate,
         #     n_fft=self.config.n_fft,
         #     n_mels=self.config.n_mels,

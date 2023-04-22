@@ -16,6 +16,8 @@ from torchvision.models import (
 from src.model.heads import DeepHead
 from src.model.model import SupportedModels
 from src.model.model_base import ModelBase
+from src.utils.utils_audio import plot_spectrograms
+from src.utils.utils_dataset import decode_instruments
 from src.utils.utils_exceptions import UnsupportedModel
 
 TORCHVISION_CONSTRUCTOR_DICT = {
@@ -26,6 +28,7 @@ TORCHVISION_CONSTRUCTOR_DICT = {
     SupportedModels.RESNEXT101_32X8D: resnext101_32x8d,
     SupportedModels.RESNEXT101_64X4D: resnext101_64x4d,
 }
+import src.config.config_defaults as config_defaults
 
 
 class TorchvisionModel(ModelBase):

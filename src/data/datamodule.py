@@ -243,6 +243,7 @@ class IRMASDataModule(pl.LightningDataModule):
             drop_last=self.drop_last_sample,
             collate_fn=self.collate_fn,
             pin_memory=True,
+            shuffle=True,
         )
 
     def val_dataloader(self) -> DataLoader[ConcatDataset[DatasetGetItem]]:
