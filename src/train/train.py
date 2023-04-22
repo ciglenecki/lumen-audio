@@ -47,7 +47,10 @@ def experiment_setup(config: ConfigDefault, pl_args: Namespace):
     """Create experiment directory."""
     timestamp = get_timestamp()
     experiment_codeword = random_codeword()
-    experiment_name = f"{timestamp}_{experiment_codeword}_{config.model.value}"
+    experiment_name_list = [timestamp, experiment_codeword, config.model.value]
+    if config.experiment_suffix:
+        experiment_name_list.append(config.experiment_suffix)
+    experiment_name = "_".join(experiment_name_list)
 
     output_dir = Path(config.output_dir)
     output_dir.mkdir(exist_ok=True)

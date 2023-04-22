@@ -368,6 +368,8 @@ class ConfigDefault(Serializable):
     check_on_train_epoch_end: bool = create(False)
     """Whether to run early stopping at the end of the training epoch."""
 
+    experiment_suffix: str = create("")
+
     # ======================== MODEL ===========================
 
     model: SupportedModels | None = create(None)
@@ -633,9 +635,13 @@ class ConfigDefault(Serializable):
             }
             self.max_num_width_samples = MAX_NUM_WIDTH_SAMPLE[self.model]
 
-        if self.finetune_head and (self.finetune_head_epochs >= self.epochs):
+        if (
+            self.finetune_head
+            and (self.finetune_head_epochs > 0)
+            and (self.finetune_head_epochs >= self.epochs)
+        ):
             raise InvalidArgument(
-                "Please set --finetune-heads-epochs int so it's less than --epochs int."
+                "Please set --finetune-heads-epochs int so it's bigger than 0 and less than --epochs int."
             )
 
     def isfloat(self, x: str):

@@ -97,6 +97,7 @@ class IRMASDataModule(pl.LightningDataModule):
         """Has to be implemented to avoid object has no attribute 'prepare_data_per_node' error."""
 
     def setup_for_train(self):
+        """Create train and val dataset, indices and statistics for testing/inference."""
         self.train_dataset = self.concat_datasets_from_tuples(self.train_paths)
         self.val_dataset = self.concat_datasets_from_tuples(self.val_paths)
 
@@ -144,12 +145,15 @@ class IRMASDataModule(pl.LightningDataModule):
         print("Val dataset stats\n", yaml.dump(self.get_val_dataset_stats()))
 
     def setup_for_inference(self):
+        """Create dataset, indices and statictis for testing/inference."""
         self.test_dataset = self.concat_datasets_from_tuples(self.test_paths)
 
-        if self.test_dataset is not None:
-            test_indices = np.arange(len(self.test_dataset))
+        # Simply reuse val dataset as train if train is not provided.
+        if self.test_dataset is None:
+            self.test_dataset = self.val_dataset
+            test_indices = np.arange(len(self.val_dataset))
         else:
-            test_indices = np.array([])
+            test_indices = np.arange(len(self.test_dataset))
 
         if self.dataset_fraction != 1:
             test_indices = np.random.choice(
@@ -160,7 +164,8 @@ class IRMASDataModule(pl.LightningDataModule):
 
         self.test_size = len(test_indices)
         self.test_sampler = SequentialSampler(test_indices.tolist())
-        print("Test dataset classes", yaml.dump(self.get_test_dataset_stats()))
+        prefix = "Validation(test)" if self.test_dataset == self.val_dataset else "Test"
+        print(f"{prefix} dataset classes", yaml.dump(self.get_test_dataset_stats()))
 
     def setup(self, stage=None):
         super().setup(stage)

@@ -19,10 +19,6 @@ DatasetGetItem = tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 
 
 class DatasetBase(Dataset[DatasetGetItem]):
-    # list of tuples which contains
-    #   - paths of audio files ("filename.wav")
-    #   - multihot encoded labels ([1,0,0,0,0])
-    # [ ("file1.wav", [1,0,0,0,0])]
     all_instrument_indices = np.array(list(config_defaults.INSTRUMENT_TO_IDX.values()))
     dataset_path: Path
 
@@ -45,6 +41,10 @@ class DatasetBase(Dataset[DatasetGetItem]):
         self.sum_two_samples = sum_two_samples
         self.concat_n_samples = concat_n_samples
         self.train_override_csvs = train_override_csvs
+        # list of tuples which contains
+        #   - paths of audio files ("filename.wav")
+        #   - multihot encoded labels ([1,0,0,0,0])
+        # [ ("file1.wav", [1,0,0,0,0])]
         self.dataset_list: list[tuple[Path, np.ndarray]] = self.create_dataset_list()
         self.instrument_idx_list: dict[
             str, list[int]
@@ -268,6 +268,7 @@ class DatasetBase(Dataset[DatasetGetItem]):
         # play_audio(audio, sampling_rate=self.sampling_rate)
         # print("second time")
         # play_audio(audio, sampling_rate=self.sampling_rate)
+
         return features, labels, index
 
 
