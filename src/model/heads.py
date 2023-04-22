@@ -3,7 +3,6 @@ import torch.nn as nn
 from src.enums.enums import SupportedHeads
 from src.model.attention import AttentionLayer
 from src.utils.utils_exceptions import UnsupportedHead
-from src.utils.utils_model import filter_modules, get_linear_init, initialize_weights
 
 
 def get_head_constructor(head_enum):

@@ -1,6 +1,6 @@
 """python3 src/scripts/tsv_features.py --input-dir embeddings/astMIT-ast-finetuned-
 audioset-10-10-0.4593_irmas_train/"""
-import bisect
+
 import json
 import os
 from pathlib import Path
@@ -9,7 +9,6 @@ import pandas as pd
 from tqdm import tqdm
 
 from src.config.argparse_with_config import ArgParseWithConfig
-from src.config.config_defaults import INSTRUMENT_TO_FULLNAME, get_default_config
 
 
 def parse_args():
@@ -19,10 +18,10 @@ def parse_args():
         type=Path,
         help="Directory which has a 'embeddings' subdirectory which contains jsons.",
     )
-    args, config, pl_args = parser.parse_args()
-    config.parse_dataset_paths()
+    args, _, _ = parser.parse_args()
+
     assert os.path.isdir(args.input_dir), "Input directory should exist."
-    return args, config, pl_args
+    return args, _, _
 
 
 def main():
@@ -66,6 +65,7 @@ def main():
         for e_idx, e in enumerate(embedding):
             embeddings[f"e{e_idx}"].append(e)
 
+        # WARNING: ADDING ONLY ONE/FIRST INSTRUMENT!
         all_instrument_names.append(instrument_names[0])
         sample_paths.append(sample_path)
 

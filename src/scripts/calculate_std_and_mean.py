@@ -1,21 +1,17 @@
-import argparse
-
 import librosa
-import simple_parsing
 import torch
 from tqdm import tqdm
 
 from src.config.argparse_with_config import ArgParseWithConfig
-from src.config.config_defaults import NUM_RGB_CHANNELS, ConfigDefault
+from src.config.config_defaults import ConfigDefault
 from src.data.datamodule import IRMASDataModule
-from src.utils.utils_dataset import add_rgb_channel, create_and_repeat_channel
-from src.utils.utils_exceptions import InvalidArgument
+from src.utils.utils_dataset import create_and_repeat_channel
 
 
 def parse():
     parser = ArgParseWithConfig()
     args, config, pl_args = parser.parse_args()
-    config.parse_dataset_paths()
+    config.required_train_paths()
     return args, config
 
 
@@ -51,8 +47,9 @@ if __name__ == "__main__":
     args, config = parse()
 
     datamodule = IRMASDataModule(
-        train_dirs=config.train_dirs,
-        val_dirs=config.val_dirs,
+        train_paths=config.train_paths,
+        val_paths=config.val_paths,
+        test_paths=config.test_paths,
         batch_size=config.batch_size,
         num_workers=config.num_workers,
         dataset_fraction=config.dataset_fraction,

@@ -1,13 +1,9 @@
-from functools import partial
 from pathlib import Path
-from typing import Callable
 
 import audiomentations as AA
-import librosa
 import numpy as np
 import torch
 import torch_audiomentations
-from audiomentations.core.transforms_interface import BaseWaveformTransform
 from torchvision.transforms import RandomErasing
 
 from src.config.config_defaults import ConfigDefault
@@ -142,10 +138,10 @@ class SpectrogramAugmentation:
             spectrogram[mask] = 0
 
         if SupportedAugmentations.FREQ_MASK in self.augmentations:
-            # [b, h, w] -> [h, w, c]
-            spectrogram = spectrogram.squeeze(0).unsqueeze(-1).numpy()
-            spectrogram = torch.tensor(self.freq_mask(spectrogram))
-            spectrogram = spectrogram.squeeze(-1).unsqueeze(0)
+            spectrogram = [
+                torch.tensor(self.freq_mask(s.numpy())) for s in spectrogram
+            ]  # [b, h, w] -> [h, w]
+            spectrogram = torch.stack(spectrogram)
             # [b, h, w]
 
         if SupportedAugmentations.RANDOM_ERASE in self.augmentations:

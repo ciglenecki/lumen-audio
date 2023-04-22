@@ -194,6 +194,7 @@ class FinetuningCallback(BaseFinetuning):
         self.freeze(pl_module)
         head = pl_module.head()
         self.make_trainable(head)
+        print("Modules after freezing:")
         print_modules(pl_module)
 
     def finetune_function(
@@ -223,4 +224,5 @@ class FinetuningCallback(BaseFinetuning):
             params = BaseFinetuning.filter_on_optimizer(optimizer, params)
             if params:
                 optimizer.add_param_group({"params": params})
+            print("Modules after unfreezing:")
             print_modules(pl_module)

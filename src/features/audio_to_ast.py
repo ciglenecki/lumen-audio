@@ -85,7 +85,6 @@ class AudioTransformAST(AudioTransformBase):
             sampling_rate=self.sampling_rate,
             return_tensors="pt",
         )["input_values"]
-
         if self.spectrogram_augmentation is not None:
             spectrogram = self.spectrogram_augmentation(
                 spectrogram
