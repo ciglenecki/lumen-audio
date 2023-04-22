@@ -96,74 +96,78 @@ class IRMASDataModule(pl.LightningDataModule):
     def prepare_data(self) -> None:
         """Has to be implemented to avoid object has no attribute 'prepare_data_per_node' error."""
 
+    def setup_for_train(self):
+        self.train_dataset = self.concat_datasets_from_tuples(self.train_paths)
+        self.val_dataset = self.concat_datasets_from_tuples(self.val_paths)
+
+        assert (
+            self.train_dataset is not None
+        ), "Please provide --train-paths if you want to train a model."
+        assert (
+            self.val_dataset is not None
+        ), "Please provide --val-paths if you want to train a model."
+
+        if self.train_only_dataset:
+            self.val_dataset = self.train_dataset
+            indices = np.arange(len(self.train_dataset))
+            train_indices, val_indices = train_test_split(indices, test_size=0.2)
+            self._sanity_check_difference(train_indices, val_indices)
+        else:
+            train_indices = np.arange(len(self.train_dataset))
+            val_indices = np.arange(len(self.val_dataset))
+
+        if self.dataset_fraction != 1:
+            train_indices = np.random.choice(
+                train_indices,
+                int(self.dataset_fraction * len(train_indices)),
+                replace=False,
+            )
+            val_indices = np.random.choice(
+                val_indices,
+                int(self.dataset_fraction * len(val_indices)),
+                replace=False,
+            )
+
+        self.train_size = len(train_indices)
+        self.val_size = len(val_indices)
+
+        if self.use_weighted_train_sampler:
+            samples_weight = self.get_sample_class_weights(self.train_dataset)
+            self.train_sampler = WeightedRandomSampler(
+                samples_weight, len(samples_weight)
+            )
+        else:
+            self.train_sampler = SubsetRandomSampler(train_indices.tolist())
+        self.val_sampler = SequentialSampler(val_indices.tolist())
+
+        print("Train dataset stats\n", yaml.dump(self.get_train_dataset_stats()))
+        print("Val dataset stats\n", yaml.dump(self.get_val_dataset_stats()))
+
+    def setup_for_inference(self):
+        self.test_dataset = self.concat_datasets_from_tuples(self.test_paths)
+
+        if self.test_dataset is not None:
+            test_indices = np.arange(len(self.test_dataset))
+        else:
+            test_indices = np.array([])
+
+        if self.dataset_fraction != 1:
+            test_indices = np.random.choice(
+                test_indices,
+                int(self.dataset_fraction * len(test_indices)),
+                replace=False,
+            )
+
+        self.test_size = len(test_indices)
+        self.test_sampler = SequentialSampler(test_indices.tolist())
+        print("Test dataset classes", yaml.dump(self.get_test_dataset_stats()))
+
     def setup(self, stage=None):
         super().setup(stage)
         if stage in ["fit"]:  # train + validate
-            self.train_dataset = self.concat_datasets_from_tuples(self.train_paths)
-            self.val_dataset = self.concat_datasets_from_tuples(self.val_paths)
-
-            assert (
-                self.train_dataset is not None
-            ), "Please provide --train-paths if you want to train a model."
-            assert (
-                self.val_dataset is not None
-            ), "Please provide --val-paths if you want to train a model."
-
-            if self.train_only_dataset:
-                self.val_dataset = self.train_dataset
-                indices = np.arange(len(self.train_dataset))
-                train_indices, val_indices = train_test_split(indices, test_size=0.2)
-                self._sanity_check_difference(train_indices, val_indices)
-            else:
-                train_indices = np.arange(len(self.train_dataset))
-                val_indices = np.arange(len(self.val_dataset))
-
-            if self.dataset_fraction != 1:
-                train_indices = np.random.choice(
-                    train_indices,
-                    int(self.dataset_fraction * len(train_indices)),
-                    replace=False,
-                )
-                val_indices = np.random.choice(
-                    val_indices,
-                    int(self.dataset_fraction * len(val_indices)),
-                    replace=False,
-                )
-
-            self.train_size = len(train_indices)
-            self.val_size = len(val_indices)
-
-            if self.use_weighted_train_sampler:
-                samples_weight = self.get_sample_class_weights(self.train_dataset)
-                self.train_sampler = WeightedRandomSampler(
-                    samples_weight, len(samples_weight)
-                )
-            else:
-                self.train_sampler = SubsetRandomSampler(train_indices.tolist())
-            self.val_sampler = SequentialSampler(val_indices.tolist())
-
-            print("Train dataset stats\n", yaml.dump(self.get_train_dataset_stats()))
-            print("Val dataset stats\n", yaml.dump(self.get_val_dataset_stats()))
-
+            self.setup_for_train()
         elif stage in ["predict", "test"]:
-            self.test_dataset = self.concat_datasets_from_tuples(self.test_paths)
-
-            if self.test_dataset is not None:
-                test_indices = np.arange(len(self.test_dataset))
-            else:
-                test_indices = np.array([])
-
-            if self.dataset_fraction != 1:
-                test_indices = np.random.choice(
-                    test_indices,
-                    int(self.dataset_fraction * len(test_indices)),
-                    replace=False,
-                )
-
-            self.test_size = len(test_indices)
-            self.test_sampler = SequentialSampler(test_indices.tolist())
-            print("Test dataset classes", yaml.dump(self.get_test_dataset_stats()))
-
+            self.setup_for_inference()
         self._log_indices()
 
     def concat_datasets_from_tuples(

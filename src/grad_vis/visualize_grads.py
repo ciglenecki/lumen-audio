@@ -103,7 +103,7 @@ if __name__ == "__main__":
         sum_two_samples=False,
         use_weighted_train_sampler=config.use_weighted_train_sampler,
     )
-    datamodule.setup("test")
+    datamodule.setup_for_inference()
 
     test_dataloader = datamodule.test_dataloader()
     for inputs, labels, ids, _ in test_dataloader:

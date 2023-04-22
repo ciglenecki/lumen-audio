@@ -10,7 +10,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --backbone-after backbone.classifier --head-after backbone.classifier --model AST --audio-transform AST --finetune-head-epochs 2 --epochs 25 --batch-size 4 --num-workers 4 --quick --skip-validation",
+			"args": "--accelerator gpu --devices -1 --train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --backbone-after backbone.classifier --head-after backbone.classifier --model AST --audio-transform AST --finetune-head-epochs 2 --epochs 25 --batch-size 4 --num-workers 0 --quick --skip-validation",
 			"justMyCode": false
 		},
 		{
@@ -73,11 +73,7 @@
 			"request": "launch",
 			"program": "src/grad_vis/visualize_grads.py",
 			"console": "integratedTerminal",
-<<<<<<< HEAD
 			"args": "--input-dirs irmastrain:data/irmas/train --path_to_model models_quick/04-14-15-25-32_CalmAlan_resnext50_32x4d/checkpoints/04-14-15-25-32_CalmAlan_resnext50_32x4d_val_acc_0.0000_val_loss_1.1923.ckpt --target_layer backbone.avgpool --model RESNEXT50_32X4D --audio-transform MEL_SPECTROGRAM --label vio --batch-size 1 --image-size 256 256",
-=======
-			"args": "--path_to_model ./models/04-19-18-16-08_WorthMike_resnext50_32x4d/checkpoints/04-19-18-16-08_WorthMike_resnext50_32x4d_val_acc_0.0000_val_loss_0.4678.ckpt --target_layer backbone.avgpool --model RESNEXT50_32X4D --audio-transform MFCC --label vio --train-dirs irmas:data/irmas/train --batch-size 2",
->>>>>>> dev
 			"justMyCode": false
 		},
 		{

@@ -164,7 +164,7 @@ DEFAULT_PRETRAINED_TAG_MAP = {
     SupportedModels.RESNEXT101_64X4D: TAG_IMAGENET1K_V1,
 }
 
-USAGE_TEXT_PATHS = f"Usage:\t--train-paths <TYPE>:/path/to/dataset\n\t--val-paths <TYPE>:/path/to/dataset.\nSupported <TYPE>: {[ d.value for d in SupportedDatasetDirType]}"
+USAGE_TEXT_PATHS = f"Usage:\t--train-paths <TYPE>:/path/to/dataset (for training)\n\t--val-paths <TYPE>:/path/to/dataset (for training)\n\t--test-paths <TYPE>:/path/to/dataset (for inference)\nSupported <TYPE>: {[ d.value for d in SupportedDatasetDirType]}"
 
 
 def create(arg, **kwargs):
@@ -202,10 +202,7 @@ def dir_to_enum_and_path(
             f"Pair {pair} needs to have two elements split with '{delimiter}'."
         )
     dataset_name, dataset_path = pair
-    if len(pair) != 2:
-        raise InvalidArgument(
-            f"Pair {pair} needs to have two elements split with '{delimiter}'."
-        )
+
     try:
         dataset = SupportedDatasetDirType(dataset_name)
     except ValueError as e:
@@ -691,6 +688,9 @@ class ConfigDefault(Serializable):
             kwargs[key] = value
 
         return kwargs
+
+    def __repr__(self):
+        pass
 
     def __str__(self):
         return self.dumps_yaml(allow_unicode=True, default_flow_style=False)

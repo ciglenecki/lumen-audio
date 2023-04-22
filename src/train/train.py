@@ -124,7 +124,7 @@ if __name__ == "__main__":
         sum_two_samples=SupportedAugmentations.SUM_TWO_SAMPLES in config.augmentations,
         use_weighted_train_sampler=config.use_weighted_train_sampler,
     )
-    datamodule.setup("fit")  # fit, test
+    datamodule.setup_for_train()
 
     if config.loss_function == SupportedLossFunctions.CROSS_ENTROPY:
         loss_function = torch.nn.BCEWithLogitsLoss(**config.loss_function_kwargs)
