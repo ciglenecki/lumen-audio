@@ -17,6 +17,7 @@ from src.config.argparse_with_config import ArgParseWithConfig
 from src.config.config_defaults import parse_dataset_paths
 from src.data.datamodule import IRMASDataModule
 from src.features.audio_transform import get_audio_transform
+from src.features.augmentations import get_augmentations
 from src.features.chunking import get_collate_fn
 from src.model.model import get_model
 

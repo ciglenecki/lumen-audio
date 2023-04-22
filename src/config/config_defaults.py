@@ -172,13 +172,19 @@ def create(arg, **kwargs):
     return field(default_factory=lambda: arg, **kwargs)
 
 
-def default_path(path: Path | None, default_value: Path):
+def default_path(path: Path | None, default_value: Path, create_if_none=False):
     """Return default value if object is none."""
-    if path is None and Path(default_value).exists():
+    if path is not None:  # return explicit path
+        return path
+
+    if create_if_none:  # create and return default value
+        default_value.mkdir(parents=True, exist_ok=True)
         return default_value
-    elif path is None and not Path(default_value).exists():
-        return None
-    return path
+
+    if default_value.exists():  # return default path
+        return default_value
+
+    return None
 
 
 def dir_to_enum_and_path(
@@ -408,13 +414,13 @@ class ConfigDefault(Serializable):
     loss_function_kwargs: dict | dict = create({})
     """Loss function kwargs"""
 
-    lr: float = create(5e-4)
+    lr: float = create(5e-5)
     """Learning rate"""
 
-    lr_onecycle_max: float = create(3e-3)
+    lr_onecycle_max: float = create(5e-4)
     """Maximum lr OneCycle scheduler reaches"""
 
-    lr_warmup: float = create(5e-4)
+    lr_warmup: float = create(3e-4)
     """warmup learning rate"""
 
     use_multiple_optimizers: bool = create(False)
@@ -432,15 +438,12 @@ class ConfigDefault(Serializable):
 
     def after_init(self):
         """This function sets defaults, dynamically changes some of the arguments based on other
-        arguments.
+        arguments."""
 
-        This is different from __post_init__ because it's user's responsibility to call the
-        function.
-        """
-
-        # If user didn't send explict paths, set and create default directories.
-        self.path_data = default_path(self.path_data, Path("data"))
-        self.path_irmas = default_path(self.path_irmas, Path("data", "irmas"))
+        self.path_data = default_path(self.path_data, Path("data"), create_if_none=True)
+        self.path_irmas = default_path(
+            self.path_irmas, Path("data", "irmas"), create_if_none=True
+        )
         self.path_irmas_train = default_path(
             self.path_irmas_train, Path("data", "irmas", "train")
         )
@@ -453,12 +456,10 @@ class ConfigDefault(Serializable):
         self.path_openmic = default_path(self.path_openmic, Path("data", "openmic"))
 
         self.path_models = default_path(
-            self.path_models,
-            Path("models"),
+            self.path_models, Path("models"), create_if_none=True
         )
         self.path_models_quick = default_path(
-            self.path_models_quick,
-            Path("models_quick"),
+            self.path_models_quick, Path("models_quick"), create_if_none=True
         )
         self.path_background_noise = default_path(
             self.path_background_noise, Path("data", "ecs50")
@@ -482,7 +483,7 @@ class ConfigDefault(Serializable):
                 dict(path_background_noise=self.path_background_noise)
             )
 
-        # Default RGB option based on model's architecture
+        # Dynamically set the RGB option based on model's architecture
         if self.model is not None and self.use_rgb is None:
             USE_RGB = {
                 SupportedModels.AST: False,
@@ -497,7 +498,7 @@ class ConfigDefault(Serializable):
             }
             self.use_rgb = USE_RGB[self.model]
 
-        # Default pretrained tag for each model, if it's pretrained.
+        # Dynamically set pretrained tag
         if self.model is not None and self.pretrained and self.pretrained_tag is None:
             if self.model not in DEFAULT_PRETRAINED_TAG_MAP:
                 raise InvalidArgument(
@@ -634,51 +635,6 @@ class ConfigDefault(Serializable):
                 SupportedModels.RESNEXT101_64X4D: None,
             }
             self.max_num_width_samples = MAX_NUM_WIDTH_SAMPLE[self.model]
-
-        # Dynamically set pretrained tag
-        if self.model is not None and self.pretrained and self.pretrained_tag is None:
-            if self.model not in DEFAULT_PRETRAINED_TAG_MAP:
-                raise InvalidArgument(
-                    f"Couldn't find pretrained tag for pretrained model {self.model}. Add a new tag to the DEFAULT_PRETRAINED_TAG_MAP map or pass the --pretrained-tag <tag> argument."
-                )
-            self.pretrained_tag = DEFAULT_PRETRAINED_TAG_MAP[self.model]
-
-        # Dynamically set the RGB option based on model's architecture
-        if self.model is not None and self.use_rgb is None:
-            USE_RGB = {
-                SupportedModels.AST: False,
-                SupportedModels.WAV2VEC_CNN: None,
-                SupportedModels.WAV2VEC: None,
-                SupportedModels.EFFICIENT_NET_V2_S: True,
-                SupportedModels.EFFICIENT_NET_V2_M: True,
-                SupportedModels.EFFICIENT_NET_V2_L: True,
-                SupportedModels.RESNEXT50_32X4D: True,
-                SupportedModels.RESNEXT101_32X8D: True,
-                SupportedModels.RESNEXT101_64X4D: True,
-            }
-            self.use_rgb = USE_RGB[self.model]
-
-        # Dynamically AST DSP attributes and augmentations
-        if (
-            self.model == SupportedModels.AST
-            and self.pretrained
-            and self.pretrained_tag == TAG_AST_AUDIOSET
-        ):
-            self.n_fft = 400
-            self.hop_length = 160
-            self.n_mels = 128
-
-            if self.augmentations == get_default_value_for_field("augmentations", self):
-                _augmentations_set = set(self.augmentations)
-                _augmentations_set.add(SupportedAugmentations.CONCAT_N_SAMPLES)
-                _augmentations_set.add(SupportedAugmentations.SUM_TWO_SAMPLES)
-                self.augmentations = list(_augmentations_set)
-
-        # Set typical weight decay for optimizers.
-        if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAM:
-            self.weight_decay = 0
-        if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAMW:
-            self.weight_decay = 1e-2
 
         if self.finetune_head and (self.finetune_head_epochs >= self.epochs):
             raise InvalidArgument(
