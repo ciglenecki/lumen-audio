@@ -127,6 +127,7 @@ def spectrogram_to_list(
     spectrograms = pad_sequence(spectrograms, batch_first=True)  # [w, h]
     spectrograms = [s.T for s in spectrograms]  # [h, w]
     spectrograms = torch.stack(spectrograms)  # [b, h, w]
+    spectrograms = spectrograms.cpu()
 
     return spectrograms.numpy()
 
