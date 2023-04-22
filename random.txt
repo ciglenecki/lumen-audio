@@ -75,7 +75,7 @@ user_group.add_argument(
     metavar="dir",
     nargs="+",
     type=parse_dataset_enum_dirs,
-    help="Dataset root directories that will be used for validation in the following format: --val-paths irmas:/path/to openmic:/path/to",
+    help="Dataset root directories that will be used for validation in the following format: --val-paths irmastest:/path/to openmic:/path/to",
     default=defaults.DEFAULT_VAL_DIRS,
 )
 

@@ -100,7 +100,7 @@ class IRMASDataModule(pl.LightningDataModule):
         super().setup(stage)
         if stage in ["fit"]:  # train + validate
             self.train_dataset = self.concat_datasets_from_tuples(self.train_paths)
-            self.val_dataset = self.concat_datasets_from_tuples(self.val_dataset)
+            self.val_dataset = self.concat_datasets_from_tuples(self.val_paths)
 
             assert (
                 self.train_dataset is not None
@@ -146,7 +146,8 @@ class IRMASDataModule(pl.LightningDataModule):
             print("Val dataset stats\n", yaml.dump(self.get_val_dataset_stats()))
 
         elif stage in ["predict", "test"]:
-            self.test_dataset = self.get_test_dataset_concated()
+            self.test_dataset = self.concat_datasets_from_tuples(self.test_paths)
+
             if self.test_dataset is not None:
                 test_indices = np.arange(len(self.test_dataset))
             else:
@@ -206,16 +207,11 @@ class IRMASDataModule(pl.LightningDataModule):
 
         return ConcatDataset(datasets)
 
-    def get_train_dataset_concated(self) -> None | ConcatDataset:
-        return self.concat_datasets_from_tuples(self.train_paths)
-
-    def get_val_dataset_concated(self) -> None | ConcatDataset:
-        return self.concat_datasets_from_tuples(self.val_paths)
-
-    def get_test_dataset_concated(self) -> None | ConcatDataset:
-        return self.concat_datasets_from_tuples(self.test_paths)
-
     def get_dataset_stats(self, concat_dataset: ConcatDataset):
+        """Aggregate statistics from all other datasets which are contained in ConcatDataset.
+
+        Every metric is aggregated by summing across datasets.
+        """
         stats = {}
         datasets: list[DatasetBase] = concat_dataset.datasets  # type: ignore
         for dataset in datasets:
@@ -281,6 +277,23 @@ class IRMASDataModule(pl.LightningDataModule):
             collate_fn=self.collate_fn,
             pin_memory=True,
         )
+
+    # def _sanity_check_paths(
+    #     self,
+    #     indices_a: np.ndarray,
+    #     indices_b: np.ndarray,
+    # ):
+    #     """Checks if there are overlaping val and test indicies to avoid data leakage."""
+
+    #     for ind_a, ind_b in combinations([indices_a, indices_b], 2):
+    #         assert (
+    #             len(np.intersect1d(ind_a, ind_b)) == 0
+    #         ), f"Some indices share an index {np.intersect1d(ind_a, ind_b)}"
+    #     set_ind = set(indices_a)
+    #     set_ind.update(indices_b)
+    #     assert len(set_ind) == (
+    #         len(indices_a) + len(indices_b)
+    #     ), "Some indices might contain non-unqiue values"
 
     def _sanity_check_difference(
         self,

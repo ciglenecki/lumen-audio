@@ -251,13 +251,13 @@ class ConfigDefault(Serializable):
     """Dataset root directories that will be used for training in the following format: --train-paths irmastrain:/path/to/dataset or openmic:/path/to/dataset"""
 
     val_paths: list[str] | None = create(None)
-    """Dataset root directories that will be used for validation in the following format: --val-paths irmas:/path/to/dataset openmic:/path/to/dataset. If --val-paths is not provided val dir will be split to val and test."""
+    """Dataset root directories that will be used for validation in the following format: --val-paths irmastest:/path/to/dataset openmic:/path/to/dataset. If --val-paths is not provided val dir will be split to val and test."""
 
     test_paths: list[str] | None = create(None)
-    """Dataset root directories that will be used for testing in the following format: --val-paths irmas:/path/to/dataset openmic:/path/to/dataset"""
+    """Dataset root directories that will be used for testing in the following format: --val-paths irmastest:/path/to/dataset openmic:/path/to/dataset"""
 
     # predict_paths: list[str] | None = create(None)
-    # """Dataset root directories that will be used for predicting in the following format: --val-paths irmas:/path/to/dataset openmic:/path/to/dataset"""
+    # """Dataset root directories that will be used for predicting in the following format: --val-paths irmastest:/path/to/dataset openmic:/path/to/dataset"""
 
     train_only_dataset: bool = create(False)
     """Use only the train portion of the dataset and split it 0.8 0.2"""
