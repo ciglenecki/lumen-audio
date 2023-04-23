@@ -3,3 +3,4 @@ black
 isort
 pylint
 mypy
+pre-commit      # hooks for applying linters on commit

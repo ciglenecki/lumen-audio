@@ -1,9 +1,8 @@
-from typing import Optional, Union
-
 import torch
 import torch.nn as nn
 import torchmetrics
 from pytorch_lightning.loggers import TensorBoardLogger
+from torch_scatter import scatter_max
 from torchmetrics.classification import MultilabelF1Score
 from torchvision.models import (
     efficientnet_v2_l,
@@ -14,11 +13,12 @@ from torchvision.models import (
     resnext101_64x4d,
 )
 
-import src.config.config_defaults as config_defaults
+from src.model.heads import DeepHead
 from src.model.model import SupportedModels
 from src.model.model_base import ModelBase
-from src.model.optimizers import OptimizerType, SchedulerType, our_configure_optimizers
-from src.utils.utils_train import MetricMode, OptimizeMetric
+from src.utils.utils_audio import plot_spectrograms
+from src.utils.utils_dataset import decode_instruments
+from src.utils.utils_exceptions import UnsupportedModel
 
 TORCHVISION_CONSTRUCTOR_DICT = {
     SupportedModels.EFFICIENT_NET_V2_S: efficientnet_v2_s,
@@ -28,6 +28,7 @@ TORCHVISION_CONSTRUCTOR_DICT = {
     SupportedModels.RESNEXT101_32X8D: resnext101_32x8d,
     SupportedModels.RESNEXT101_64X4D: resnext101_64x4d,
 }
+import src.config.config_defaults as config_defaults
 
 
 class TorchvisionModel(ModelBase):
@@ -37,40 +38,34 @@ class TorchvisionModel(ModelBase):
 
     def __init__(
         self,
-        model_enum: str,
-        pretrained: bool = config_defaults.DEFAULT_PRETRAINED,
-        batch_size: int = config_defaults.DEFAULT_BATCH_SIZE,
-        scheduler_type: SchedulerType = SchedulerType.PLATEAU,
-        optimizer_type: OptimizerType = config_defaults.DEFAULT_OPTIMIZER,
-        num_labels: int = config_defaults.DEFAULT_NUM_LABELS,
-        optimization_metric: OptimizeMetric = config_defaults.DEFAULT_OPTIMIZE_METRIC,
-        weight_decay: float = config_defaults.DEFAULT_WEIGHT_DECAY,
-        metric_mode: MetricMode = config_defaults.DEFAULT_METRIC_MODE,
-        early_stopping_epoch: int = config_defaults.DEFAULT_EARLY_STOPPING_NO_IMPROVEMENT_EPOCHS,
-        fc: list[int] = config_defaults.DEFAULT_FC,
-        pretrained_weights: Optional[str] = config_defaults.DEFAULT_PRETRAINED_WEIGHTS,
-        epoch_patience: int = config_defaults.DEFAULT_EARLY_STOPPING_NO_IMPROVEMENT_EPOCHS,
-        epochs: Optional[int] = config_defaults.DEFAULT_EPOCHS,
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        self.model_enum = model_enum
-        self.pretrained = pretrained
-        self.batch_size = batch_size
-        self.scheduler_type = scheduler_type
-        self.epochs = epochs
-        self.optimizer_type = optimizer_type
-        self.num_labels = num_labels
-        self.optimization_metric = optimization_metric
-        self.weight_decay = weight_decay
-        self.metric_mode = metric_mode
-        self.early_stopping_epoch = early_stopping_epoch
-        self.pretrained_weights = pretrained_weights
-        self.epoch_patience = epoch_patience
 
-        self.backbone = TORCHVISION_CONSTRUCTOR_DICT[model_enum](
-            weights=pretrained_weights, progress=True
+        self.hamming_distance = torchmetrics.HammingDistance(
+            task="multilabel", num_labels=self.num_labels
+        )
+
+        self.f1_score = MultilabelF1Score(num_labels=self.num_labels)
+
+        if self.model_enum not in TORCHVISION_CONSTRUCTOR_DICT:
+            raise UnsupportedModel(
+                f"If you want to use {self.model_enum} in TorchvisionModel you need to add the enum to TORCHVISION_CONSTRUCTOR_DICT map."
+            )
+
+        backbone_constructor = TORCHVISION_CONSTRUCTOR_DICT[self.model_enum]
+        backbone_kwargs = {}
+
+        if backbone_constructor in {
+            resnext50_32x4d,
+            resnext101_32x8d,
+            resnext101_64x4d,
+        }:
+            backbone_kwargs.update({"zero_init_residual": True})
+
+        self.backbone = backbone_constructor(
+            weights=self.pretrained_tag, progress=True, **backbone_kwargs
         )
 
         print("------------------------------------------")
@@ -92,21 +87,7 @@ class TorchvisionModel(ModelBase):
             else last_module.in_features
         )
 
-        new_fc = []
-        if isinstance(last_module, nn.Sequential):
-            for k in last_module[
-                :-1
-            ]:  # in case of existing dropouts in final fc module
-                new_fc.append(k)
-
-        fc.insert(0, last_dim)
-        fc.append(self.num_labels)
-        for i, _ in enumerate(fc[:-1]):
-            new_fc.append(
-                nn.Linear(in_features=fc[i], out_features=fc[i + 1], bias=True)
-            )
-
-        setattr(self.backbone, last_module_name, nn.Sequential(*new_fc))
+        setattr(self.backbone, last_module_name, DeepHead([last_dim, self.num_labels]))
 
         print("\n")
         print("Backbone after changing the classifier:")
@@ -114,47 +95,88 @@ class TorchvisionModel(ModelBase):
         print("\n")
         print("------------------------------------------")
 
-        self.hamming_distance = torchmetrics.HammingDistance(
-            task="multilabel", num_labels=self.num_labels
-        )
-
-        self.f1_score = MultilabelF1Score(num_labels=self.num_labels)
-        self.loss_function = nn.BCEWithLogitsLoss()
         self.save_hyperparameters()
-
-    def head(self) -> Union[nn.ModuleList, nn.Module]:
-        return self.backbone.classifier
-
-    def trainable_backbone(self) -> Union[nn.ModuleList, nn.Module]:
-        result = []
-        result.extend(list(self.backbone.features)[-3:])
-        return result
 
     def forward(self, audio: torch.Tensor):
         out = self.backbone.forward(audio)
         return out
 
     def _step(self, batch, batch_idx, type: str):
-        audio, y = batch
+        """
+        - batch_size: 4.
+        - `batch` size can actually be bigger (10) because of chunking.
+        - Split the `batch` with batch_size
+        - sub_batches = [[4, height, width], [4, height, width], [2, height, width]]
+        """
 
-        logits_pred = self.forward(audio)
-        loss = self.loss_function(logits_pred, y)
-        y_pred = torch.sigmoid(logits_pred) > 0.5
-        hamming_distance = self.hamming_distance(y, y_pred)
-        f1_score = self.f1_score(y, y_pred)
+        images, y, _, item_index = batch
 
-        data_dict = {
-            "loss": loss,  # the 'loss' key needs to be present
-            f"{type}/loss": loss,
-            f"{type}/hamming_distance": hamming_distance,
-            f"{type}/f1_score": f1_score,
-        }
+        # Uncomment if y ou want to plot and play audio
+        # if type == "train":
+        #     irmas_dataset = self.trainer.train_dataloader.dataset.datasets.datasets[0]
+        # else:
+        #     irmas_dataset = self.trainer.val_dataloaders[0].dataset.datasets[0]
+        # transform = irmas_dataset.audio_transform
+        # audio_label_path = [irmas_dataset.load_sample(i) for i in item_index]
+        # instrument_name = [
+        #     config_defaults.INSTRUMENT_TO_FULLNAME[decode_instruments(x[1])[0]]
+        #     for x in audio_label_path
+        # ]
+        # paths = [x[2] for x in audio_label_path]
+        # titles = [
+        #     f"{i} {n} {p}" for i, (p, n) in enumerate(zip(paths, instrument_name))
+        # ]
+        # plot_spectrograms(
+        #     transform.undo(images),
+        #     sampling_rate=self.config.sampling_rate,
+        #     n_fft=self.config.n_fft,
+        #     n_mels=self.config.n_mels,
+        #     hop_length=self.config.hop_length,
+        #     y_axis="mel",
+        #     titles=titles,
+        #     # block_plot=False,
+        # )
+        # item_index = list(set(item_index))
+        # orig_audios = [irmas_dataset.load_sample(i)[0] for i in item_index]
+        # titles = list(set(titles))
 
-        log_dict = data_dict.copy()
-        log_dict.pop("loss", None)
-        self.log_dict(log_dict, on_step=True, on_epoch=True, logger=True, prog_bar=True)
+        # while True:
+        #     for audio, title in zip(orig_audios, titles):
+        #         print(title)
+        #         play_audio(audio, transform.sampling_rate)
+        #     pass
 
-        return data_dict
+        sub_batches = torch.split(images, self.batch_size, dim=0)
+        loss = 0
+        y_pred_prob = torch.zeros((len(images), self.num_labels), device=self.device)
+        y_pred = torch.zeros((len(images), self.num_labels), device=self.device)
+
+        passed_images = 0
+        for sub_batch_image in sub_batches:
+            b_size = len(sub_batch_image)
+            start = passed_images
+            end = passed_images + b_size
+
+            b_y = y[start:end]
+            b_logits_pred = self.forward(sub_batch_image)
+            b_loss = self.loss_function(b_logits_pred, b_y)
+
+            b_y_pred_prob = torch.sigmoid(b_logits_pred)
+            b_y_pred = (b_y_pred_prob >= 0.5).float()
+
+            loss += b_loss * b_size
+            y_pred_prob[start:end] = b_y_pred_prob
+            y_pred[start:end] = b_y_pred
+
+            passed_images += b_size
+        if type != "train":
+            pass
+            # y_final_out, _ = scatter_max(y_pred, file_indices, dim=0)
+
+        loss = loss / len(images)
+        return self.log_and_return_loss_step(
+            loss=loss, y_pred=y_pred, y_true=y, type=type
+        )
 
     def training_step(self, batch, batch_idx):
         return self._step(batch, batch_idx, type="train")
@@ -165,30 +187,36 @@ class TorchvisionModel(ModelBase):
     def test_step(self, batch, batch_idx):
         return self._step(batch, batch_idx, type="test")
 
-    def configure_optimizers(self):
-        out = our_configure_optimizers(
-            parameters=self.parameters(),
-            scheduler_type=self.scheduler_type,
-            metric_mode=self.metric_mode,
-            plateau_patience=(self.epoch_patience // 2) + 1,
-            backbone_lr=self.backbone_lr,
-            weight_decay=self.weight_decay,
-            optimizer_type=self.optimizer_type,
-            optimization_metric=self.optimization_metric,
-            trainer_estimated_stepping_batches=int(
-                self.trainer.estimated_stepping_batches
-            ),
-            num_of_steps_in_epoch=self.num_of_steps_in_epoch,
-            epochs=self.epochs,
+    def predict_step(self, batch, batch_idx: int, dataloader_idx: int = 0):
+        images, y, file_indices, item_index = batch
+
+        sub_batches = torch.split(images, self.batch_size, dim=0)
+        loss = 0
+        y_pred_prob = torch.zeros((len(images), self.num_labels), device=self.device)
+        y_pred = torch.zeros((len(images), self.num_labels), device=self.device)
+
+        passed_images = 0
+        for sub_batch_image in sub_batches:
+            b_size = len(sub_batch_image)
+            start = passed_images
+            end = passed_images + b_size
+
+            b_y = y[start:end]
+            b_logits_pred = self.forward(sub_batch_image)
+            b_loss = self.loss_function(b_logits_pred, b_y)
+
+            b_y_pred_prob = torch.sigmoid(b_logits_pred)
+            b_y_pred = (b_y_pred_prob >= 0.5).float()
+
+            loss += b_loss * b_size
+            y_pred_prob[start:end] = b_y_pred_prob
+            y_pred[start:end] = b_y_pred
+
+            passed_images += b_size
+
+        y_final_out, _ = scatter_max(y_pred, file_indices, dim=0)
+
+        loss = loss / len(images)
+        return self.log_and_return_loss_step(
+            loss=loss, y_pred=y_pred, y_true=y, type=type
         )
-        return out
-
-    def _lr_finetuning_step(self, optimizer_idx):
-        """Exponential learning rate update.
-
-        Mupltiplicator is the finetune_lr_nominator
-        """
-        old_lr = self.trainer.optimizers[optimizer_idx].param_groups[0]["lr"]
-        new_lr = old_lr * self.finetune_lr_nominator
-        self._set_lr(new_lr)
-        return

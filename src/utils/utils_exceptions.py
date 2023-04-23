@@ -1,5 +1,5 @@
 class InvalidArgument(Exception):
-    """Argument is invalid."""
+    """Invalid argument."""
 
 
 class InvalidDataException(Exception):
@@ -22,5 +22,13 @@ class UnsupportedModel(ValueError):
     pass
 
 
+class UnsupportedHead(ValueError):
+    pass
+
+
 class InvalidModuleStr(ValueError):
     """Invalid submodule string which isn't contained within the parent module."""
+
+
+class UnsupportedAudioTransforms(Exception):
+    pass

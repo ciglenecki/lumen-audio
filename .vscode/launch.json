@@ -10,26 +10,79 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --dataset-dir data/raw/train --lr 0.003 --batch-size 2 --num-workers 6 --audio-transform ast --model ast --spectrogram-augmentations time_stretch radnom_pixels --epochs 40  --patience 50 --quick --backbone-after layer.9 --head-after deep_head",
+			"args": "--accelerator gpu --devices -1 --train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --backbone-after backbone.classifier --head-after backbone.classifier --model AST --audio-transform AST --finetune-head-epochs 1 --epochs 2 --batch-size 4 --num-workers 0 --quick --skip-validation",
 			"justMyCode": false
 		},
 		{
-			"name": "Train efficientnet",
+			"name": "Train AST fixed labels",
 			"type": "python",
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --dataset-dir data/raw/train --lr 5e-4 --batch-size 4 --num-workers 4 --audio-transform mel_spectrogram_fixed_repeat --model efficient_net_v2_s --spectrogram-augmentations time_stretch radnom_pixels --epochs 20  --patience 50 --quick",
+			"args": "--accelerator gpu --devices -1 --train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --backbone-after backbone.classifier --head-after backbone.classifier --model AST --audio-transform AST --quick --train-override-csv data/irmas_sample/normalized_random_samples_relabeling.csv",
 			"justMyCode": false
 		},
 		{
-			"name": "Train test",
+			"name": "Train Wav2vec",
 			"type": "python",
 			"request": "launch",
-			"program": "src/train.py",
+			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--dataset-dir data/raw/train --lr 1e-4 --warmup-lr 5e-4 --num-workers 1 --quick",
+			"args": "--accelerator gpu --devices -1 --train-paths irmastrain:data/irmas/train --lr 5e-5 --batch-size 2 --num-workers 4 --audio-transform WAV2VEC --model WAV2VEC --epochs 40  --backbone-after layers.9 --head-after deep_head --quick",
 			"justMyCode": false
+		},
+		{
+			"name": "Train TorchModel",
+			"type": "python",
+			"request": "launch",
+			"program": "src/train/train.py",
+			"console": "integratedTerminal",
+			"args": "--accelerator gpu --devices -1 --train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --audio-transform MEL_SPECTROGRAM --model RESNEXT50_32X4D --backbone-after backbone.layer1.2 --head-after backbone.fc --num-workers 1 --batch-size 4",
+			"justMyCode": false
+		},
+		{
+			"name": "Train Wav2Vec CNN",
+			"type": "python",
+			"request": "launch",
+			"program": "src/train/train.py",
+			"console": "integratedTerminal",
+			"args": "--accelerator gpu --devices -1 --train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --audio-transform WAV2VEC_CNN --model WAV2VEC_CNN --use-fluffy --head ATTENTION_HEAD --use-multiple-optimizers --loss-function CROSS_ENTROPY_POS_WEIGHT --backbone-after classifier.heads --head-after classifier.heads --quick",
+			"justMyCode": false
+		},
+		{
+			"name": "Check pretraining",
+			"type": "python",
+			"request": "launch",
+			"program": "src/pretrain/pretrain.py",
+			"console": "integratedTerminal",
+			"args": "--model RESNEXT50_32X4D --audio-transform MEL_SPECTROGRAM",
+			"justMyCode": false
+		},
+		{
+			"name": "Save embeddings",
+			"type": "python",
+			"request": "launch",
+			"program": "src/scripts/save_embeddings.py",
+			"console": "integratedTerminal",
+			"args": "--model AST --audio-transform AST --pretrained-tag MIT/ast-finetuned-audioset-10-10-0.4593 --train-paths irmastrain:data/irmas/train --batch-size 2",
+			"justMyCode": false
+		},
+		{
+			"name": "Gradcam",
+			"type": "python",
+			"request": "launch",
+			"program": "src/grad_vis/visualize_grads.py",
+			"console": "integratedTerminal",
+			"args": "--input-dirs irmastrain:data/irmas/train --path_to_model models_quick/04-14-15-25-32_CalmAlan_resnext50_32x4d/checkpoints/04-14-15-25-32_CalmAlan_resnext50_32x4d_val_acc_0.0000_val_loss_1.1923.ckpt --target_layer backbone.avgpool --model RESNEXT50_32X4D --audio-transform MEL_SPECTROGRAM --label vio --batch-size 1 --image-size 256 256",
+			"justMyCode": false
+		},
+		{
+			"name": "Python: Current File",
+			"type": "python",
+			"request": "launch",
+			"program": "${file}",
+			"console": "integratedTerminal",
+			"justMyCode": true
 		},
 	]
 }

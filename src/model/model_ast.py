@@ -1,18 +1,17 @@
-import math
-from typing import Any, Optional
+from typing import Any
 
+import librosa
 import torch
-import torchmetrics
+import torchaudio
 from pytorch_lightning.loggers import TensorBoardLogger
-from torchmetrics.classification import MultilabelF1Score
-from transformers import ASTConfig, ASTForAudioClassification
+from transformers import ASTConfig, ASTFeatureExtractor, ASTForAudioClassification
 from transformers.modeling_outputs import SequenceClassifierOutput
 
 import src.config.config_defaults as config_defaults
-from src.model.deep_head import DeepHead
+from src.config.argparse_with_config import ArgParseWithConfig
 from src.model.model_base import ModelBase
-from src.model.optimizers import OptimizerType, SchedulerType, our_configure_optimizers
-from src.utils.utils_train import MetricMode, OptimizeMetric
+from src.utils.utils_audio import load_audio_from_file, play_audio, plot_spectrograms
+from src.utils.utils_dataset import get_example_val_sample
 
 
 class ASTModelWrapper(ModelBase):
@@ -20,64 +19,32 @@ class ASTModelWrapper(ModelBase):
 
     def __init__(
         self,
-        pretrained: bool,
-        batch_size: int,
-        scheduler_type: SchedulerType,
-        epochs: Optional[int],
-        optimizer_type: OptimizerType,
-        model_name: str,
-        num_labels: int,
-        optimization_metric: OptimizeMetric,
-        weight_decay: float,
-        metric_mode: MetricMode,
-        epoch_patience: int,
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
 
-        self.pretrained = pretrained
-        self.batch_size = batch_size
-        self.scheduler_type = scheduler_type
-        self.epochs = epochs
-        self.optimizer_type = optimizer_type
-        self.num_labels = num_labels
-        self.model_name = model_name
-        self.optimization_metric = optimization_metric
-        self.weight_decay = weight_decay
-        self.metric_mode = metric_mode
-        self.epoch_patience = epoch_patience
-
-        config = ASTConfig(
-            pretrained_model_name_or_path=model_name,
+        ast_config = ASTConfig.from_pretrained(
+            pretrained_model_name_or_path=self.pretrained_tag,
             id2label=config_defaults.IDX_TO_INSTRUMENT,
-            label2id=config_defaults.IDX_TO_INSTRUMENT,
-            num_labels=num_labels,
+            label2id=config_defaults.INSTRUMENT_TO_IDX,
+            num_labels=self.num_labels,
             finetuning_task="audio-classification",
             problem_type="multi_label_classification",
         )
 
-        self.hamming_distance = torchmetrics.HammingDistance(
-            task="multilabel", num_labels=num_labels
-        )
-        self.f1_score = MultilabelF1Score(num_labels=self.num_labels)
-
         self.backbone: ASTForAudioClassification = (
             ASTForAudioClassification.from_pretrained(
-                model_name,
-                config=config,
+                self.pretrained_tag,
+                config=ast_config,
                 ignore_mismatched_sizes=True,
             )
         )
 
-        middle_size = int(
-            math.sqrt(config.hidden_size * self.num_labels) + self.num_labels
-        )
-
-        self.backbone.classifier = DeepHead(
-            [config.hidden_size, middle_size, self.num_labels]
-        )
-
+        # middle_size = int(
+        #     math.sqrt(config.hidden_size * self.num_labels) + self.num_labels
+        # )
+        # self.backbone.classifier = DeepHead([ast_config.hidden_size, self.num_labels])
         self.save_hyperparameters()
 
     def forward(self, audio: torch.Tensor, labels: torch.Tensor):
@@ -90,55 +57,53 @@ class ASTModelWrapper(ModelBase):
         return out.loss, out.logits
 
     def _step(self, batch, batch_idx, type: str):
-        audio, y = batch
-
-        loss, logits_pred = self.forward(audio, labels=y)
-        y_pred_prob = torch.sigmoid(logits_pred)
-        y_pred = y_pred_prob >= 0.5
-
-        hamming_distance = self.hamming_distance(y, y_pred)
-        f1_score = self.f1_score(y, y_pred)
-
-        data_dict = {
-            "loss": loss,  # the 'loss' key needs to be present
-            f"{type}/loss": loss,
-            f"{type}/hamming_distance": hamming_distance,
-            f"{type}/f1_score": f1_score,
-        }
-
-        log_dict = data_dict.copy()
-        log_dict.pop("loss", None)
-        self.log_dict(log_dict, on_step=True, on_epoch=True, logger=True, prog_bar=True)
-
-        return data_dict
-
-    def configure_optimizers(self):
-        out = our_configure_optimizers(
-            parameters=self.parameters(),
-            scheduler_type=self.scheduler_type,
-            metric_mode=self.metric_mode,
-            plateau_patience=(self.epoch_patience // 2) + 1,
-            backbone_lr=self.backbone_lr,
-            weight_decay=self.weight_decay,
-            optimizer_type=self.optimizer_type,
-            optimization_metric=self.optimization_metric,
-            trainer_estimated_stepping_batches=int(
-                self.trainer.estimated_stepping_batches
-            ),
-            num_of_steps_in_epoch=self.num_of_steps_in_epoch,
-            epochs=self.epochs,
-        )
-        return out
-
-    def _lr_finetuning_step(self, optimizer_idx):
-        """Exponential learning rate update.
-
-        Mupltiplicator is the finetune_lr_nominator
         """
-        old_lr = self.trainer.optimizers[optimizer_idx].param_groups[0]["lr"]
-        new_lr = old_lr * self.finetune_lr_nominator
-        self._set_lr(new_lr)
-        return
+        - batch_size: 4.
+        - `batch` size can actually be bigger (10) because of chunking.
+        - Split the `batch` with batch_size
+        - sub_batches = [[4, height, width], [4, height, width], [2, height, width]]
+        """
+
+        images, y, file_indices, item_indices = batch
+
+        # plot_spectrograms(
+        #     images.detach().cpu(),
+        #     sampling_rate=self.config.sampling_rate,
+        #     n_fft=self.config.n_fft,
+        #     n_mels=self.config.n_mels,
+        #     hop_length=self.config.hop_length,
+        #     y_axis=None,
+        # )
+
+        sub_batches = torch.split(images, self.batch_size, dim=0)
+        loss = 0
+        y_pred_prob = torch.zeros((len(images), self.num_labels), device=self.device)
+        y_pred = torch.zeros((len(images), self.num_labels), device=self.device)
+
+        passed_images = 0
+        for sub_batch_image in sub_batches:
+            b_size = len(sub_batch_image)
+            start = passed_images
+            end = passed_images + b_size
+
+            b_y = y[start:end]
+            b_loss, b_logits_pred = self.forward(sub_batch_image, labels=b_y)
+            b_y_pred_prob = torch.sigmoid(b_logits_pred)
+            b_y_pred = (b_y_pred_prob >= 0.5).float()
+
+            loss += b_loss * b_size
+            y_pred_prob[start:end] = b_y_pred_prob
+            y_pred[start:end] = b_y_pred
+
+            passed_images += b_size
+        if type != "train":
+            pass
+            # y_final_out, _ = scatter_max(y_pred, file_indices, dim=0)
+
+        loss = loss / len(images)
+        return self.log_and_return_loss_step(
+            loss=loss, y_pred=y_pred, y_true=y, type=type
+        )
 
     def training_step(self, batch, batch_idx):
         return self._step(batch, batch_idx, type="train")
@@ -154,3 +119,90 @@ class ASTModelWrapper(ModelBase):
     ) -> Any:
         # TODO:
         pass
+
+
+if __name__ == "__main__":
+    parser = ArgParseWithConfig()
+    args, config, pl_args = parser.parse_args()
+    audio = get_example_val_sample(config.sampling_rate)
+
+    # example_audio_mel_audio()
+    config_ = ASTConfig.from_pretrained(
+        pretrained_model_name_or_path=config_defaults.TAG_AST_AUDIOSET,
+        id2label=config_defaults.IDX_TO_INSTRUMENT,
+        label2id=config_defaults.INSTRUMENT_TO_IDX,
+        num_labels=config_defaults.DEFAULT_NUM_LABELS,
+        finetuning_task="audio-classification",
+        problem_type="multi_label_classification",
+    )
+
+    backbone: ASTForAudioClassification = ASTForAudioClassification.from_pretrained(
+        config_defaults.TAG_AST_AUDIOSET,
+        config=config_,
+        ignore_mismatched_sizes=True,
+    )
+    target_sr = 16_000
+    n_fft = 400
+    hop = 160
+    mel_bins = 128
+    fname = "data/irmas_sample/1 - Hank's Other Bag-1.wav"
+
+    feature_extractor = ASTFeatureExtractor.from_pretrained(
+        config_defaults.TAG_AST_AUDIOSET,
+        normalize=False,
+    )
+
+    audio_torch, org_sample_rate = torchaudio.load(fname)
+    resampler = torchaudio.transforms.Resample(
+        org_sample_rate, target_sr, dtype=audio_torch.dtype
+    )
+    audio_torch = resampler(audio_torch)
+    audio_torch = audio_torch.mean(dim=0, keepdim=False)
+
+    audio_lib, org_sample_rate = load_audio_from_file(
+        fname, target_sr=target_sr, method="librosa"
+    )
+    audio_lib = librosa.resample(
+        y=audio_lib, orig_sr=org_sample_rate, target_sr=target_sr
+    )
+
+    features_torch = feature_extractor(
+        audio_torch,
+        sampling_rate=target_sr,
+        return_tensors="np",
+    )["input_values"]
+
+    features_librosa = feature_extractor(
+        audio_lib,
+        sampling_rate=target_sr,
+        return_tensors="np",
+    )["input_values"]
+
+    torch_spec = features_torch
+    lib_spec = features_librosa
+
+    torch_spec = torch_spec.squeeze(0).T
+    lib_spec = lib_spec.squeeze(0).T
+    inv = torchaudio.transforms.InverseMelScale(
+        n_stft=n_fft // 2 + 1, sample_rate=target_sr
+    )
+    grif = torchaudio.transforms.GriffinLim(
+        n_fft=n_fft, hop_length=hop, n_iter=54, power=2
+    )
+    inv_torch = grif(inv(torch.tensor(torch_spec)))
+    inv_lib = grif(inv(torch.tensor(lib_spec)))
+
+    torch_reconstructed = librosa.feature.inverse.mel_to_audio(
+        torch_spec, sr=target_sr, n_fft=n_fft, hop_length=hop
+    )
+    lib_reconstruct = librosa.feature.inverse.mel_to_audio(
+        lib_spec, sr=target_sr, n_fft=n_fft, hop_length=hop
+    )
+
+    print(librosa.get_duration(y=lib_reconstruct, sr=16_000))
+    print(len(lib_reconstruct) / 16_000)
+
+    # play_audio(torch_reconstructed, sr=target_sr, max_seconds=3)
+    # play_audio(lib_reconstruct, sr=target_sr, max_seconds=3)
+    play_audio(inv_torch.squeeze(0).numpy(), sampling_rate=target_sr, max_seconds=3)
+    play_audio(inv_lib.squeeze(0).numpy(), sampling_rate=target_sr, max_seconds=3)

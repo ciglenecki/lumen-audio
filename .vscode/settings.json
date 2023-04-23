@@ -1,0 +1,13 @@
+{
+	"search.exclude": {
+		"**/node_modules": true,
+		"**/bower_components": true,
+		// "**/*.code-search": true,
+		// "**/venv": true,
+	},
+	"[python]": {
+		"editor.defaultFormatter": "ms-python.black-formatter"
+	},
+	"python.linting.pylintEnabled": true,
+	"python.linting.enabled": true,
+}

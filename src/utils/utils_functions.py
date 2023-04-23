@@ -5,7 +5,6 @@ import random
 import sys
 import time
 from datetime import datetime
-from enum import Enum
 from pathlib import Path
 from typing import TypeVar
 
@@ -29,6 +28,8 @@ def parse_kwargs(kwargs_strs: list[str], list_sep=",", key_value_sep="="):
         list_sep: _description_..
         arg_sep: _description_..
     """
+    if isinstance(kwargs_strs, str):
+        kwargs_strs = [kwargs_strs]
 
     def parse_value(value: str):
         if isint(value):
@@ -42,7 +43,7 @@ def parse_kwargs(kwargs_strs: list[str], list_sep=",", key_value_sep="="):
         _kv = key_value.split(key_value_sep)
         assert (
             len(_kv) == 2
-        ), f"Exactly one {key_value_sep} should appear in {key_value}"
+        ), f"Exactly one `{key_value_sep}` should appear in {key_value}"
         key, value = _kv
         value = [parse_value(v) for v in value.split(list_sep)]
         value = value if len(value) > 1 else value[0]
@@ -181,6 +182,7 @@ class SocketConcatenator:
 
     def __init__(self, *files):
         self.files = files
+        self.encoding = "utf-8"
 
     def write(self, obj):
         for f in self.files:
@@ -195,7 +197,7 @@ class SocketConcatenator:
 def stdout_to_file(file: Path):
     """Pipes standard input to standard input and to a new file."""
     print("Standard output piped to file:")
-    f = open(Path(file), "w")
+    f = open(Path(file), "w", encoding="utf-8")
     sys.stdout = SocketConcatenator(sys.stdout, f)
     sys.stderr = SocketConcatenator(sys.stderr, f)
 
@@ -206,14 +208,22 @@ def reset_sockets():
     sys.stderr = sys.__stderr__
 
 
-def add_prefix_to_keys(dict: dict, prefix) -> dict:
+def add_prefix_to_keys(
+    dict: dict, prefix: str, filter_fn: callable = lambda x: False
+) -> dict:
     """
     Example:
         dict = {"a": 1, "b": 2}
         prefix = "text_"
         returns {"text_a": 1, "text_b": 2}
+
+    Example:
+        dict = {"abra": 1, "abrakadabra": 2, "nothing": 3}
+        prefix = "text_"
+        filter = lambda x: x.startswith("abra")
+        returns {"text_abra": 1, "text_abrakadabra": 2, "nothing": 3}
     """
-    return {prefix + k: v for k, v in dict.items()}
+    return {(k if filter_fn(k) else prefix + k): v for k, v in dict.items()}
 
 
 def flatten(list):
@@ -260,32 +270,18 @@ def timeit(func):
     return timed
 
 
-class EnumStr(Enum):
-    @classmethod
-    def keys(cls):
-        return [elem.value for elem in list(cls)]
-
-    @classmethod
-    def from_string(cls, s, do_except=False):
-        try:
-            return cls(s)
-        except Exception:
-            if do_except:
-                raise ValueError(s)
-            else:
-                print(f"Skipping enum parsing {s}")
-
-    def __str__(self) -> str:
-        first = super().__str__()
-        return f"{first}: '{self.value}'"
-
-
 def to_yaml(data):
     return yaml.dump(data, allow_unicode=True, default_flow_style=False)
 
 
 def function_kwargs(func):
     return inspect.getfullargspec(func)
+
+
+def print_tensor(t, name=None):
+    print(f"{name}: {t.shape}")
+    print("Min:", t.min(), "Max", t.max())
+    print()
 
 
 nato_alphabet = [
