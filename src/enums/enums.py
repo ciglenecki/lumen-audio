@@ -66,6 +66,7 @@ class AudioTransforms(Enum):
 
     AST = "ast"
     MEL_SPECTROGRAM = "mel_spectrogram"
+    MULTI_SPECTROGRAM = "multi_spectrogram"
     WAV2VEC = "wav2vec"
     MFCC = "mfcc"
     WAV2VEC_CNN = "wav2vec_cnn"
