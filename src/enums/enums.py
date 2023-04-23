@@ -71,11 +71,13 @@ class AudioTransforms(Enum):
     WAV2VEC_CNN = "wav2vec_cnn"
 
 
-class SupportedDatasets(Enum):
-    """List of SupportedDatasets we use."""
+class SupportedDatasetDirType(Enum):
+    """List of SupportedDatasetDirType we use."""
 
-    IRMAS = "irmas"
+    IRMAS_TRAIN = "irmastrain"
+    IRMAS_TEST = "irmastest"
     OPENMIC = "openmic"
+    CSV = "csv"
 
 
 class MetricMode(Enum):

@@ -1,5 +1,5 @@
 """python3 src/scripts/save_embeddings.py --model AST --audio-transform AST --pretrained-tag
-MIT/ast-finetuned-audioset-10-10-0.4593 --train-dirs irmas:data/irmas/train --batch-size 1.
+MIT/ast-finetuned-audioset-10-10-0.4593 --train-paths irmastrain:data/irmas/train --batch-size 1.
 
 python3 src/scripts/save_embeddings.py  --model EFFICIENT_NET_V2_S --audio-transform MEL_SPECTROGRAM
 
@@ -23,7 +23,7 @@ import src.config.config_defaults as config_defaults
 from src.config.argparse_with_config import ArgParseWithConfig
 from src.data.datamodule import IRMASDataModule
 from src.data.dataset_irmas import IRMASDatasetTest, IRMASDatasetTrain
-from src.enums.enums import AudioTransforms, SupportedModels
+from src.enums.enums import SupportedModels
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
 from src.features.chunking import get_collate_fn
 from src.model.model import get_model, model_constructor_map
@@ -38,22 +38,14 @@ def parse_args():
     parser.add_argument("--target-model-layer", type=str)
 
     args, config, pl_args = parser.parse_args()
-
-    if config.model is None:
-        raise InvalidArgument(
-            f"Please provide --model {[e.name for e in SupportedModels]}"
-        )
-    if config.audio_transform is None:
-        raise InvalidArgument(
-            f"Please provide --audio-transform {[e.name for e in AudioTransforms]}"
-        )
+    config.required_test_paths()
+    config.required_model()
+    config.required_audio_transform()
 
     if int(config.pretrained_tag is not None) + int(args.checkpoint is not None) != 1:
         raise InvalidArgument(
             "Please provide either --pretrained-tag or --checkpoint <PATH>"
         )
-
-    config.parse_dataset_paths()
     return args, config, pl_args
 
 
@@ -139,8 +131,9 @@ if __name__ == "__main__":
 
     collate_fn = get_collate_fn(config)
     datamodule = IRMASDataModule(
-        train_dirs=config.train_dirs,
-        val_dirs=config.val_dirs,
+        train_paths=config.train_paths,
+        val_paths=config.val_paths,
+        test_paths=config.test_paths,
         batch_size=config.batch_size,
         num_workers=config.num_workers,
         dataset_fraction=config.dataset_fraction,
@@ -214,13 +207,13 @@ if __name__ == "__main__":
                 if isinstance(exact_dataset, IRMASDatasetTrain) or isinstance(
                     exact_dataset, IRMASDatasetTest
                 ):
-                    audio_path, _ = exact_dataset.dataset[item_index]
+                    audio_path, _ = exact_dataset.dataset_list[item_index]
                 else:
                     raise Exception(
                         "Add 'isinstance(exact, YourDataset) and use item index to unpack the path to the file"
                     )
 
-                dataset_enum, _ = datamodule.train_dirs[dataset_idx]
+                dataset_enum, _ = datamodule.train_paths[dataset_idx]
                 dataset_str = dataset_enum.value
 
                 stem = Path(audio_path).stem  # e.g. [cel][cla]0001__1
