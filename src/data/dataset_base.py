@@ -41,6 +41,7 @@ class DatasetBase(Dataset[DatasetGetItem]):
         self.sum_two_samples = sum_two_samples
         self.concat_n_samples = concat_n_samples
         self.train_override_csvs = train_override_csvs
+        self.use_concat = concat_n_samples is not None and concat_n_samples > 1
         # list of tuples which contains
         #   - paths of audio files ("filename.wav")
         #   - multihot encoded labels ([1,0,0,0,0])
@@ -218,10 +219,16 @@ class DatasetBase(Dataset[DatasetGetItem]):
 
     def concat_and_sum_random_negative_samples(self, original_audio, original_labels):
         """Finds (num_negative_sampels * 2) - 1 negative samples which are concated and summed to original audio. Negative audio sample doesn't share original audio's labels"""
-        num_negative_sampels = self.concat_n_samples
-        if self.sum_two_samples:
-            num_negative_sampels = num_negative_sampels * 2
-        num_negative_sampels = num_negative_sampels - 1  # exclude original audio
+
+        if self.use_concat and self.sum_two_samples:
+            num_negative_sampels = self.concat_n_samples * 2
+            num_negative_sampels = num_negative_sampels - 1  # exclude original audio
+        elif self.use_concat and not self.sum_two_samples:
+            num_negative_sampels = self.concat_n_samples
+        elif not self.use_concat and self.sum_two_samples:
+            num_negative_sampels = 1
+        else:
+            return original_audio, original_labels
 
         # Load negative samples
         multiple_audios, multiple_labels, _ = self.sample_n_negative_samples(
@@ -235,7 +242,7 @@ class DatasetBase(Dataset[DatasetGetItem]):
         audio, labels = self.concat_and_sum(
             multiple_audios,
             multiple_labels,
-            use_concat=self.concat_n_samples is not None and self.concat_n_samples > 1,
+            use_concat=self.use_concat,
             sum_two_samples=self.sum_two_samples,
         )
 
@@ -244,9 +251,7 @@ class DatasetBase(Dataset[DatasetGetItem]):
     def __getitem__(self, index: int) -> DatasetGetItem:
         audio, labels, _ = self.load_sample(index)
 
-        if (
-            self.concat_n_samples is not None and self.concat_n_samples > 1
-        ) or self.sum_two_samples:
+        if self.use_concat or self.sum_two_samples:
             audio, labels = self.concat_and_sum_random_negative_samples(audio, labels)
 
         if self.audio_transform is None:
