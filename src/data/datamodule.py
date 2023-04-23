@@ -98,8 +98,12 @@ class IRMASDataModule(pl.LightningDataModule):
 
     def setup_for_train(self):
         """Create train and val dataset, indices and statistics for testing/inference."""
-        self.train_dataset = self.concat_datasets_from_tuples(self.train_paths)
-        self.val_dataset = self.concat_datasets_from_tuples(self.val_paths)
+        self.train_dataset = self.concat_datasets_from_tuples(
+            self.train_paths, self.train_audio_transform
+        )
+        self.val_dataset = self.concat_datasets_from_tuples(
+            self.val_paths, self.val_audio_transform
+        )
 
         assert (
             self.train_dataset is not None
@@ -146,7 +150,9 @@ class IRMASDataModule(pl.LightningDataModule):
 
     def setup_for_inference(self):
         """Create dataset, indices and statictis for testing/inference."""
-        self.test_dataset = self.concat_datasets_from_tuples(self.test_paths)
+        self.test_dataset = self.concat_datasets_from_tuples(
+            self.test_paths, self.val_audio_transform
+        )
 
         # Simply reuse val dataset as train if train is not provided.
         if self.test_dataset is None:
@@ -178,6 +184,7 @@ class IRMASDataModule(pl.LightningDataModule):
     def concat_datasets_from_tuples(
         self,
         dataset_paths: list[tuple[SupportedDatasetDirType, Path]] | None,
+        transform: AudioTransformBase,
     ) -> None | ConcatDataset:
         if dataset_paths is None:
             return None
@@ -188,7 +195,7 @@ class IRMASDataModule(pl.LightningDataModule):
             if dataset_enum == SupportedDatasetDirType.IRMAS_TRAIN:
                 dataset = IRMASDatasetTrain(
                     dataset_path=dataset_path,
-                    audio_transform=self.train_audio_transform,
+                    audio_transform=transform,
                     normalize_audio=self.normalize_audio,
                     concat_n_samples=self.concat_n_samples,
                     sum_two_samples=self.sum_two_samples,
@@ -197,7 +204,7 @@ class IRMASDataModule(pl.LightningDataModule):
             elif dataset_enum == SupportedDatasetDirType.IRMAS_TEST:
                 dataset = IRMASDatasetTest(
                     dataset_path=dataset_path,
-                    audio_transform=self.val_audio_transform,
+                    audio_transform=transform,
                     normalize_audio=self.normalize_audio,
                     concat_n_samples=False,
                     sum_two_samples=False,
