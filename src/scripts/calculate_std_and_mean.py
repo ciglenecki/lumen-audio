@@ -28,9 +28,11 @@ def audios_to_flat_spectrograms(
     images: torch.Tensor, num_channels: int, config: ConfigDefault
 ):
     batch_size = images.size(0)
-    images = create_and_repeat_channel(
-        images, num_channels
-    )  # [Batch, Channel, Height, Width]
+
+    if num_channels == 1:
+        images = create_and_repeat_channel(
+            images, num_channels
+        )  # [Batch, Channel, Height, Width]
 
     flat_images = images.view(
         batch_size, images.size(1), -1
@@ -65,18 +67,19 @@ if __name__ == "__main__":
     )
     datamodule.setup("test")
 
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     dataloader = datamodule.test_dataloader()
 
-    num_channels = 1
-    mean = torch.zeros(num_channels)
+    num_channels = 3
+    mean = torch.zeros(num_channels).to(device)
 
     # We can perform means of means because each image has the same number of pixels.
 
     num_patches = 0
     for audio, _, _, _ in tqdm(dataloader):
         num_patches += audio.shape[0]
-        flat_images = audios_to_flat_spectrograms(
-            audio, num_channels, config
+        flat_images = audios_to_flat_spectrograms(audio, num_channels, config).to(
+            device
         )  # [Batch, Channel, Height x Width]
 
         mean_per_channel_per_batch = flat_images.mean(2)  # [Batch, Channel]
@@ -86,10 +89,10 @@ if __name__ == "__main__":
     mean = mean / num_patches
     print(f"Mean for each channel is: {mean}")
 
-    var = torch.zeros(num_channels)
+    var = torch.zeros(num_channels).to(device)
     for audio, _, _, _ in tqdm(dataloader):
-        flat_images = audios_to_flat_spectrograms(
-            audio, num_channels, config
+        flat_images = audios_to_flat_spectrograms(audio, num_channels, config).to(
+            device
         )  # [Batch, Channel, Height x Width]
 
         # unsqueeze 1 because we have to bring the `mean` to the channel dimension instead of zero-th dimension.
