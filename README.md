@@ -69,14 +69,12 @@ Low priority tasks:
   - [ ] 🖊️ report your findings in Google Docs
 - [ ] train  ResNeXt 50_32x4d on MelSpectrogram
   - [ ] Compare how augmentations affect the final metrics:
-    - [ ] with no augmentations
+    - [x] with no augmentations
     - [ ] with augmentations
-    - [ ] 🖊️ report your findings in Google Docs
 - [ ] train  ResNeXt 50_32x4d on MFCC
   - [ ] Compare how augmentations affect the final metrics:
-    - [ ] with no augmentations
+    - [x] with no augmentations
     - [ ] with augmentations
-    - [ ] 🖊️ report your findings in Google Docs
 - [ ] **train with relabeled data (rep):** Include Ivan's relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
   - [ ] 🖊️ report your findings in Google Docs
 - [ ] **train with relabeled data (cleanlab):** Include train override csv. No augmentations. Compare both models metrics.

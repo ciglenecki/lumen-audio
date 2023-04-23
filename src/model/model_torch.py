@@ -43,6 +43,8 @@ class TorchvisionModel(ModelBase):
     ):
         super().__init__(*args, **kwargs)
 
+        torch.set_float32_matmul_precision("medium")
+	
         self.hamming_distance = torchmetrics.HammingDistance(
             task="multilabel", num_labels=self.num_labels
         )
