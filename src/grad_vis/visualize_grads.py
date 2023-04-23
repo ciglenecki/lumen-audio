@@ -114,9 +114,9 @@ if __name__ == "__main__":
 
             grouped_example = torch.cat([torch.tensor(i) for i in res[indices]], dim=-1)
 
-            grouped_example_rgb = (
-                torch.cat([torch.tensor(i) for i in inputs[indices]], dim=-1) * 3
-            ) * 3
+            grouped_example_rgb = torch.cat(
+                [torch.tensor(i) for i in inputs[indices]], dim=-1
+            )
 
             grouped_example = (grouped_example - grouped_example.min()) / (
                 grouped_example.max() - grouped_example.min()

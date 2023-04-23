@@ -12,12 +12,12 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 
 import src.config.config_defaults as config_defaults
+from src.config.config_defaults import AUDIO_EXTENSIONS
 from src.data.dataset_base import DatasetBase, DatasetInternalItem
 from src.utils.utils_dataset import encode_instruments, multi_hot_encode
 
 config = config_defaults.default_config
-
-glob_expressions = [f"*.{ext}" for ext in config.audio_file_extensions]
+glob_expressions = [f"*.{ext}" for ext in AUDIO_EXTENSIONS]
 
 
 class IRMASDatasetTrain(DatasetBase):
@@ -41,7 +41,7 @@ class IRMASDatasetTrain(DatasetBase):
                 └── voi
         """
 
-        super().__init__(*args, **kwargs)  # sets self.dataset
+        super().__init__(*args, **kwargs)
 
         assert (
             len(self.dataset_list) == config_defaults.DEFAULT_IRMAS_TRAIN_SIZE
@@ -114,7 +114,7 @@ class IRMASDatasetTest(DatasetBase):
                 ├── 012__[cel][nod][cla]0043__1.txt
                 ├── ...
         """
-        super().__init__(*args, **kwargs)  # sets self.dataset
+        super().__init__(*args, **kwargs)
 
         assert (
             len(self.dataset_list) == config_defaults.DEFAULT_IRMAS_TEST_SIZE

@@ -1,3 +1,17 @@
+"""
+Requirements:
+- IRMAS train embeddings (guitar)
+- OpenMIC guitar embeddings
+- OpenMIC original CSV
+
+Does:
+- Trains SVM on IRMAS' guitar embeddings
+- predicts the class for OpenMIC embeddings and sets the class "guitar" to either electric guitar or acoustic guitar
+- reassignes the guitar labels
+- creates appropriate csv that can be used for training
+- plots frequency of each instrument
+
+"""
 import argparse
 import json
 import os

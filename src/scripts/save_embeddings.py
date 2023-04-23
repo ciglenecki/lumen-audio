@@ -7,13 +7,11 @@ python3 src/scripts/save_embeddings.py --checkpoint models/04-13-14-20-12_GoodSi
 
 python3 src/scripts/save_embeddings.py --model EFFICIENT_NET_V2_S --audio-transform MEL_SPECTROGRAM --pretrained-tag IMAGENET1K_V1
 """
-import bisect
 import json
 from pathlib import Path
 
 import torch
 import torch_scatter
-from torch.utils.data import ConcatDataset, DataLoader
 from torchvision.models.feature_extraction import (
     create_feature_extractor,
     get_graph_node_names,
@@ -21,11 +19,8 @@ from torchvision.models.feature_extraction import (
 from tqdm import tqdm
 
 import src.config.config_defaults as config_defaults
-from data.dataset_base import DatasetBase
 from src.config.argparse_with_config import ArgParseWithConfig
 from src.data.datamodule import OurDataModule
-from src.data.dataset_inference_dir import InferenceDataset
-from src.data.dataset_irmas import IRMASDatasetTest, IRMASDatasetTrain
 from src.enums.enums import SupportedModels
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
 from src.features.chunking import get_collate_fn
@@ -148,7 +143,7 @@ if __name__ == "__main__":
         collate_fn=collate_fn,
         normalize_audio=config.normalize_audio,
         normalize_image=config.normalize_image,
-        train_only_dataset=config.train_only_dataset,
+        train_only_dataset=False,
         concat_n_samples=None,
         sum_two_samples=None,
         use_weighted_train_sampler=False,

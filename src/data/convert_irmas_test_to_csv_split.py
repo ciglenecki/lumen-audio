@@ -1,6 +1,7 @@
-"""Takes IRMAS train directory structure and converts it to 2 csvs.
+"""Takes IRMAS test directory structure and splits it into 2 csvs with --frac ratio.
 
-Splitted by --frac.
+It Interanally uses iterative_train_test_split to split the dataset without changing the underlying
+distribution.
 """
 
 import argparse

@@ -165,6 +165,9 @@ DEFAULT_PRETRAINED_TAG_MAP = {
 ALL_INSTRUMENTS = [e.value for e in InstrumentEnums]
 ALL_INSTRUMENTS_NAMES = [INSTRUMENT_TO_FULLNAME[ins] for ins in ALL_INSTRUMENTS]
 
+AUDIO_EXTENSIONS = ["wav", "mp3", "ogg"]
+
+
 USAGE_TEXT_PATHS = f"Usage:\t--train-paths <TYPE>:/path/to/dataset (for training)\n\t--val-paths <TYPE>:/path/to/dataset (for training)\n\t--test-paths <TYPE>:/path/to/dataset (for inference)\nSupported <TYPE>: {[ d.value for d in SupportedDatasetDirType]}"
 
 
@@ -285,8 +288,6 @@ class ConfigDefault(Serializable):
 
     train_override_csvs: Path | None = create(None)
     """CSV files with columns 'filename, sax, gac, org, ..., cla' where filename is path and each instrument is either 0 or 1"""
-
-    audio_file_extensions: list[str] = create(["wav", "mp3", "ogg"])
 
     # ======================== DPS ===========================
 

@@ -5,11 +5,12 @@ import pandas as pd
 import torch
 
 import src.config.config_defaults as config_defaults
+from src.config.config_defaults import AUDIO_EXTENSIONS
 from src.data.dataset_base import DatasetBase, DatasetGetItem
 from src.utils.utils_exceptions import InvalidArgument
 
 config = config_defaults.default_config
-glob_expressions = [f"*.{ext}" for ext in config.audio_file_extensions]
+glob_expressions = [f"*.{ext}" for ext in AUDIO_EXTENSIONS]
 
 
 class CSVDataset(DatasetBase):
@@ -26,7 +27,7 @@ class CSVDataset(DatasetBase):
         if not kwargs["dataset_path"].is_file():
             raise InvalidArgument(f"{str(self.dataset_path)} is not a file.")
 
-        super().__init__(*args, **kwargs)  # sets self.dataset
+        super().__init__(*args, **kwargs)
 
     def create_dataset_list(self) -> list[tuple[Path, np.ndarray]]:
         """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)"""

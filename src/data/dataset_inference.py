@@ -12,15 +12,12 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 
 import src.config.config_defaults as config_defaults
+from src.config.config_defaults import AUDIO_EXTENSIONS
 from src.data.dataset_base import DatasetBase, DatasetGetItem
 from src.features.audio_transform_base import AudioTransformBase
 from src.utils.utils_exceptions import InvalidDataException
 
-# '*.(wav|mp3|flac)'
-
-config = config_defaults.default_config
-
-glob_expressions = [f"*.{ext}" for ext in config.audio_file_extensions]
+glob_expressions = [f"*.{ext}" for ext in AUDIO_EXTENSIONS]
 
 
 class InferenceDataset(DatasetBase):
@@ -34,11 +31,18 @@ class InferenceDataset(DatasetBase):
         """_summary_
 
         Args:
-            dataset_path: directory with the following structure:
+            dataset_path directory with the following structure:
                 ├── waveform1.wav
                 ├── waveform2.wav
                 ├── avbcfd.wav
                 ├── 4q59daxui.ogg
+
+            OR
+
+            dataset_path CSV with the following structure:
+            file,cel,cla,flu,gac,gel,org,pia,sax,tru,vio,voi
+            data/openmic/audio/000/000135_483840.ogg,0,0,0,0,0,0,0,0,0,0,1
+            data/openmic/audio/000/000178_3840.ogg,0,0,0,0,0,0,0,0,0,0,1
         """
         kwargs = dict(
             num_classes=0,

@@ -25,7 +25,7 @@ from tqdm import tqdm
 import src.config.config_defaults as config_defaults
 from src.data.dataset_base import DatasetBase, DatasetGetItem, DatasetInternalItem
 from src.data.dataset_csv import CSVDataset
-from src.data.dataset_inference_dir import InferenceDataset
+from src.data.dataset_inference import InferenceDataset
 from src.data.dataset_irmas import IRMASDatasetTest, IRMASDatasetTrain
 from src.enums.enums import SupportedDatasetDirType
 from src.features.audio_transform_base import AudioTransformBase
