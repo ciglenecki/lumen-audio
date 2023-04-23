@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+from logging import config
 from pathlib import Path
 
 import pyrootutils
@@ -122,7 +123,6 @@ DEFAULT_MEL_SPECTROGRAM_MEAN = 0.413
 DEFAULT_MEL_SPECTROGRAM_STD = 2.582
 DEFAULT_AST_MEAN = -4.2677393
 DEFAULT_AST_STD = 4.5689974
-DEFAULT_AUDIO_EXTENSIONS = ["wav"]
 
 IRMAS_TRAIN_CLASS_COUNT = {
     "voi": 778,
@@ -249,6 +249,8 @@ class ConfigDefault(Serializable):
     path_models: Path | None = create(None)
     path_models_quick: Path | None = create(None)
     path_background_noise: Path | None = create(None)
+    path_figures: Path | None = create(None)
+    path_embeddings: Path | None = create(None)
 
     train_paths: list[str] | None = create(None)
     """Dataset root directories that will be used for training in the following format: --train-paths irmastrain:/path/to/dataset or openmic:/path/to/dataset"""
@@ -273,6 +275,8 @@ class ConfigDefault(Serializable):
 
     train_override_csvs: Path | None = create(None)
     """CSV files with columns 'filename, sax, gac, org, ..., cla' where filename is path and each instrument is either 0 or 1"""
+
+    audio_file_extensions: list[str] = create(["wav", "mp3", "ogg"])
 
     # ======================== DPS ===========================
 
@@ -452,6 +456,9 @@ class ConfigDefault(Serializable):
         self.path_irmas_sample = default_path(
             self.path_irmas_sample, Path("data", "irmas_sample")
         )
+        self.path_irmas_train_features = default_path(
+            self.path_irmas_sample, Path("data", "irmas", "train_features")
+        )
         self.path_openmic = default_path(self.path_openmic, Path("data", "openmic"))
 
         self.path_models = default_path(
@@ -460,6 +467,14 @@ class ConfigDefault(Serializable):
         self.path_models_quick = default_path(
             self.path_models_quick, Path("models_quick"), create_if_none=True
         )
+        self.path_figures = default_path(
+            self.path_figures, Path("figures"), create_if_none=True
+        )
+
+        self.path_embeddings = default_path(
+            self.path_embeddings, Path("embeddings"), create_if_none=False
+        )
+
         self.path_background_noise = default_path(
             self.path_background_noise, Path("data", "ecs50")
         )
@@ -707,7 +722,9 @@ def get_default_value_for_field(field_str: str, cls=ConfigDefault):
 
 
 def get_default_config():
-    return ConfigDefault()
+    config = ConfigDefault()
+    config.after_init()
+    return config
 
 
 default_config = get_default_config()

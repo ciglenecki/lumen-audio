@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+from itertools import chain
 from pathlib import Path
 
 import librosa
@@ -14,11 +15,9 @@ import src.config.config_defaults as config_defaults
 from src.data.dataset_base import DatasetBase, DatasetInternalItem
 from src.utils.utils_dataset import encode_instruments, multi_hot_encode
 
-# '*.(wav|mp3|flac)'
-# glob_expression = f"*\.({'|'.join(defaults.DEFAULT_AUDIO_EXTENSIONS)})"
-glob_expression = "*.wav"
-
 config = config_defaults.get_default_config()
+
+glob_expressions = [f"*.{ext}" for ext in config.audio_file_extensions]
 
 
 class IRMASDatasetTrain(DatasetBase):
@@ -66,7 +65,11 @@ class IRMASDatasetTrain(DatasetBase):
         #     i.value: [] for i in config_defaults.InstrumentEnums
         # }
 
-        for item_idx, path in tqdm(enumerate(self.dataset_path.rglob(glob_expression))):
+        glob_generators = [
+            self.dataset_path.rglob(glob_exp) for glob_exp in glob_expressions
+        ]
+
+        for item_idx, path in tqdm(enumerate(chain(*glob_generators))):
             filename = str(path.stem)
             characteristics = re.findall(
                 r"\[(.*?)\]", filename

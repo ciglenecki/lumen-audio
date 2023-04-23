@@ -25,13 +25,13 @@ class DatasetBase(Dataset[DatasetGetItem]):
     def __init__(
         self,
         dataset_path: Path,
-        audio_transform: AudioTransformBase | None = None,
-        num_classes=config_defaults.DEFAULT_NUM_LABELS,
-        sampling_rate=16_000,
-        normalize_audio=True,
-        sum_two_samples: bool = False,
-        concat_n_samples: int | None = None,
-        train_override_csvs: list[Path] | None = None,
+        audio_transform: AudioTransformBase | None,
+        num_classes: int,
+        sampling_rate: int,
+        normalize_audio: bool,
+        sum_two_samples: bool,
+        concat_n_samples: int | None,
+        train_override_csvs: list[Path] | None,
     ):
         self.dataset_path = dataset_path
         self.audio_transform = audio_transform
