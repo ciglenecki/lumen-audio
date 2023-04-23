@@ -1,16 +1,104 @@
 import glob
 import numpy as np
 import librosa as lb
+import antropy as ant
 from sklearn.svm import SVC, LinearSVC # we can use LinearSVC because it's faster
 from sklearn.base import BaseEstimator
 
 class ManageData():
 
     def __init__(self, ):
-        self.data_train = []
-        self.y_train = []
-        self.data_val = []
-        self.y_val = []
+        pass
+
+    def LoadTrainData(self, path = r'C:\Users\dragu\Desktop\Lumen\Dataset\Dataset\IRMAS_Training_Data\*\*.wav', label_position = 65):
+        """Loads data and labels for training"""
+
+        X = []
+        y = []
+
+        for filename in glob.glob(path):
+            data, _ = lb.load(filename)
+            X.append(data)
+            y.append(self._MakeLabel(filename[label_position:(label_position+3)]))
+
+        self.data_train = np.array(X)
+        self.y_train = np.array(y)
+
+        print('Training data and labels loaded!\nExample:\nX:', self.data_train[0], '\ny:', self.y_train[0])
+    
+    def LoadValidationData(self, path = r'C:\Users\dragu\Desktop\Lumen\Dataset\Dataset\IRMAS_Validation_Data\set1\*.wav'):
+        """Loads the validation data as well as the corresponding labels"""
+
+        X = []
+        y = []
+
+        for filename in glob.glob(path):
+            data, _ = lb.load(filename)
+
+            file = open(filename[:-3] + 'txt', "r")
+            instruments = file.read()
+            instrument_list = instruments.split("\t\n")
+            instrument_list.remove('')
+            file.close()
+
+            #making a one-hot encoded label of a file
+            label = np.zeros(11)
+            for instrument in instrument_list:
+                single_label = self._MakeLabel(instrument)
+                label += single_label
+            
+            X.append(data)
+            y.append(label)
+            
+        self.data_val = np.array(X, dtype=object)
+        self.y_val = np.array(y)
+
+        print('Validation data and labels loaded!\nExample:\nX:', self.data_val[0], '\ny:', self.y_val[0])
+
+    def LoadTrainFeatures(self, path = r'C:\Users\dragu\Desktop\Lumen\Dataset\Dataset\IRMAS_Training_Data\*\*.wav', label_position = 65):
+        """Loads training features and the corresponding labels"""
+
+        X = []
+        y = []
+
+        for filename in glob.glob(path):
+            data, _ = lb.load(filename)
+            X.append(self._Feature(data))
+            y.append(self._MakeLabel(filename[label_position:(label_position+3)]))
+
+        self.X_train = np.array(X)
+        self.y_train = np.array(y)
+
+        print('Training features and labels loaded!\nExample:\nX:', self.X_train[0], '\ny:', self.y_train[0])
+    
+    def LoadValidationFeatures(self, path = r'C:\Users\dragu\Desktop\Lumen\Dataset\Dataset\IRMAS_Validation_Data\set1\*.wav'):
+        """Loads the validation features as well as the corresponding labels"""
+
+        X = []
+        y = []
+
+        for filename in glob.glob(path):
+            data, _ = lb.load(filename)
+
+            file = open(filename[:-3] + 'txt', "r")
+            instruments = file.read()
+            instrument_list = instruments.split("\t\n")
+            instrument_list.remove('')
+            file.close()
+
+            #making a one-hot encoded label of a file
+            label = np.zeros(11)
+            for instrument in instrument_list:
+                single_label = self._MakeLabel(instrument)
+                label += single_label
+            
+            X.append(self._Feature(data))
+            y.append(label)
+            
+        self.X_val = np.array(X)#, dtype=object)
+        self.y_val = np.array(y)
+
+        print('Validation features and labels loaded!\nExample:\nX:', self.X_val[0], '\ny:', self.y_val[0])
 
     def _MakeLabel(self, instrument):
         '''Makes a one-hot encoded label from the strings describing the instruments contained in the file'''
@@ -41,123 +129,89 @@ class ManageData():
             y[10] = 1
         
         return y
+
+    def _BreakSignal(self, signal): # not used in this model
+        chunk_size = 66150
+        num_chunks = len(signal) // chunk_size
+        remainder = len(signal) % chunk_size
+
+        chunks = [signal[i*chunk_size:(i+1)*chunk_size] for i in range(num_chunks)]
+
+        if remainder > 0:
+            last_chunk = signal[num_chunks*chunk_size:]
+            padding = [last_chunk[-1]] * (chunk_size - remainder)
+            last_chunk = np.hstack([last_chunk, padding])
+            chunks.append(last_chunk)
     
-    def LoadTrainData(self, path = r'C:\Users\dragu\Desktop\Lumen\Dataset\Dataset\IRMAS_Training_Data\*\*.wav', label_position = 65):
-        """Loads data and labels for training"""
+        return chunks
 
-        X = []
-        y = []
-
-        for filename in glob.glob(path):
-            data, _ = lb.load(filename)
-            X.append(data)
-            y.append(self._MakeLabel(filename[label_position:(label_position+3)]))
-
-        self.data_train = np.array(X)
-        self.y_train = np.array(y)
-
-        print('Training data loaded!\nExample:\nX:', self.data_train[0], '\ny:', self.y_train[0])
-    
-    def _BreakSignal(self, signal):
-            chunk_size = 66150
-            num_chunks = len(signal) // chunk_size
-            remainder = len(signal) % chunk_size
-
-            chunks = [signal[i*chunk_size:(i+1)*chunk_size] for i in range(num_chunks)]
-
-            if remainder > 0:
-                last_chunk = signal[num_chunks*chunk_size:]
-                padding = [last_chunk[-1]] * (chunk_size - remainder)
-                last_chunk = np.hstack([last_chunk, padding])
-                chunks.append(last_chunk)
-    
-            return chunks
-    
-    def LoadValidationData(self, path = r'C:\Users\dragu\Desktop\Lumen\Dataset\Dataset\IRMAS_Validation_Data\set1\*.wav'):
-        """Loads the validation data as well as the corresponding labels"""
-
-        X = []
-        y = []
-
-        for filename in glob.glob(path):
-            data, _ = lb.load(filename)
-
-            file = open(filename[:-3] + 'txt', "r")
-            instruments = file.read()
-            instrument_list = instruments.split("\t\n")
-            instrument_list.remove('')
-            file.close()
-
-            #making a one-hot encoded label of a file
-            label = np.zeros(11)
-            for instrument in instrument_list:
-                single_label = self._MakeLabel(instrument)
-                label += single_label
-            
-            #chunking the data into 3-second chunks
-            for chunk in self._BreakSignal(data):
-                X.append(chunk)
-                y.append(label)
-            
-        self.data_val = np.array(X)
-        self.y_val = np.array(y)
-
-        print('Validation data loaded!\nExample:\nX:', self.data_val[0], '\ny:', self.y_val[0])
-    
-    def MakeFeatures(self, ): #here we can add more features
-        """Makes all the desired features from the loaded data and flattens it into a set of concatenated vectors."""
-
-        features_train = []
-        features_val = []
-
-        for i in self.data_train:
-            feature1 = lb.feature.melspectrogram(y=i, sr=22050).flatten()
-            feature2 = lb.feature.mfcc(y=i, sr=22050).flatten()
-            feature3 = lb.feature.rms(y=i).flatten()
-            features_train.append(np.concatenate((feature1, feature2, feature3)))
-
-        for i in self.data_val:
-            feature1 = lb.feature.melspectrogram(y=i, sr=22050).flatten()
-            feature2 = lb.feature.mfcc(y=i, sr=22050).flatten()
-            feature3 = lb.feature.rms(y=i).flatten()
-            features_val.append(np.concatenate((feature1, feature2, feature3)))
-
-        self.X_train = np.array(features_train)
-        self.X_val = np.array(features_val)
-
-        print('Features made!\nExample:\nX_train:', self.X_train[0],'X_val:\n', self.X_val[0])
+    def _Feature(self, i):  #here we can add more features
+        '''Makes a feature vector from the given raw data'''
+        # Mel frequency cepstral coefficients
+        mfcc = lb.feature.mfcc(y=i, sr=22050, n_mfcc=10, n_fft=len(i), hop_length=len(i)+1).flatten()
+        # Zero crossing rate
+        zero_crossing_rate = lb.feature.zero_crossing_rate(y=i, frame_length=len(i), hop_length=len(i)+1).flatten()
+        # Root mean square
+        rms = lb.feature.rms(y=i, frame_length=len(i), hop_length=len(i)+1).flatten()
+        # Roll-off frequency
+        spectral_rolloff = lb.feature.spectral_rolloff(y=i, n_fft=len(i), hop_length=len(i)+1).flatten()
+        # Spectral centroid
+        spectral_centroid = lb.feature.spectral_centroid(y=i, n_fft=len(i), hop_length=len(i)+1).flatten()
+        # Spectral bandwidth
+        spectral_bandwidth = lb.feature.spectral_bandwidth(y=i, n_fft=len(i), hop_length=len(i)+1).flatten()
+        # Spectral contrast
+        spectral_contrast = lb.feature.spectral_contrast(y=i, n_fft=len(i), hop_length=len(i)+1).flatten()
+        # Spectral flatness
+        spectral_flatness = lb.feature.spectral_flatness(y=i, n_fft=len(i), hop_length=len(i)+1).flatten()
+        # Permutation entropy
+        perm_entropy = ant.perm_entropy(i, normalize=True)
+        # Spectral entropy
+        spectral_entropy = ant.spectral_entropy(i, sf=22050, method='welch', normalize=True)
+        # Singular value decomposition entropy
+        svd_entropy = ant.svd_entropy(i, normalize=True)
+        # Approximate entropy
+        #app_entropy = ant.app_entropy(i)
+        # Sample entropy
+        #sample_entropy = ant.sample_entropy(i)
+        # Hjorth mobility and complexity parameters
+        Hjorth_parameters = ant.hjorth_params(i)
+        
+        return np.hstack((mfcc, zero_crossing_rate, rms, spectral_rolloff, spectral_centroid, spectral_bandwidth,
+        spectral_contrast, spectral_flatness, perm_entropy, spectral_entropy, svd_entropy,
+        #app_entropy, sample_entropy, Hjorth_parameters))
+        Hjorth_parameters))
     
 class multilabelSVM(BaseEstimator):
 
     def __init__(self, model_ = LinearSVC()):
-         self.model_ = model_
+         self.model0 = model_
+         self.model1 = model_
+         self.model2 = model_
+         self.model3 = model_
+         self.model4 = model_
+         self.model5 = model_
+         self.model6 = model_
+         self.model7 = model_
+         self.model8 = model_
+         self.model9 = model_
+         self.model10 = model_
+         self.model11 = model_
     
     def fit(self, X = None, y = None):
         """Training a full model and returning a one-hot encoded vector which tells which instrument is present in the given data"""
         X = self.X_train if X is None else X
         y = self.y_train if y is None else y
 
-        self.model0 = LinearSVC()
         self.model0.fit(X = X, y = y[:,0])
-        self.model1 = self.model_
         self.model1.fit(X = X, y = y[:,1])
-        self.model2 = self.model_
         self.model2.fit(X = X, y = y[:,2])
-        self.model3 = self.model_
         self.model3.fit(X = X, y = y[:,3])
-        self.model4 = self.model_
         self.model4.fit(X = X, y = y[:,4])
-        self.model5 = self.model_
         self.model5.fit(X = X, y = y[:,5])
-        self.model6 = self.model_
         self.model6.fit(X = X, y = y[:,6])
-        self.model7 = self.model_
         self.model7.fit(X = X, y = y[:,7])
-        self.model8 = self.model_
         self.model8.fit(X = X, y = y[:,8])
-        self.model9 = self.model_
         self.model9.fit(X = X, y = y[:,9])
-        self.model10 = self.model_
         self.model10.fit(X = X, y = y[:,10])
         
         print('Training completed successfully!')
