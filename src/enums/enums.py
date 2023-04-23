@@ -78,6 +78,7 @@ class SupportedDatasetDirType(Enum):
     IRMAS_TEST = "irmastest"
     OPENMIC = "openmic"
     CSV = "csv"
+    INFERENCE = "inference"
 
 
 class MetricMode(Enum):

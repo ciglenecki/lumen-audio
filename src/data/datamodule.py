@@ -22,13 +22,15 @@ from torch.utils.data import (
 )
 from tqdm import tqdm
 
+from config import config_defaults
 from src.data.dataset_base import DatasetBase, DatasetGetItem, DatasetInternalItem
+from src.data.dataset_inference_dir import InferenceDataset
 from src.data.dataset_irmas import IRMASDatasetTest, IRMASDatasetTrain
 from src.enums.enums import SupportedDatasetDirType
 from src.features.audio_transform_base import AudioTransformBase
 
 
-class IRMASDataModule(pl.LightningDataModule):
+class OurDataModule(pl.LightningDataModule):
     train_size: int
     val_size: int
     test_size: int
@@ -36,7 +38,7 @@ class IRMASDataModule(pl.LightningDataModule):
     class_count_dict: dict[str, int]
 
     """
-    IRMASDataModule is responsible for efficiently creating datasets creating a
+    OurDataModule is responsible for efficiently creating datasets creating a
     indexing strategy (SubsetRandomSampler) for each dataset.
     Any preprocessing which requires aggregation of data,
     such as caculating the mean and standard deviation of the dataset
@@ -61,6 +63,8 @@ class IRMASDataModule(pl.LightningDataModule):
         concat_n_samples: int | None,
         sum_two_samples: bool,
         use_weighted_train_sampler,
+        sampling_rate: int,
+        num_classes: int = config_defaults.DEFAULT_NUM_LABELS,
     ):
         super().__init__()
         self.batch_size = batch_size
@@ -80,7 +84,8 @@ class IRMASDataModule(pl.LightningDataModule):
         self.sum_two_samples = sum_two_samples
         self.use_weighted_train_sampler = use_weighted_train_sampler
         self.collate_fn = collate_fn
-
+        self.sampling_rate = sampling_rate
+        self.num_classes = num_classes
         self.train_dataset = None
         self.val_dataset = None
         self.test_dataset = None
@@ -199,8 +204,10 @@ class IRMASDataModule(pl.LightningDataModule):
                     normalize_audio=self.normalize_audio,
                     concat_n_samples=self.concat_n_samples,
                     sum_two_samples=self.sum_two_samples,
+                    sampling_rate=self.sampling_rate,
+                    train_override_csvs=None,
+                    num_classes=self.num_classes,
                 )
-                datasets.append(dataset)
             elif dataset_enum == SupportedDatasetDirType.IRMAS_TEST:
                 dataset = IRMASDatasetTest(
                     dataset_path=dataset_path,
@@ -208,15 +215,28 @@ class IRMASDataModule(pl.LightningDataModule):
                     normalize_audio=self.normalize_audio,
                     concat_n_samples=False,
                     sum_two_samples=False,
+                    sampling_rate=self.sampling_rate,
+                    train_override_csvs=None,
+                    num_classes=self.num_classes,
                 )
-                datasets.append(dataset)
             elif dataset_enum == SupportedDatasetDirType.OPENMIC:
                 pass
             elif dataset_enum == SupportedDatasetDirType.OPENMIC:
                 pass
             elif dataset_enum == SupportedDatasetDirType.OPENMIC:
                 pass
-
+            elif dataset_enum == SupportedDatasetDirType.INFERENCE:
+                dataset = InferenceDataset(
+                    dataset_path=dataset_path,
+                    audio_transform=transform,
+                    sampling_rate=self.sampling_rate,
+                    normalize_audio=self.normalize_audio,
+                )
+            else:
+                raise ValueError(
+                    f"{str(dataset_enum)}. Choose one of the following  {[ d.value for d in SupportedDatasetDirType]} (or if you are developing a new dataset, add a new entry into the SupportedDatasetDirType enum)"
+                )
+            datasets.append(dataset)
         print()
         if len(datasets) == 0:
             return None

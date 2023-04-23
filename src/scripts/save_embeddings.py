@@ -21,8 +21,9 @@ from torchvision.models.feature_extraction import (
 from tqdm import tqdm
 
 import src.config.config_defaults as config_defaults
+from data.dataset_base import DatasetBase
 from src.config.argparse_with_config import ArgParseWithConfig
-from src.data.datamodule import IRMASDataModule
+from src.data.datamodule import OurDataModule
 from src.data.dataset_inference_dir import InferenceDataset
 from src.data.dataset_irmas import IRMASDatasetTest, IRMASDatasetTrain
 from src.enums.enums import SupportedModels
@@ -36,17 +37,11 @@ from src.utils.utils_exceptions import InvalidArgument, UnsupportedModel
 def parse_args():
     parser = ArgParseWithConfig()
     parser.add_argument("--checkpoint", type=Path)
-    parser.add_argument(
-        "--input-path",
-        type=Path,
-        required=True,
-        help="Input directory with audios. Recursively goes over .mp3, .wav, .ogg...",
-    )
     parser.add_argument("--output-dir", type=Path, default=Path("embeddings"))
     parser.add_argument("--target-model-layer", type=str)
 
     args, config, pl_args = parser.parse_args()
-    config.required_test_paths()
+    config.required_dataset_paths()
     config.required_model()
     config.required_audio_transform()
 
@@ -54,6 +49,8 @@ def parse_args():
         raise InvalidArgument(
             "Please provide either --pretrained-tag or --checkpoint <PATH>"
         )
+    if len(config.dataset_paths) != 1:
+        raise InvalidArgument("Please provide only one dataset.")
     return args, config, pl_args
 
 
@@ -117,40 +114,48 @@ def extract_embeddings(embeddings: torch.Tensor, model: SupportedModels):
 if __name__ == "__main__":
     # Todo cacualte for each dataset train/val
     args, config, pl_args = parse_args()
+    config: config_defaults.ConfigDefault
 
     base_experiment_name = (
         Path(args.checkpoint).stem
         if args.checkpoint
         else f"{config.model.value}_{config.pretrained_tag.replace('/', '-')}"
     )
-    subdir = f"{str(args.input_path).replace('/', '-')}_{base_experiment_name}"
+    dataset_path_name = config.dataset_paths[0][1]
+    subdir = f"{str(dataset_path_name).replace('/', '-')}_{base_experiment_name}"
     embedding_dir = Path(args.output_dir, subdir, "embeddings")
     embedding_dir.mkdir(parents=True, exist_ok=True)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    inference_audio_transform: AudioTransformBase = get_audio_transform(
+    transform: AudioTransformBase = get_audio_transform(
         config,
         spectrogram_augmentation=None,
         waveform_augmentation=None,
     )
 
-    dataset = InferenceDataset(
-        dataset_path=args.input_path,
-        audio_transform=inference_audio_transform,
-        sampling_rate=config.sampling_rate,
-        normalize_audio=config.normalize_audio,
-    )
-
     collate_fn = get_collate_fn(config)
-    data_loader = DataLoader(
-        dataset,
+    datamodule = OurDataModule(
+        train_paths=None,
+        val_paths=None,
+        test_paths=config.dataset_paths,
         batch_size=config.batch_size,
         num_workers=config.num_workers,
-        drop_last=False,
+        dataset_fraction=config.dataset_fraction,
+        drop_last_sample=False,
+        train_audio_transform=None,
+        val_audio_transform=transform,
         collate_fn=collate_fn,
-        pin_memory=True,
+        normalize_audio=config.normalize_audio,
+        normalize_image=config.normalize_image,
+        train_only_dataset=config.train_only_dataset,
+        concat_n_samples=None,
+        sum_two_samples=None,
+        use_weighted_train_sampler=False,
+        sampling_rate=config.sampling_rate,
     )
+    datamodule.setup_for_inference()
+    data_loader = datamodule.test_dataloader()
 
     if args.checkpoint:
         model_constructor = model_constructor_map[config.model]
@@ -199,19 +204,21 @@ if __name__ == "__main__":
             item_indices, embeddings_list, indices_list
         ):
             # Find the exact dataset which the file originate from
-            # dataset_idx = bisect.bisect_right(
-            #     data_loader.dataset.cumulative_sizes, item_index
-            # )
-            # exact_dataset = data_loader.dataset.datasets[dataset_idx]
+            dataset_idx = bisect.bisect_right(
+                data_loader.dataset.cumulative_sizes, item_index
+            )
+            exact_dataset: DatasetBase = data_loader.dataset.datasets[dataset_idx]
+            audio_path, _ = exact_dataset.dataset_list[item_index]
+
             # if isinstance(exact_dataset, IRMASDatasetTrain) or isinstance(
             #     exact_dataset, IRMASDatasetTest
             # ):
-            #     audio_path, _ = exact_dataset.dataset_list[item_index]
+
             # else:
             #     raise Exception(
             #         "Add 'isinstance(exact, YourDataset) and use item index to unpack the path to the file"
             #     )
-            audio_path, _ = dataset.dataset_list[item_index]
+            # audio_path, _ = dataset.dataset_list[item_index]
 
             stem = Path(audio_path).stem  # e.g. [cel][cla]0001__1
             audio_path = str(Path(audio_path))

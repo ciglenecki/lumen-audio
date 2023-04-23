@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from src.config.argparse_with_config import ArgParseWithConfig
 from src.config.config_defaults import ConfigDefault
-from src.data.datamodule import IRMASDataModule
+from src.data.datamodule import OurDataModule
 from src.features.audio_transform import get_audio_transform
 from src.features.chunking import collate_fn_spectrogram, get_collate_fn
 from src.utils.utils_dataset import create_and_repeat_channel
@@ -44,7 +44,7 @@ if __name__ == "__main__":
         config, spectrogram_augmentation=None, waveform_augmentation=None
     )
     collate_fn = collate_fn_spectrogram
-    datamodule = IRMASDataModule(
+    datamodule = OurDataModule(
         train_paths=None,
         val_paths=None,
         test_paths=config.test_paths,
@@ -61,6 +61,7 @@ if __name__ == "__main__":
         concat_n_samples=None,
         sum_two_samples=None,
         use_weighted_train_sampler=False,
+        sampling_rate=config.sampling_rate,
     )
     datamodule.setup("test")
 

@@ -9,9 +9,6 @@ from pathlib import Path
 import librosa
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-from IPython.display import Audio
-from sklearn import preprocessing
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
@@ -36,34 +33,11 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "--irmas-embeddings",
-        type=float,
-        help="fraction of the entire dataset to be stored as test.",
-        default=0.5,
-    )
-    parser.add_argument(
-        "--data-dir",
-        type=Path,
-        help="Openmic directory path.",
-        default=config.path_openmic,
-    )
-    parser.add_argument(
         "--load-model",
         type=Path,
         help="Load to trained SVM.",
     )
-    parser.add_argument(
-        "--out-dir",
-        type=Path,
-        help="fraction of the entire dataset to be stored as test.",
-        default=config.path_data,
-    )
-    parser.add_argument(
-        "--fig-dir",
-        type=Path,
-        help="fraction of the entire dataset to be stored as test.",
-        default=config.path_figures,
-    )
+
     parser.add_argument(
         "--irmas-train-embeddings",
         type=Path,
@@ -86,7 +60,7 @@ def parse_args():
         ),
     )
     args = parser.parse_args()
-    if not args.openmic_guitars.isfile():
+    if not args.openmic_guitars.is_file():
         raise InvalidDataException(
             "Please run python3 data/convert_openmic_guitras_to_csv.py to generate a OpenMIC guitars only csv."
         )
@@ -94,7 +68,7 @@ def parse_args():
 
 
 def main():
-    args, unknown_args = parse_args()
+    args = parse_args()
     irmas_train_embeddings: Path = args.irmas_train_embeddings
     openmic_guitar_embeddings: Path = args.openmic_guitar_embeddings
     OPENMIC_EMBEDDINGS_KEY = "openmic_embeddings"
@@ -117,10 +91,10 @@ def main():
     if args.load_model:
         model = pickle.load(open(args.load_model, "rb"))
     else:
-        for json_path in irmas_train_embeddings.rglob(".json"):
+        for json_path in irmas_train_embeddings.rglob("*.json"):
             with open(json_path) as file:
                 json_item = json.load(file)
-                instruments = json_item["instrument"]
+                instruments = json_item["instruments"]
                 embedding = json_item["embedding"]
                 for instrument in instruments:
                     if instrument in store:
@@ -138,12 +112,14 @@ def main():
         y = np.zeros(len(X))  # 0 <- ACOUSTIC_GUITAR
         y[num_acoustic:] = 1  # 1 <- ELECTRIC_GUITAR
         model = make_pipeline(StandardScaler(), SVC(gamma="auto"))
+        print(X.shape, y.shape)
         model.fit(X, y)
         filename = "svm_guitars.pkl"
         pickle.dump(model, open(Path(config.path_models, filename), "wb"))
 
     x_openmic = np.array(store[OPENMIC_EMBEDDINGS_KEY])
-    model.predict(x_openmic)
+    y_pred = model.predict(x_openmic)
+    print(y_pred)
 
 
 if __name__ == "__main__":

@@ -189,6 +189,7 @@ def default_path(path: Path | None, default_value: Path, create_if_none=False):
 
 def dir_to_enum_and_path(
     string: str,
+    allow_raw_path=False,
 ) -> tuple[SupportedDatasetDirType, Path]:
     """
     Example:
@@ -197,6 +198,10 @@ def dir_to_enum_and_path(
     """
     delimiter = ":"
     pair = string.split(delimiter)
+
+    if len(pair) == 1 and allow_raw_path:
+        return SupportedDatasetDirType.INFERENCE, string
+
     if len(pair) != 2:
         raise InvalidArgument(
             f"Pair {pair} needs to have two elements split with '{delimiter}'."
@@ -217,13 +222,14 @@ def dir_to_enum_and_path(
 
 def parse_dataset_paths(
     data_dir: str | list[str],
+    allow_raw_path=False,
 ) -> list[tuple[SupportedDatasetDirType, Path]]:
     # Parse strings to dataset type and path
     try:
         if isinstance(data_dir, str):
-            return [dir_to_enum_and_path(data_dir)]
+            return [dir_to_enum_and_path(data_dir, allow_raw_path)]
         elif isinstance(data_dir, list):
-            return [dir_to_enum_and_path(d) for d in data_dir]
+            return [dir_to_enum_and_path(d, allow_raw_path) for d in data_dir]
     except InvalidArgument as e:
         msg = USAGE_TEXT_PATHS
         raise InvalidArgument(f"{str(e)}\n{msg}")
@@ -260,6 +266,9 @@ class ConfigDefault(Serializable):
 
     test_paths: list[str] | None = create(None)
     """Dataset root directories that will be used for testing in the following format: --val-paths irmastest:/path/to/dataset openmic:/path/to/dataset"""
+
+    dataset_paths: list[str] | None = create(None)
+    """Dataset path with the following format format: --dataset-paths inference:/path/to/dataset openmic:/path/to/dataset"""
 
     # predict_paths: list[str] | None = create(None)
     # """Dataset root directories that will be used for predicting in the following format: --val-paths irmastest:/path/to/dataset openmic:/path/to/dataset"""
@@ -457,7 +466,11 @@ class ConfigDefault(Serializable):
             self.path_irmas_sample, Path("data", "irmas_sample")
         )
         self.path_irmas_train_features = default_path(
-            self.path_irmas_sample, Path("data", "irmas", "train_features")
+            self.path_irmas_train_features,
+            Path(
+                "embeddings",
+                "data-irmas-train_ast_MIT-ast-finetuned-audioset-10-10-0.4593",
+            ),
         )
         self.path_openmic = default_path(self.path_openmic, Path("data", "openmic"))
 
@@ -545,6 +558,7 @@ class ConfigDefault(Serializable):
         self.set_train_paths()
         self.set_val_paths()
         self.set_test_paths()
+        self.set_dataset_paths()
 
     def set_train_paths(self):
         if self.train_paths is None:
@@ -564,6 +578,12 @@ class ConfigDefault(Serializable):
         if self.test_paths is not None:
             self.test_paths = parse_dataset_paths(self.test_paths)
 
+    def set_dataset_paths(self):
+        if self.dataset_paths is not None:
+            self.dataset_paths = parse_dataset_paths(
+                self.dataset_paths, allow_raw_path=True
+            )
+
     def required_train_paths(self):
         if self.train_paths is None:
             raise InvalidArgument(f"--train-paths is required\n{USAGE_TEXT_PATHS}")
@@ -575,6 +595,10 @@ class ConfigDefault(Serializable):
     def required_test_paths(self):
         if self.train_paths is None:
             raise InvalidArgument(f"--test-paths is required\n{USAGE_TEXT_PATHS}")
+
+    def required_dataset_paths(self):
+        if self.dataset_paths is None:
+            raise InvalidArgument(f"--dataset-paths is required\n{USAGE_TEXT_PATHS}")
 
     def required_model(self):
         if self.model is None:

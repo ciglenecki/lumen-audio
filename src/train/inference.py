@@ -8,7 +8,7 @@ from pytorch_lightning.callbacks import (
 )
 
 from src.config.argparse_with_config import ArgParseWithConfig
-from src.data.datamodule import IRMASDataModule
+from src.data.datamodule import OurDataModule
 from src.enums.enums import (
     SupportedAugmentations,
     SupportedLossFunctions,
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     )
     collate_fn = get_collate_fn(config)
 
-    datamodule = IRMASDataModule(
+    datamodule = OurDataModule(
         batch_size=config.batch_size,
         num_workers=config.num_workers,
         dataset_fraction=config.dataset_fraction,
@@ -110,6 +110,7 @@ if __name__ == "__main__":
         sum_two_samples=SupportedAugmentations.SUM_TWO_SAMPLES in config.augmentations,
         use_weighted_train_sampler=config.use_weighted_train_sampler,
         normalize_image=config.normalize_image,
+        sampling_rate=config.sampling_rate,
     )
 
     if config.loss_function == SupportedLossFunctions.CROSS_ENTROPY:

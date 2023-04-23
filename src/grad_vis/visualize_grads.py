@@ -15,7 +15,7 @@ from pytorch_grad_cam.utils.image import show_cam_on_image
 from src.config import config_defaults
 from src.config.argparse_with_config import ArgParseWithConfig
 from src.config.config_defaults import parse_dataset_paths
-from src.data.datamodule import IRMASDataModule
+from src.data.datamodule import OurDataModule
 from src.features.audio_transform import get_audio_transform
 from src.features.augmentations import get_augmentations
 from src.features.chunking import get_collate_fn
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     audio_transform = get_audio_transform(
         config, spectrogram_augmentation=None, waveform_augmentation=None
     )
-    datamodule = IRMASDataModule(
+    datamodule = OurDataModule(
         train_paths=config.train_paths,
         val_paths=config.val_paths,
         test_paths=config.test_paths,
@@ -102,6 +102,7 @@ if __name__ == "__main__":
         concat_n_samples=None,
         sum_two_samples=False,
         use_weighted_train_sampler=config.use_weighted_train_sampler,
+        sampling_rate=config.sampling_rate,
     )
     datamodule.setup_for_inference()
 
