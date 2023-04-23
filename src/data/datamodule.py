@@ -22,8 +22,9 @@ from torch.utils.data import (
 )
 from tqdm import tqdm
 
-from config import config_defaults
+import src.config.config_defaults as config_defaults
 from src.data.dataset_base import DatasetBase, DatasetGetItem, DatasetInternalItem
+from src.data.dataset_csv import CSVDataset
 from src.data.dataset_inference_dir import InferenceDataset
 from src.data.dataset_irmas import IRMASDatasetTest, IRMASDatasetTrain
 from src.enums.enums import SupportedDatasetDirType
@@ -117,6 +118,8 @@ class OurDataModule(pl.LightningDataModule):
             self.val_dataset is not None
         ), "Please provide --val-paths if you want to train a model."
 
+        self._sanity_check_train_val_leak()
+
         if self.train_only_dataset:
             self.val_dataset = self.train_dataset
             indices = np.arange(len(self.train_dataset))
@@ -199,7 +202,9 @@ class OurDataModule(pl.LightningDataModule):
 
         datasets: list[Dataset] = []
         for dataset_enum, dataset_path in dataset_paths:
-            print(f"Creating {type} dataset {dataset_enum.value.upper()}")
+            print(
+                f"Creating dataset {dataset_enum.value.upper()} from {str(dataset_path)}"
+            )
             if dataset_enum == SupportedDatasetDirType.IRMAS_TRAIN:
                 dataset = IRMASDatasetTrain(
                     dataset_path=dataset_path,
@@ -224,10 +229,17 @@ class OurDataModule(pl.LightningDataModule):
                 )
             elif dataset_enum == SupportedDatasetDirType.OPENMIC:
                 pass
-            elif dataset_enum == SupportedDatasetDirType.OPENMIC:
-                pass
-            elif dataset_enum == SupportedDatasetDirType.OPENMIC:
-                pass
+            elif dataset_enum == SupportedDatasetDirType.CSV:
+                dataset = CSVDataset(
+                    dataset_path=dataset_path,
+                    audio_transform=transform,
+                    normalize_audio=self.normalize_audio,
+                    concat_n_samples=self.concat_n_samples,
+                    sum_two_samples=self.sum_two_samples,
+                    sampling_rate=self.sampling_rate,
+                    train_override_csvs=None,
+                    num_classes=self.num_classes,
+                )
             elif dataset_enum == SupportedDatasetDirType.INFERENCE:
                 dataset = InferenceDataset(
                     dataset_path=dataset_path,
@@ -237,7 +249,7 @@ class OurDataModule(pl.LightningDataModule):
                 )
             else:
                 raise ValueError(
-                    f"{str(dataset_enum)}. Choose one of the following  {[ d.value for d in SupportedDatasetDirType]} (or if you are developing a new dataset, add a new entry into the SupportedDatasetDirType enum)"
+                    f"{str(dataset_enum)}. Please add dataset enum in this if/elif part."
                 )
             datasets.append(dataset)
         print()
@@ -298,7 +310,7 @@ class OurDataModule(pl.LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             sampler=self.test_sampler,
-            drop_last=self.drop_last_sample,
+            drop_last=False,
             collate_fn=self.collate_fn,
             pin_memory=True,
         )
@@ -317,22 +329,21 @@ class OurDataModule(pl.LightningDataModule):
             pin_memory=True,
         )
 
-    # def _sanity_check_paths(
-    #     self,
-    #     indices_a: np.ndarray,
-    #     indices_b: np.ndarray,
-    # ):
-    #     """Checks if there are overlaping val and test indicies to avoid data leakage."""
+    def _sanity_check_train_val_leak(self):
+        """Checks if there are overlaping train and val paths."""
+        train_paths = set()
+        for i in range(len(self.train_dataset)):
+            path, _ = self.get_item_from_internal_structure(i, split="train")
+            train_paths.add(str(path))
 
-    #     for ind_a, ind_b in combinations([indices_a, indices_b], 2):
-    #         assert (
-    #             len(np.intersect1d(ind_a, ind_b)) == 0
-    #         ), f"Some indices share an index {np.intersect1d(ind_a, ind_b)}"
-    #     set_ind = set(indices_a)
-    #     set_ind.update(indices_b)
-    #     assert len(set_ind) == (
-    #         len(indices_a) + len(indices_b)
-    #     ), "Some indices might contain non-unqiue values"
+        val_paths = set()
+        for i in range(len(self.val_dataset)):
+            path, _ = self.get_item_from_internal_structure(i, split="val")
+            val_paths.add(str(path))
+
+        assert (
+            len(train_paths.intersection(val_paths)) == 0
+        ), "There are same files in train and val dataset"
 
     def _sanity_check_difference(
         self,
@@ -389,6 +400,8 @@ class OurDataModule(pl.LightningDataModule):
         data_loader = split_map[split]()
         concated_dataset: ConcatDataset = data_loader.dataset  # type: ignore
         dataset_idx = bisect.bisect_right(concated_dataset.cumulative_sizes, item_index)
+        if dataset_idx != 0:
+            item_index = item_index - concated_dataset.cumulative_sizes[dataset_idx - 1]
         exact_dataset: DatasetBase = concated_dataset.datasets[dataset_idx]  # type: ignore
         audio_path, label = exact_dataset.dataset_list[item_index]
         return audio_path, label

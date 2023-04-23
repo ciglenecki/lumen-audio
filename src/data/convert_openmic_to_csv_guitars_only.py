@@ -1,28 +1,11 @@
-import argparse
-import json
-import os
-import re
 from pathlib import Path
 
-import librosa
-import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
-from IPython.display import Audio
-from skmultilearn.model_selection.iterative_stratification import (
-    iterative_train_test_split,
-)
-from tqdm import tqdm
 
 from src.config.argparse_with_config import ArgParseWithConfig
-from src.config.config_defaults import (
-    INSTRUMENT_TO_FULLNAME,
-    InstrumentEnums,
-    get_default_config,
-)
-from src.utils.utils_dataset import encode_instruments
+from src.config.config_defaults import default_config
 
-config = get_default_config()
+config = default_config
 
 
 def parse_args():
@@ -55,7 +38,7 @@ def parse_args():
     return args
 
 
-def create_filename(sample_key):
+def create_filename_from_sample_key(sample_key):
     subdir = sample_key[:3]
     filepath = Path(config.path_openmic, "audio", subdir, sample_key + ".ogg")
     filepath = str(filepath)
@@ -70,7 +53,7 @@ def main():
     mask_relevance = df["relevance"] > args.relevance
     df = df.loc[mask_guitars & mask_relevance, :]
     df["file"] = df["sample_key"]
-    df["file"] = df["file"].apply(create_filename)
+    df["file"] = df["file"].apply(create_filename_from_sample_key)
 
     df.to_csv(
         Path(

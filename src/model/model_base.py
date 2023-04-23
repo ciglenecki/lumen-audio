@@ -259,6 +259,7 @@ class ModelBase(pl.LightningModule, ABC):
 
     def print_modules(self):
         """Print module's parameters."""
+        print("================== MODULE PARAMS ==================")
         for module_name, module in self.named_modules():
             module_req_grad = all(
                 [x[1].requires_grad for x in module.named_parameters()]

@@ -17,13 +17,14 @@ from skmultilearn.model_selection.iterative_stratification import (
 from tqdm import tqdm
 
 from src.config.config_defaults import (
+    ALL_INSTRUMENTS,
     INSTRUMENT_TO_FULLNAME,
     InstrumentEnums,
-    get_default_config,
+    default_config,
 )
 from src.utils.utils_dataset import encode_instruments
 
-config = get_default_config()
+config = default_config
 
 
 def parse_args():
@@ -67,8 +68,7 @@ LABELS_KEY = "label"
 SONG_KEY = "song"
 OUTPUT_PATH_KEY = "file"
 
-all_instruments = [e.value for e in InstrumentEnums]
-all_instruments_name = [INSTRUMENT_TO_FULLNAME[i] for i in all_instruments]
+all_instruments_name = [INSTRUMENT_TO_FULLNAME[i] for i in ALL_INSTRUMENTS]
 
 
 def make_song_dataframe(df: pd.DataFrame) -> pd.DataFrame:
@@ -79,7 +79,7 @@ def make_song_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         # [0, 1, 1] + [0, 0, 1]
         # [0, 1, 2]
         # [0, 1, 1]
-        label = np.sum(data[all_instruments].values, axis=0).astype(bool).astype(int)
+        label = np.sum(data[ALL_INSTRUMENTS].values, axis=0).astype(bool).astype(int)
         song_dict[SONG_KEY].append(group)
         song_dict[LABELS_KEY].append(label)
     song_df = pd.DataFrame().from_dict(song_dict)
@@ -93,7 +93,7 @@ def make_dataframe(data_dir: Path) -> pd.DataFrame:
         LABEL_PATH_KEY,
         LABELS_KEY,
         SONG_KEY,
-    ] + all_instruments
+    ] + ALL_INSTRUMENTS
 
     data_dict = {col: [] for col in dataframe_columns}
     waveform_paths = data_dir.rglob("*.wav")
@@ -118,7 +118,7 @@ def make_dataframe(data_dir: Path) -> pd.DataFrame:
         data_dict[WAVEFORM_PATH_KEY].append(str(waveform_path))
         data_dict[LABEL_PATH_KEY].append(label_path)
         data_dict[LABELS_KEY].append(encode_instruments(waveform_instruments))
-        for instrument in all_instruments:
+        for instrument in ALL_INSTRUMENTS:
             is_instrument_present = 1 if instrument in waveform_instruments else 0
             data_dict[instrument].append(is_instrument_present)
 
@@ -151,8 +151,8 @@ def main():
     train_df = waveform_df[train_mask]
     test_df = waveform_df[test_mask]
 
-    train_df = train_df.loc[:, [WAVEFORM_PATH_KEY] + all_instruments]
-    test_df = test_df.loc[:, [WAVEFORM_PATH_KEY] + all_instruments]
+    train_df = train_df.loc[:, [WAVEFORM_PATH_KEY] + ALL_INSTRUMENTS]
+    test_df = test_df.loc[:, [WAVEFORM_PATH_KEY] + ALL_INSTRUMENTS]
     train_df = train_df.rename(columns={WAVEFORM_PATH_KEY: OUTPUT_PATH_KEY})
     test_df = test_df.rename(columns={WAVEFORM_PATH_KEY: OUTPUT_PATH_KEY})
 
@@ -173,13 +173,13 @@ def main():
     # ========== PLOT ==========
 
     # Calculate the class frequencies for each dataset
-    train_freq = train_df[all_instruments].sum()
-    test_freq = test_df[all_instruments].sum()
+    train_freq = train_df[ALL_INSTRUMENTS].sum()
+    test_freq = test_df[ALL_INSTRUMENTS].sum()
 
     bar_width = 0.4
 
     # Set the positions of the bars on the x-axis
-    train_pos = np.arange(len(all_instruments))
+    train_pos = np.arange(len(ALL_INSTRUMENTS))
     test_pos = train_pos + bar_width
 
     # Plot the histogram

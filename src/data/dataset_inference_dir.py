@@ -18,7 +18,7 @@ from src.utils.utils_exceptions import InvalidDataException
 
 # '*.(wav|mp3|flac)'
 
-config = config_defaults.get_default_config()
+config = config_defaults.default_config
 
 glob_expressions = [f"*.{ext}" for ext in config.audio_file_extensions]
 
@@ -62,15 +62,6 @@ class InferenceDataset(DatasetBase):
             for _, row in df.iterrows():
                 filepath = Path(row["file"])
                 labels = np.array([0])
-
-                # TODO: for csv train dataset!
-                # sorted_instruments = [
-                #     config_defaults.IDX_TO_INSTRUMENT[i]
-                #     for i in range(len(config_defaults.IDX_TO_INSTRUMENT))
-                # ]
-                # labels = np.array(
-                #     [row[instrument] for instrument in sorted_instruments], dtype=int
-                # )
                 dataset_list.append((filepath, labels))
 
         elif self.dataset_path.is_dir():
@@ -89,10 +80,3 @@ class InferenceDataset(DatasetBase):
                 f"Path {self.dataset_path} is not a csv or a directory which contains audio files."
             )
         return dataset_list
-
-    def __getitem__(self, index: int) -> DatasetGetItem:
-        audio, labels, _ = self.load_sample(index)
-
-        labels = torch.tensor(labels).float()
-        features = self.audio_transform(audio)
-        return features, labels, index

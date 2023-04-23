@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from logging import config
 from pathlib import Path
 
 import pyrootutils
@@ -163,6 +162,8 @@ DEFAULT_PRETRAINED_TAG_MAP = {
     SupportedModels.RESNEXT101_32X8D: TAG_IMAGENET1K_V2,
     SupportedModels.RESNEXT101_64X4D: TAG_IMAGENET1K_V1,
 }
+ALL_INSTRUMENTS = [e.value for e in InstrumentEnums]
+ALL_INSTRUMENTS_NAMES = [INSTRUMENT_TO_FULLNAME[ins] for ins in ALL_INSTRUMENTS]
 
 USAGE_TEXT_PATHS = f"Usage:\t--train-paths <TYPE>:/path/to/dataset (for training)\n\t--val-paths <TYPE>:/path/to/dataset (for training)\n\t--test-paths <TYPE>:/path/to/dataset (for inference)\nSupported <TYPE>: {[ d.value for d in SupportedDatasetDirType]}"
 
@@ -200,7 +201,7 @@ def dir_to_enum_and_path(
     pair = string.split(delimiter)
 
     if len(pair) == 1 and allow_raw_path:
-        return SupportedDatasetDirType.INFERENCE, string
+        return SupportedDatasetDirType.INFERENCE, Path(string)
 
     if len(pair) != 2:
         raise InvalidArgument(

@@ -204,21 +204,9 @@ if __name__ == "__main__":
             item_indices, embeddings_list, indices_list
         ):
             # Find the exact dataset which the file originate from
-            dataset_idx = bisect.bisect_right(
-                data_loader.dataset.cumulative_sizes, item_index
+            audio_path, _ = datamodule.get_item_from_internal_structure(
+                item_index, split="test"
             )
-            exact_dataset: DatasetBase = data_loader.dataset.datasets[dataset_idx]
-            audio_path, _ = exact_dataset.dataset_list[item_index]
-
-            # if isinstance(exact_dataset, IRMASDatasetTrain) or isinstance(
-            #     exact_dataset, IRMASDatasetTest
-            # ):
-
-            # else:
-            #     raise Exception(
-            #         "Add 'isinstance(exact, YourDataset) and use item index to unpack the path to the file"
-            #     )
-            # audio_path, _ = dataset.dataset_list[item_index]
 
             stem = Path(audio_path).stem  # e.g. [cel][cla]0001__1
             audio_path = str(Path(audio_path))
@@ -237,5 +225,9 @@ if __name__ == "__main__":
 
             json_file_name = Path(embedding_dir, f"{stem}.json")
 
+            if json_file_name.exists():
+                print(f"File exists {json_file_name}")
+                input()
             with open(json_file_name, "w") as file:
                 json.dump(json_item, file)
+    print("Saved embeddings to directory:", embedding_dir)

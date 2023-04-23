@@ -7,7 +7,7 @@ import torchvision.transforms.functional
 from src.config.config_defaults import (
     DEFAULT_MEL_SPECTROGRAM_MEAN,
     DEFAULT_MEL_SPECTROGRAM_STD,
-    get_default_config,
+    default_config,
 )
 from src.features.audio_transform_base import AudioTransformBase
 from src.features.chunking import chunk_image_by_width, undo_image_chunking
@@ -111,7 +111,7 @@ class MelSpectrogram(AudioTransformBase):
 
 
 def test_chunking():
-    config = get_default_config()
+    config = default_config
     audio = get_example_val_sample(config.sampling_rate)
     transform = MelSpectrogram(
         sampling_rate=config.sampling_rate,

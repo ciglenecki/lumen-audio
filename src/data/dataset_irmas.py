@@ -15,7 +15,7 @@ import src.config.config_defaults as config_defaults
 from src.data.dataset_base import DatasetBase, DatasetInternalItem
 from src.utils.utils_dataset import encode_instruments, multi_hot_encode
 
-config = config_defaults.get_default_config()
+config = config_defaults.default_config
 
 glob_expressions = [f"*.{ext}" for ext in config.audio_file_extensions]
 
@@ -26,8 +26,7 @@ class IRMASDatasetTrain(DatasetBase):
         *args,
         **kwargs,
     ):
-        """_summary_
-
+        """
         Args:
             dataset_path: directory with the following structure:
 
@@ -61,14 +60,9 @@ class IRMASDatasetTrain(DatasetBase):
             df = pd.concat(dfs, ignore_index=True)
             df.set_index("filename", inplace=True)
 
-        # self.instrument_idx_list = {
-        #     i.value: [] for i in config_defaults.InstrumentEnums
-        # }
-
         glob_generators = [
             self.dataset_path.rglob(glob_exp) for glob_exp in glob_expressions
         ]
-
         for item_idx, path in tqdm(enumerate(chain(*glob_generators))):
             filename = str(path.stem)
             characteristics = re.findall(
@@ -97,9 +91,6 @@ class IRMASDatasetTrain(DatasetBase):
             # genre_vector = encode_genre(genre)
 
             dataset_list.append((path, labels))
-
-            # for instrument in item_instruments:
-            #     self.instrument_idx_list[instrument].append(item_idx)
         return dataset_list
 
 
@@ -132,7 +123,10 @@ class IRMASDatasetTest(DatasetBase):
     def create_dataset_list(self) -> list[tuple[Path, np.ndarray]]:
         """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)"""
         dataset_list: list[tuple[Path, np.ndarray]] = []
-        for audio_file in tqdm(self.dataset_path.rglob(glob_expression)):
+        glob_generators = [
+            self.dataset_path.rglob(glob_exp) for glob_exp in glob_expressions
+        ]
+        for audio_file in tqdm(chain(*glob_generators)):
             path_without_ext = os.path.splitext(audio_file)[0]
             txt_path = Path(path_without_ext + ".txt")
 

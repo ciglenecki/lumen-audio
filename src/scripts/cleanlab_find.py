@@ -12,7 +12,7 @@ import src.config.config_defaults as config_defaults
 
 
 def main():
-    config = config_defaults.get_default_config()
+    config = config_defaults.default_config
 
     EMBEDDINGS_DIR = config.path_irmas_train_features
     TRAIN_DATASET_PATH = config.path_irmas_train
