@@ -24,12 +24,7 @@ from src.model.model import get_model
 
 def parse_args():
     parser = ArgParseWithConfig()
-    parser.add_argument(
-        "--input-dirs",
-        type=parse_dataset_paths,
-        required=True,
-        help="Directories which will be used to render visualize_grads.",
-    )
+
     parser.add_argument(
         "--path_to_model",
         type=str,
@@ -56,10 +51,10 @@ def parse_args():
     )
 
     args, config, pl_args = parser.parse_args()
-    config.test_paths = args.input_dirs
     config.required_model()
     config.required_audio_transform()
-    config.required_test_paths()
+    config.required_dataset_paths()
+
     return args, config, pl_args
 
 
@@ -86,14 +81,14 @@ if __name__ == "__main__":
         config, spectrogram_augmentation=None, waveform_augmentation=None
     )
     datamodule = OurDataModule(
-        train_paths=config.train_paths,
-        val_paths=config.val_paths,
-        test_paths=config.test_paths,
+        train_paths=None,
+        val_paths=None,
+        test_paths=config.dataset_paths,
         batch_size=config.batch_size,
         num_workers=config.num_workers,
         dataset_fraction=config.dataset_fraction,
         drop_last_sample=config.drop_last,
-        train_audio_transform=audio_transform,
+        train_audio_transform=None,
         val_audio_transform=audio_transform,
         collate_fn=get_collate_fn(config),
         normalize_audio=config.normalize_audio,
@@ -119,9 +114,9 @@ if __name__ == "__main__":
 
             grouped_example = torch.cat([torch.tensor(i) for i in res[indices]], dim=-1)
 
-            grouped_example_rgb = torch.cat(
-                [torch.tensor(i) for i in inputs[indices]], dim=-1
-            )
+            grouped_example_rgb = (
+                torch.cat([torch.tensor(i) for i in inputs[indices]], dim=-1) * 3
+            ) * 3
 
             grouped_example = (grouped_example - grouped_example.min()) / (
                 grouped_example.max() - grouped_example.min()
