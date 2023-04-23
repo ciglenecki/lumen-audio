@@ -17,7 +17,6 @@ from src.utils.utils_dataset import (
     remove_rgb_channel,
 )
 
-
 class MelSpectrogram(AudioTransformBase):
     """Resamples audio, extracts melspectrogram from audio and pads the original spectrogram to
     dimension of spectrogram for max_num_width_samples sequence."""

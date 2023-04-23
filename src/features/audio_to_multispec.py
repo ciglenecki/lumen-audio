@@ -4,7 +4,10 @@ import torch
 import torch.nn.functional
 from src.features.audio_transform_base import AudioTransformBase
 from src.features.chunking import chunk_image_by_width
-
+from src.config.config_defaults import (
+    DEFAULT_MULTI_SPECTROGRAM_MEAN,
+    DEFAULT_MULTI_SPECTROGRAM_STD
+)
 
 class MultiSpectrogram(AudioTransformBase):
     """Resamples audio, extracts melspectrogram from audio and pads the original spectrogram to
@@ -67,19 +70,25 @@ class MultiSpectrogram(AudioTransformBase):
         melspec_chunks = chunk_image_by_width(self.image_size, torch.tensor(melspec), "repeat")
         spectral_centroid_chunks = chunk_image_by_width(self.image_size, torch.tensor(spectral_centroid), "repeat")
         chroma_chunks = chunk_image_by_width(self.image_size, torch.tensor(chroma), "repeat")
-
-        # print(melspec_chunks.shape, spectral_centroid_chunks.shape, chroma_chunks.shape)
-
-        #spectrogram_chunks = images.unsqueeze(dim=1).repeat(1, num_repeat, 1, 1)
-
-        # if self.normalize_image:
-        #     spectrogram_chunks = self.normalize_spectrogram(spectrogram_chunks)
-
         multi_spectrogram = torch.stack([melspec_chunks, spectral_centroid_chunks, chroma_chunks]).permute(1, 0, 2, 3)
-        # print(multi_spectrogram.shape)
 
+        if self.normalize_image:
+            multi_spectrogram = self.normalize_spectrogram(multi_spectrogram)
 
         return multi_spectrogram
+
+    @staticmethod
+    def normalize_spectrogram(spectrogram: torch.Tensor):
+        # https://pytorch.org/vision/main/generated/torchvision.transforms.Normalize.html
+        return (
+            spectrogram - DEFAULT_MULTI_SPECTROGRAM_MEAN.view(1, 3, 1, 1)
+        ) / DEFAULT_MULTI_SPECTROGRAM_STD.view(1, 3, 1, 1)
+
+    @staticmethod
+    def undo_normalize_spectrogram(spectrogram: torch.Tensor):
+        return (
+            spectrogram * DEFAULT_MULTI_SPECTROGRAM_MEAN.view(1, 3, 1, 1)
+        ) + DEFAULT_MULTI_SPECTROGRAM_STD.view(1, 3, 1, 1)
 
 
 if __name__ == "__main__":

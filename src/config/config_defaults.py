@@ -10,6 +10,7 @@ from enum import Enum
 from pathlib import Path
 
 import pyrootutils
+import torch
 from simple_parsing.helpers import Serializable
 
 from src.config.logger import log
@@ -116,12 +117,19 @@ NUM_RGB_CHANNELS = 3
 
 DEFAULT_MFCC_MEAN = -7.3612
 DEFAULT_MFCC_STD = 56.4464
+
 # DEFAULT_MEL_SPECTROGRAM_MEAN = 0.4125 # with some augmentations?
 # DEFAULT_MEL_SPECTROGRAM_STD = 2.3365 # with some augmentations?
+
 DEFAULT_MEL_SPECTROGRAM_MEAN = 0.413
 DEFAULT_MEL_SPECTROGRAM_STD = 2.582
+
+DEFAULT_MULTI_SPECTROGRAM_MEAN = torch.tensor([[4.1400e-01, 1.3334e+03, 4.6917e-01]])
+DEFAULT_MULTI_SPECTROGRAM_STD= torch.tensor([[2.5947e+00, 5.5186e+02, 3.1212e-01]])
+
 DEFAULT_AST_MEAN = -4.2677393
 DEFAULT_AST_STD = 4.5689974
+
 DEFAULT_AUDIO_EXTENSIONS = ["wav"]
 
 IRMAS_TRAIN_CLASS_COUNT = {
