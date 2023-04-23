@@ -155,11 +155,14 @@ class IRMASDataModule(pl.LightningDataModule):
         )
 
         # Simply reuse val dataset as train if train is not provided.
-        if self.test_dataset is None:
+        if self.test_dataset is None and self.val_dataset is not None:
             self.test_dataset = self.val_dataset
             test_indices = np.arange(len(self.val_dataset))
-        else:
-            test_indices = np.arange(len(self.test_dataset))
+        assert (
+            self.test_dataset is not None
+        ), "Test dataset should either by set by concat_datasets_from_tuples or copied from val dataset"
+
+        test_indices = np.arange(len(self.test_dataset))
 
         if self.dataset_fraction != 1:
             test_indices = np.random.choice(
