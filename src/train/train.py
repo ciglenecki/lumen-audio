@@ -74,7 +74,8 @@ def experiment_setup(config: ConfigDefault, pl_args: Namespace):
         "================== PyTorch Lightning ==================\n\n",
         to_yaml(vars(pl_args)),
     )
-    # input("Review the config above. Press enter if you wish to continue: ")
+    if config.verify_config:
+        input("Review the config above. Press enter if you wish to continue: ")
     return experiment_name, experiment_dir, output_dir
 
 
