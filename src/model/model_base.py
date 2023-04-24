@@ -251,21 +251,6 @@ class ModelBase(pl.LightningModule, ABC):
             self.finetuning_step < self.finetune_until_step
         )
 
-    def print_params(self):
-        """Print module's parameters."""
-        for _, module in self.named_modules():
-            for param_name, param in module.named_parameters():
-                print(param_name, "requires_grad:", param.requires_grad)
-
-    def print_modules(self):
-        """Print module's parameters."""
-        print("================== MODULE PARAMS ==================")
-        for module_name, module in self.named_modules():
-            module_req_grad = all(
-                [x[1].requires_grad for x in module.named_parameters()]
-            )
-            print(module_name, "requires_grad:", module_req_grad)
-
     def _set_finetune_until_step(self):
         """We have to caculate what's the step number after which the fine tuning phase is over. We
         also dynamically set the finetune lr nominator, which will ensure that warmup learning rate

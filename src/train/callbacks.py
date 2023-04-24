@@ -5,7 +5,7 @@ from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import BaseFinetuning, Callback
 from torch.optim.optimizer import Optimizer
 
-from src.utils.utils_model import print_modules
+from src.utils.utils_model import print_learnable_params
 
 
 class TensorBoardHparamFixer(pl.Callback):
@@ -194,8 +194,7 @@ class FinetuningCallback(BaseFinetuning):
         self.freeze(pl_module)
         head = pl_module.head()
         self.make_trainable(head)
-        print("Modules after freezing:")
-        print_modules(pl_module)
+        print_learnable_params(pl_module)
 
     def finetune_function(
         self,
@@ -224,5 +223,4 @@ class FinetuningCallback(BaseFinetuning):
             params = BaseFinetuning.filter_on_optimizer(optimizer, params)
             if params:
                 optimizer.add_param_group({"params": params})
-            print("Modules after unfreezing:")
-            print_modules(pl_module)
+            print_learnable_params(pl_module)

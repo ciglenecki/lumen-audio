@@ -2,6 +2,7 @@ from typing import Callable, Union
 
 import pytorch_lightning.callbacks
 import torch.nn as nn
+from tabulate import tabulate
 from torchmetrics.metric import Metric
 from transformers.trainer_pt_utils import get_parameter_names
 
@@ -81,7 +82,7 @@ def get_all_modules_after(
         )
 
     if len(modules) == 0:
-        print_modules(module)
+        print_params(module)
         raise InvalidModuleStr(
             f"get_all_modules_after return no elements because of invalid module '{module_str}', use one of the above."
         )
@@ -89,21 +90,25 @@ def get_all_modules_after(
     return modules
 
 
-def print_params(module: Union[nn.ModuleList, nn.Module]):
+def print_params(module: Union[nn.ModuleList, nn.Module], filter_fn=None):
     """Print params."""
-    for sub_module_name, sub_module in module.named_modules():
-        for param_name, param in sub_module.named_parameters():
-            print("requires_grad:", param.requires_grad, param.numel(), param_name)
+    headers = ["Parameter name", "Req.grad", "Num."]
+    table = []
+    for param_name, param in module.named_parameters():
+        if filter_fn is not None and not filter_fn(param):
+            continue
+        table.append([param_name, param.requires_grad, param.numel()])
+    print(tabulate(table, headers=headers))
 
 
-def print_modules(module: Union[nn.ModuleList, nn.Module]):
-    """Print model's paramteres."""
-    for sub_module_name, sub_module in module.named_modules():
-        sub_module_req_grad = any(
-            [x[1].requires_grad for x in sub_module.named_parameters()]
-        )
-        print(sub_module_name, "requires_grad:", sub_module_req_grad)
-    print()
+def print_learnable_params(module: Union[nn.ModuleList, nn.Module]):
+    print("\n================== Learnable params ==================")
+    print_params(module, lambda x: x.requires_grad)
+
+
+def print_frozen_params(module: Union[nn.ModuleList, nn.Module]):
+    print("\n================== Frozen params ==================
+    print_params(module, lambda x: not x.requires_grad)
 
 
 def proper_weight_decay(model: nn.Module, weight_decay: float):
