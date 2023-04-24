@@ -4,7 +4,7 @@ from src.config import config_defaults
 from src.config.argparse_with_config import ArgParseWithConfig
 from src.enums.enums import SupportedModels
 from src.model.model import get_model
-from src.utils.utils_model import print_modules
+from src.utils.utils_model import print_params
 
 
 def parse_args():
@@ -23,5 +23,5 @@ if __name__ == "__main__":
             config, torch.nn.BCEWithLogitsLoss(**config.loss_function_kwargs)
         )
         print("Model", m)
-        print_modules(model)
+        print_params(model)
         print("\n\n\n\n")

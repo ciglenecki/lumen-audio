@@ -457,6 +457,9 @@ class ConfigDefault(Serializable):
     log_every_n_steps: int = create(30)
     """How often (steps) to log metrics."""
 
+    verify_config: bool = create(False)
+    """Asks users to press enter to confirm the config"""
+
     def after_init(self):
         """This function sets defaults, dynamically changes some of the arguments based on other
         arguments."""
