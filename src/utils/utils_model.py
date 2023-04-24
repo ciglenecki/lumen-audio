@@ -107,7 +107,7 @@ def print_learnable_params(module: Union[nn.ModuleList, nn.Module]):
 
 
 def print_frozen_params(module: Union[nn.ModuleList, nn.Module]):
-    print("\n================== Frozen params ==================
+    print("\n================== Frozen params ==================")
     print_params(module, lambda x: not x.requires_grad)
 
 
