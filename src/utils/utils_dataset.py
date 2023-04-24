@@ -23,7 +23,7 @@ def remove_rgb_channel(images: torch.Tensor):
 
 
 def get_example_val_sample(target_sr: int = None) -> np.ndarray:
-    config = config_defaults.default_config
+    config = config_defaults.get_default_config()
     audio_path = Path(config.path_irmas_test, "1 - Hank's Other Bag-14.wav")
     audio, _ = load_audio_from_file(audio_path, target_sr=target_sr)
     return audio

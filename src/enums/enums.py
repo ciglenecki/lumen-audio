@@ -26,12 +26,14 @@ class SupportedAugmentations(Enum):
     CONCAT_N_SAMPLES = "concat_n"
     SUM_TWO_SAMPLES = "sum_two_samples"
 
+    # Softer augmentations
     BACKGROUND_NOISE = "background_noise"
     TIME_STRETCH = "time_stretch"
     TIME_SHIFT = "time_shift"
     PITCH = "pitch"
-
     COLOR_NOISE = "color_noise"
+
+    # Harder augmentations
     TIMEINV = "timeinv"
     TIME_MASK = "time_mask"
     SEVEN_BAND_EQ = "seven_band_eq"

@@ -5,11 +5,11 @@ import pandas as pd
 import torch
 
 import src.config.config_defaults as config_defaults
-from src.config.config_defaults import AUDIO_EXTENSIONS
+from src.config.config_defaults import AUDIO_EXTENSIONS, get_default_config
 from src.data.dataset_base import DatasetBase, DatasetGetItem
 from src.utils.utils_exceptions import InvalidArgument
 
-config = config_defaults.default_config
+config = get_default_config()
 glob_expressions = [f"*.{ext}" for ext in AUDIO_EXTENSIONS]
 
 

@@ -21,11 +21,11 @@ from src.config.config_defaults import (
     ALL_INSTRUMENTS,
     INSTRUMENT_TO_FULLNAME,
     InstrumentEnums,
-    default_config,
+    get_default_config,
 )
 from src.utils.utils_dataset import encode_instruments
 
-config = default_config
+config = get_default_config()
 
 
 def parse_args():

@@ -758,6 +758,3 @@ def get_default_config():
     config = ConfigDefault()
     config.after_init()
     return config
-
-
-default_config = get_default_config()

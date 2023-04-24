@@ -10,7 +10,7 @@ from src.config.config_defaults import (
     DrumKeys,
     GenreKeys,
     InstrumentEnums,
-    default_config,
+    get_default_config,
 )
 
 
@@ -28,7 +28,7 @@ def add_class_prefix(string, path_irmas_train):
 
 
 def main():
-    config = default_config
+    config = get_default_config()
     file_path = Path(config.path_irmas_sample, "random_samples_relabeling.csv")
     out_path = Path(
         config.path_irmas_sample, "normalized_random_samples_relabeling.csv"

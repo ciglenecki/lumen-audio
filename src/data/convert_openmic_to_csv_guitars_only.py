@@ -3,9 +3,9 @@ from pathlib import Path
 import pandas as pd
 
 from src.config.argparse_with_config import ArgParseWithConfig
-from src.config.config_defaults import default_config
+from src.config.config_defaults import get_default_config
 
-config = default_config
+config = get_default_config()
 
 
 def parse_args():

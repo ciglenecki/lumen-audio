@@ -1,9 +1,9 @@
 """Checks if all audio files are indeed sampled at 44_100."""
 import wave
 
-from src.config.config_defaults import default_config
+from src.config.config_defaults import get_default_config
 
-config = default_config
+config = get_default_config()
 val_dict = {}
 
 for file_name in config.path_irmas_test.rglob("*.wav"):

@@ -28,11 +28,11 @@ from src.config.config_defaults import (
     ALL_INSTRUMENTS,
     ALL_INSTRUMENTS_NAMES,
     InstrumentEnums,
-    default_config,
+    get_default_config,
 )
 from src.utils.utils_exceptions import InvalidDataException
 
-config = default_config
+config = get_default_config()
 
 
 def parse_args():
