@@ -12,6 +12,7 @@ from src.config.config_defaults import (
 from src.features.audio_transform_base import AudioTransformBase
 from src.utils.utils_audio import plot_spectrograms, spec_width_to_num_samples
 from src.utils.utils_dataset import get_example_val_sample
+from src.utils.utils_functions import timeit
 
 
 class AudioTransformAST(AudioTransformBase):
@@ -68,6 +69,7 @@ class AudioTransformAST(AudioTransformBase):
         spectrogram = spectrogram.transpose(-2, -1)
         return spectrogram
 
+    # @timeit
     def __call__(
         self, audio: torch.Tensor | np.ndarray
     ) -> tuple[torch.Tensor, torch.Tensor]:

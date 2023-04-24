@@ -28,7 +28,10 @@ TORCHVISION_CONSTRUCTOR_DICT = {
     SupportedModels.RESNEXT101_32X8D: resnext101_32x8d,
     SupportedModels.RESNEXT101_64X4D: resnext101_64x4d,
 }
+import time
+
 import src.config.config_defaults as config_defaults
+from src.utils.utils_functions import timeit
 
 
 class TorchvisionModel(ModelBase):
@@ -44,7 +47,7 @@ class TorchvisionModel(ModelBase):
         super().__init__(*args, **kwargs)
 
         torch.set_float32_matmul_precision("medium")
-	
+
         self.hamming_distance = torchmetrics.HammingDistance(
             task="multilabel", num_labels=self.num_labels
         )
@@ -110,6 +113,8 @@ class TorchvisionModel(ModelBase):
         - Split the `batch` with batch_size
         - sub_batches = [[4, height, width], [4, height, width], [2, height, width]]
         """
+        # print("START", "_step")
+        # ts = time.time()
 
         images, y, _, item_index = batch
 
@@ -176,6 +181,10 @@ class TorchvisionModel(ModelBase):
             # y_final_out, _ = scatter_max(y_pred, file_indices, dim=0)
 
         loss = loss / len(images)
+
+        # te = time.time()
+        # print("END", "_step", "time:", round((te - ts) * 1000, 1), "ms")
+
         return self.log_and_return_loss_step(
             loss=loss, y_pred=y_pred, y_true=y, type=type
         )
@@ -189,36 +198,36 @@ class TorchvisionModel(ModelBase):
     def test_step(self, batch, batch_idx):
         return self._step(batch, batch_idx, type="test")
 
-    def predict_step(self, batch, batch_idx: int, dataloader_idx: int = 0):
-        images, y, file_indices, item_index = batch
+    # def predict_step(self, batch, batch_idx: int, dataloader_idx: int = 0):
+    #     images, y, file_indices, item_index = batch
 
-        sub_batches = torch.split(images, self.batch_size, dim=0)
-        loss = 0
-        y_pred_prob = torch.zeros((len(images), self.num_labels), device=self.device)
-        y_pred = torch.zeros((len(images), self.num_labels), device=self.device)
+    #     sub_batches = torch.split(images, self.batch_size, dim=0)
+    #     loss = 0
+    #     y_pred_prob = torch.zeros((len(images), self.num_labels), device=self.device)
+    #     y_pred = torch.zeros((len(images), self.num_labels), device=self.device)
 
-        passed_images = 0
-        for sub_batch_image in sub_batches:
-            b_size = len(sub_batch_image)
-            start = passed_images
-            end = passed_images + b_size
+    #     passed_images = 0
+    #     for sub_batch_image in sub_batches:
+    #         b_size = len(sub_batch_image)
+    #         start = passed_images
+    #         end = passed_images + b_size
 
-            b_y = y[start:end]
-            b_logits_pred = self.forward(sub_batch_image)
-            b_loss = self.loss_function(b_logits_pred, b_y)
+    #         b_y = y[start:end]
+    #         b_logits_pred = self.forward(sub_batch_image)
+    #         b_loss = self.loss_function(b_logits_pred, b_y)
 
-            b_y_pred_prob = torch.sigmoid(b_logits_pred)
-            b_y_pred = (b_y_pred_prob >= 0.5).float()
+    #         b_y_pred_prob = torch.sigmoid(b_logits_pred)
+    #         b_y_pred = (b_y_pred_prob >= 0.5).float()
 
-            loss += b_loss * b_size
-            y_pred_prob[start:end] = b_y_pred_prob
-            y_pred[start:end] = b_y_pred
+    #         loss += b_loss * b_size
+    #         y_pred_prob[start:end] = b_y_pred_prob
+    #         y_pred[start:end] = b_y_pred
 
-            passed_images += b_size
+    #         passed_images += b_size
 
-        y_final_out, _ = scatter_max(y_pred, file_indices, dim=0)
+    #     y_final_out, _ = scatter_max(y_pred, file_indices, dim=0)
 
-        loss = loss / len(images)
-        return self.log_and_return_loss_step(
-            loss=loss, y_pred=y_pred, y_true=y, type=type
-        )
+    #     loss = loss / len(images)
+    #     return self.log_and_return_loss_step(
+    #         loss=loss, y_pred=y_pred, y_true=y, type=type
+    #     )
