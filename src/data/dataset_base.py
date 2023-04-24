@@ -13,6 +13,7 @@ import src.config.config_defaults as config_defaults
 from src.features.audio_transform_base import AudioTransformBase
 from src.utils.utils_audio import load_audio_from_file
 from src.utils.utils_dataset import decode_instruments
+from src.utils.utils_functions import timeit
 
 DatasetInternalItem = tuple[Path, np.ndarray]
 DatasetGetItem = tuple[torch.Tensor, torch.Tensor, torch.Tensor]
@@ -96,6 +97,7 @@ class DatasetBase(Dataset[DatasetGetItem]):
         stats.update({"total size": len(self.dataset_list)})
         return stats
 
+    # @timeit
     def load_sample(self, item_idx: int) -> tuple[np.ndarray, np.ndarray, Path]:
         audio_path, labels = self.dataset_list[item_idx]
         audio, _ = load_audio_from_file(
@@ -248,6 +250,7 @@ class DatasetBase(Dataset[DatasetGetItem]):
 
         return audio, labels
 
+    # @timeit
     def __getitem__(self, index: int) -> DatasetGetItem:
         audio, labels, _ = self.load_sample(index)
 
