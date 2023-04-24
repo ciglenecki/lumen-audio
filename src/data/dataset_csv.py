@@ -46,10 +46,3 @@ class CSVDataset(DatasetBase):
             dataset_list.append((filepath, labels))
 
         return dataset_list
-
-    def __getitem__(self, index: int) -> DatasetGetItem:
-        audio, labels, _ = self.load_sample(index)
-
-        labels = torch.tensor(labels).float()
-        features = self.audio_transform(audio)
-        return features, labels, index
