@@ -75,135 +75,58 @@ if __name__ == "__main__":
     model = model_constructor.load_from_checkpoint(config.ckpt)
     model_config = model.config
 
-    # TODO continue here
-    (
-        train_spectrogram_augmentation,
-        train_waveform_augmentation,
-        val_spectrogram_augmentation,
-        val_waveform_augmentation,
-    ) = get_augmentations(model_config)
-
-    inference_audio_transform: AudioTransformBase = get_audio_transform(
-        config,
-        spectrogram_augmentation=val_spectrogram_augmentation,
-        waveform_augmentation=val_waveform_augmentation,
+    audio_transform: AudioTransformBase = get_audio_transform(
+        model_config,
+        spectrogram_augmentation=None,
+        waveform_augmentation=None,
     )
 
-    concat_n_samples = (
-        config.aug_kwargs["concat_n_samples"]
-        if SupportedAugmentations.CONCAT_N_SAMPLES in config.augmentations
-        else None
-    )
-    collate_fn = get_collate_fn(config)
+    collate_fn = get_collate_fn(model_config)
 
     datamodule = OurDataModule(
+        train_paths=None,
+        val_paths=None,
+        test_paths=config.dataset_paths,
         batch_size=config.batch_size,
         num_workers=config.num_workers,
         dataset_fraction=config.dataset_fraction,
-        drop_last_sample=config.drop_last,
+        drop_last_sample=False,
         train_audio_transform=None,
-        val_audio_transform=None,
+        val_audio_transform=audio_transform,
         collate_fn=collate_fn,
-        normalize_audio=config.normalize_audio,
-        train_only_dataset=config.train_only_dataset,
-        concat_n_samples=concat_n_samples,
-        sum_two_samples=SupportedAugmentations.SUM_TWO_SAMPLES in config.augmentations,
-        use_weighted_train_sampler=config.use_weighted_train_sampler,
-        normalize_image=config.normalize_image,
-        sampling_rate=config.sampling_rate,
+        normalize_audio=model_config.normalize_audio,
+        normalize_image=model_config.normalize_image,
+        train_only_dataset=False,
+        concat_n_samples=None,
+        sum_two_samples=None,
+        use_weighted_train_sampler=False,
+        sampling_rate=model_config.sampling_rate,
     )
-
-    if config.loss_function == SupportedLossFunctions.CROSS_ENTROPY:
-        loss_function = torch.nn.BCEWithLogitsLoss(**config.loss_function_kwargs)
-    if config.loss_function == SupportedLossFunctions.CROSS_ENTROPY_POS_WEIGHT:
-        kwargs = {
-            **config.loss_function_kwargs,
-            "pos_weight": calc_instrument_weight(datamodule.count_classes()),
-        }
-        loss_function = torch.nn.BCEWithLogitsLoss(**kwargs)
-
-    model = get_model(config, loss_function=loss_function)
 
     # ================= SETUP CALLBACKS (auto checkpoint, tensorboard, early stopping...)========================
 
     train_dataloader_size = len(datamodule.train_dataloader())
-    bar_refresh_rate = int(train_dataloader_size / config.bar_update)
-
-    callback_early_stopping = EarlyStopping(
-        monitor=optimizer_metric_str,
-        mode=metric_mode_str,
-        patience=config.early_stopping_metric_patience,
-        check_on_train_epoch_end=config.check_on_train_epoch_end,
-        verbose=True,
-    )
-
-    callback_checkpoint = ModelCheckpoint(
-        monitor=optimizer_metric_str,
-        mode=metric_mode_str,
-        filename="_".join(
-            [
-                experiment_name,
-                "val_acc_{val/f1_score_epoch:.4f}",
-                "val_loss_{val/loss_epoch:.4f}",
-            ]
-        ),
-        auto_insert_metric_name=False,
-        save_on_train_epoch_end=config.save_on_train_epoch_end,
-        verbose=True,
-    )
+    bar_refresh_rate = min(int(train_dataloader_size / config.bar_update), 200)
 
     log_dictionary = {
         **add_prefix_to_keys(vars(config), "user_args/"),
         **add_prefix_to_keys(vars(pl_args), "lightning_args/"),
-        "train_size": len(datamodule.train_dataloader().dataset),
-        "val_size": len(datamodule.val_dataloader().dataset),
         "test_size": len(datamodule.test_dataloader().dataset),
     }
 
     callbacks = [
-        callback_checkpoint,
-        callback_early_stopping,
         TQDMProgressBar(refresh_rate=bar_refresh_rate),
         TensorBoardHparamFixer(config_dict=log_dictionary),
         OverrideEpochMetricCallback(),
         GeneralMetricsEpochLogger(),
     ]
 
-    if config.finetune_head:
-        callbacks.append(
-            FinetuningCallback(finetune_head_epochs=config.finetune_head_epochs)
-        )
-
     callbacks.append(ModelSummary(max_depth=4))
-
-    auto_lr_find = config.scheduler == SupportedScheduler.AUTO_LR
 
     # ================= TRAINER ========================
     trainer: pl.Trainer = pl.Trainer.from_argparse_args(
         pl_args,
-        logger=[tensorboard_logger],
-        default_root_dir=output_dir,
+        default_root_dir="inference",
         callbacks=callbacks,
     )
-
-    if config.scheduler == SupportedScheduler.AUTO_LR.value:
-        lr_finder = trainer.tuner.lr_find(
-            model, datamodule=datamodule, num_training=100
-        )
-        if lr_finder is None:
-            print("Cant find best learning rate")
-            exit(1)
-        # Results can be found in
-        lr_finder.results
-
-        # Plot with
-        fig = lr_finder.plot(suggest=True)
-        fig.savefig("best_auti_lr.png")
-        # Pick point based on plot, or get suggestion
-        new_lr = lr_finder.suggestion()
-
-        print(new_lr)
-        exit(1)
-
-    trainer.fit(model, datamodule=datamodule, ckpt_path=config.ckpt)
-    trainer.test(model, datamodule)
+    trainer.test(model, datamodule=datamodule, ckpt_path=config.ckpt)
