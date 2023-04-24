@@ -2,10 +2,10 @@ from src.config.config_defaults import ConfigDefault
 from src.enums.enums import AudioTransforms
 from src.features.audio_to_ast import AudioTransformAST
 from src.features.audio_to_mfcc import MFCC
+from src.features.audio_to_multispec import MultiSpectrogram
 from src.features.audio_to_spectrogram import MelSpectrogram
 from src.features.audio_to_wav2vec import AudioToWav2Vec2, AudioToWav2Vec2CNN
 from src.features.audio_transform_base import AudioTransformBase
-from src.features.audio_to_multispec import MultiSpectrogram
 from src.features.augmentations import SpectrogramAugmentation, WaveformAugmentation
 from src.utils.utils_exceptions import UnsupportedAudioTransforms
 
@@ -35,6 +35,7 @@ def get_audio_transform(
             pretrained_tag=config.pretrained_tag,
             hop_length=config.hop_length,
             n_mels=config.n_mels,
+            n_fft=config.n_fft,
             **base_kwargs,
         )
     elif audio_transform_enum is AudioTransforms.MEL_SPECTROGRAM:

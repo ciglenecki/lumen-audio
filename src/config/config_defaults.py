@@ -503,6 +503,18 @@ class ConfigDefault(Serializable):
 
         self.output_dir = self.path_models
 
+        # aug_kwargs can be either a dictionary or a string which will be parsed as kwargs dict
+        if self.aug_kwargs is not None and isinstance(self.aug_kwargs, str):
+            try:
+                override_kwargs = self.parse_kwargs(self.aug_kwargs)
+            except Exception as e:
+                raise InvalidArgument(
+                    f"{str(e)}\n. --aug-kwargs should have the following structure: 'key=value1,value2 key2=value3' e.g. 'stretch_factors=0.8,1.2 freq_mask_param=30'"
+                )
+
+            self.aug_kwargs = get_default_value_for_field("aug_kwargs", self)
+            self.aug_kwargs.update(override_kwargs)
+
         if (
             self.path_background_noise is None
             and SupportedAugmentations.BACKGROUND_NOISE in self.augmentations
@@ -628,18 +640,6 @@ class ConfigDefault(Serializable):
 
         if self.metric and not self.metric_mode:
             raise InvalidArgument("Can't pass --metric without passing --metric-mode")
-
-        # aug_kwargs can be either a dictionary or a string which will be parsed as kwargs dict
-        if isinstance(self.aug_kwargs, str):
-            try:
-                override_kwargs = self.parse_kwargs(self.aug_kwargs)
-            except Exception as e:
-                raise InvalidArgument(
-                    f"{str(e)}\n. --aug-kwargs should have the following structure: 'key=value1,value2 key2=value3' e.g. 'stretch_factors=0.8,1.2 freq_mask_param=30'"
-                )
-
-            self.aug_kwargs = get_default_value_for_field("aug_kwargs", self)
-            self.aug_kwargs.update(override_kwargs)
 
         # loss_function_kwargs can be either a dictionary or a string which will be parsed as kwargs dict
         if isinstance(self.loss_function_kwargs, str):

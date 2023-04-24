@@ -156,7 +156,7 @@ if __name__ == "__main__":
     )
 
     train_dataloader_size = len(datamodule.train_dataloader())
-    bar_refresh_rate = int(train_dataloader_size / config.bar_update)
+    bar_refresh_rate = min(int(train_dataloader_size / config.bar_update), 200)
 
     callback_early_stopping = EarlyStopping(
         monitor=optimizer_metric_str,
