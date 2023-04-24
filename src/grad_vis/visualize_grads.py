@@ -15,7 +15,7 @@ from pytorch_grad_cam.utils.image import show_cam_on_image
 from src.config import config_defaults
 from src.config.argparse_with_config import ArgParseWithConfig
 from src.config.config_defaults import parse_dataset_paths
-from src.data.datamodule import IRMASDataModule
+from src.data.datamodule import OurDataModule
 from src.features.audio_transform import get_audio_transform
 from src.features.augmentations import get_augmentations
 from src.features.chunking import get_collate_fn
@@ -24,12 +24,7 @@ from src.model.model import get_model
 
 def parse_args():
     parser = ArgParseWithConfig()
-    parser.add_argument(
-        "--input-dirs",
-        type=parse_dataset_paths,
-        required=True,
-        help="Directories which will be used to render visualize_grads.",
-    )
+
     parser.add_argument(
         "--path_to_model",
         type=str,
@@ -56,10 +51,10 @@ def parse_args():
     )
 
     args, config, pl_args = parser.parse_args()
-    config.test_paths = args.input_dirs
     config.required_model()
     config.required_audio_transform()
-    config.required_test_paths()
+    config.required_dataset_paths()
+
     return args, config, pl_args
 
 
@@ -85,15 +80,15 @@ if __name__ == "__main__":
     audio_transform = get_audio_transform(
         config, spectrogram_augmentation=None, waveform_augmentation=None
     )
-    datamodule = IRMASDataModule(
-        train_paths=config.train_paths,
-        val_paths=config.val_paths,
-        test_paths=config.test_paths,
+    datamodule = OurDataModule(
+        train_paths=None,
+        val_paths=None,
+        test_paths=config.dataset_paths,
         batch_size=config.batch_size,
         num_workers=config.num_workers,
         dataset_fraction=config.dataset_fraction,
         drop_last_sample=config.drop_last,
-        train_audio_transform=audio_transform,
+        train_audio_transform=None,
         val_audio_transform=audio_transform,
         collate_fn=get_collate_fn(config),
         normalize_audio=config.normalize_audio,
@@ -102,6 +97,7 @@ if __name__ == "__main__":
         concat_n_samples=None,
         sum_two_samples=False,
         use_weighted_train_sampler=config.use_weighted_train_sampler,
+        sampling_rate=config.sampling_rate,
     )
     datamodule.setup_for_inference()
 

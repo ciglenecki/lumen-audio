@@ -15,7 +15,7 @@ from pytorch_lightning.utilities.seed import seed_everything
 
 from src.config.config_defaults import ConfigDefault
 from src.config.config_train import get_config
-from src.data.datamodule import IRMASDataModule
+from src.data.datamodule import OurDataModule
 from src.enums.enums import (
     MetricMode,
     OptimizeMetric,
@@ -110,7 +110,7 @@ if __name__ == "__main__":
     )
     collate_fn = get_collate_fn(config)
 
-    datamodule = IRMASDataModule(
+    datamodule = OurDataModule(
         train_paths=config.train_paths,
         val_paths=config.val_paths,
         test_paths=config.test_paths,
@@ -127,6 +127,7 @@ if __name__ == "__main__":
         concat_n_samples=concat_n_samples,
         sum_two_samples=SupportedAugmentations.SUM_TWO_SAMPLES in config.augmentations,
         use_weighted_train_sampler=config.use_weighted_train_sampler,
+        sampling_rate=config.sampling_rate,
     )
     datamodule.setup_for_train()
 

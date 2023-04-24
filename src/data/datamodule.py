@@ -22,13 +22,16 @@ from torch.utils.data import (
 )
 from tqdm import tqdm
 
+import src.config.config_defaults as config_defaults
 from src.data.dataset_base import DatasetBase, DatasetGetItem, DatasetInternalItem
+from src.data.dataset_csv import CSVDataset
+from src.data.dataset_inference import InferenceDataset
 from src.data.dataset_irmas import IRMASDatasetTest, IRMASDatasetTrain
 from src.enums.enums import SupportedDatasetDirType
 from src.features.audio_transform_base import AudioTransformBase
 
 
-class IRMASDataModule(pl.LightningDataModule):
+class OurDataModule(pl.LightningDataModule):
     train_size: int
     val_size: int
     test_size: int
@@ -36,7 +39,7 @@ class IRMASDataModule(pl.LightningDataModule):
     class_count_dict: dict[str, int]
 
     """
-    IRMASDataModule is responsible for efficiently creating datasets creating a
+    OurDataModule is responsible for efficiently creating datasets creating a
     indexing strategy (SubsetRandomSampler) for each dataset.
     Any preprocessing which requires aggregation of data,
     such as caculating the mean and standard deviation of the dataset
@@ -61,6 +64,8 @@ class IRMASDataModule(pl.LightningDataModule):
         concat_n_samples: int | None,
         sum_two_samples: bool,
         use_weighted_train_sampler,
+        sampling_rate: int,
+        num_classes: int = config_defaults.DEFAULT_NUM_LABELS,
     ):
         super().__init__()
         self.batch_size = batch_size
@@ -80,7 +85,8 @@ class IRMASDataModule(pl.LightningDataModule):
         self.sum_two_samples = sum_two_samples
         self.use_weighted_train_sampler = use_weighted_train_sampler
         self.collate_fn = collate_fn
-
+        self.sampling_rate = sampling_rate
+        self.num_classes = num_classes
         self.train_dataset = None
         self.val_dataset = None
         self.test_dataset = None
@@ -111,6 +117,8 @@ class IRMASDataModule(pl.LightningDataModule):
         assert (
             self.val_dataset is not None
         ), "Please provide --val-paths if you want to train a model."
+
+        self._sanity_check_train_val_leak()
 
         if self.train_only_dataset:
             self.val_dataset = self.train_dataset
@@ -194,7 +202,9 @@ class IRMASDataModule(pl.LightningDataModule):
 
         datasets: list[Dataset] = []
         for dataset_enum, dataset_path in dataset_paths:
-            print(f"Creating {type} dataset {dataset_enum.value.upper()}")
+            print(
+                f"Creating dataset {dataset_enum.value.upper()} from {str(dataset_path)}"
+            )
             if dataset_enum == SupportedDatasetDirType.IRMAS_TRAIN:
                 dataset = IRMASDatasetTrain(
                     dataset_path=dataset_path,
@@ -202,8 +212,10 @@ class IRMASDataModule(pl.LightningDataModule):
                     normalize_audio=self.normalize_audio,
                     concat_n_samples=self.concat_n_samples,
                     sum_two_samples=self.sum_two_samples,
+                    sampling_rate=self.sampling_rate,
+                    train_override_csvs=None,
+                    num_classes=self.num_classes,
                 )
-                datasets.append(dataset)
             elif dataset_enum == SupportedDatasetDirType.IRMAS_TEST:
                 dataset = IRMASDatasetTest(
                     dataset_path=dataset_path,
@@ -211,15 +223,35 @@ class IRMASDataModule(pl.LightningDataModule):
                     normalize_audio=self.normalize_audio,
                     concat_n_samples=False,
                     sum_two_samples=False,
+                    sampling_rate=self.sampling_rate,
+                    train_override_csvs=None,
+                    num_classes=self.num_classes,
                 )
-                datasets.append(dataset)
             elif dataset_enum == SupportedDatasetDirType.OPENMIC:
                 pass
-            elif dataset_enum == SupportedDatasetDirType.OPENMIC:
-                pass
-            elif dataset_enum == SupportedDatasetDirType.OPENMIC:
-                pass
-
+            elif dataset_enum == SupportedDatasetDirType.CSV:
+                dataset = CSVDataset(
+                    dataset_path=dataset_path,
+                    audio_transform=transform,
+                    normalize_audio=self.normalize_audio,
+                    concat_n_samples=self.concat_n_samples,
+                    sum_two_samples=self.sum_two_samples,
+                    sampling_rate=self.sampling_rate,
+                    train_override_csvs=None,
+                    num_classes=self.num_classes,
+                )
+            elif dataset_enum == SupportedDatasetDirType.INFERENCE:
+                dataset = InferenceDataset(
+                    dataset_path=dataset_path,
+                    audio_transform=transform,
+                    sampling_rate=self.sampling_rate,
+                    normalize_audio=self.normalize_audio,
+                )
+            else:
+                raise ValueError(
+                    f"{str(dataset_enum)}. Please add dataset enum in this if/elif part."
+                )
+            datasets.append(dataset)
         print()
         if len(datasets) == 0:
             return None
@@ -278,7 +310,7 @@ class IRMASDataModule(pl.LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             sampler=self.test_sampler,
-            drop_last=self.drop_last_sample,
+            drop_last=False,
             collate_fn=self.collate_fn,
             pin_memory=True,
         )
@@ -297,22 +329,21 @@ class IRMASDataModule(pl.LightningDataModule):
             pin_memory=True,
         )
 
-    # def _sanity_check_paths(
-    #     self,
-    #     indices_a: np.ndarray,
-    #     indices_b: np.ndarray,
-    # ):
-    #     """Checks if there are overlaping val and test indicies to avoid data leakage."""
+    def _sanity_check_train_val_leak(self):
+        """Checks if there are overlaping train and val paths."""
+        train_paths = set()
+        for i in range(len(self.train_dataset)):
+            path, _ = self.get_item_from_internal_structure(i, split="train")
+            train_paths.add(str(path))
 
-    #     for ind_a, ind_b in combinations([indices_a, indices_b], 2):
-    #         assert (
-    #             len(np.intersect1d(ind_a, ind_b)) == 0
-    #         ), f"Some indices share an index {np.intersect1d(ind_a, ind_b)}"
-    #     set_ind = set(indices_a)
-    #     set_ind.update(indices_b)
-    #     assert len(set_ind) == (
-    #         len(indices_a) + len(indices_b)
-    #     ), "Some indices might contain non-unqiue values"
+        val_paths = set()
+        for i in range(len(self.val_dataset)):
+            path, _ = self.get_item_from_internal_structure(i, split="val")
+            val_paths.add(str(path))
+
+        assert (
+            len(train_paths.intersection(val_paths)) == 0
+        ), "There are same files in train and val dataset"
 
     def _sanity_check_difference(
         self,
@@ -369,6 +400,8 @@ class IRMASDataModule(pl.LightningDataModule):
         data_loader = split_map[split]()
         concated_dataset: ConcatDataset = data_loader.dataset  # type: ignore
         dataset_idx = bisect.bisect_right(concated_dataset.cumulative_sizes, item_index)
+        if dataset_idx != 0:
+            item_index = item_index - concated_dataset.cumulative_sizes[dataset_idx - 1]
         exact_dataset: DatasetBase = concated_dataset.datasets[dataset_idx]  # type: ignore
         audio_path, label = exact_dataset.dataset_list[item_index]
         return audio_path, label

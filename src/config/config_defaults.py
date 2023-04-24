@@ -124,13 +124,11 @@ DEFAULT_MFCC_STD = 56.4464
 DEFAULT_MEL_SPECTROGRAM_MEAN = 0.413
 DEFAULT_MEL_SPECTROGRAM_STD = 2.582
 
-DEFAULT_MULTI_SPECTROGRAM_MEAN = torch.tensor([[4.1400e-01, 1.3334e+03, 4.6917e-01]])
-DEFAULT_MULTI_SPECTROGRAM_STD= torch.tensor([[2.5947e+00, 5.5186e+02, 3.1212e-01]])
+DEFAULT_MULTI_SPECTROGRAM_MEAN = torch.tensor([[4.1400e-01, 1.3334e03, 4.6917e-01]])
+DEFAULT_MULTI_SPECTROGRAM_STD = torch.tensor([[2.5947e00, 5.5186e02, 3.1212e-01]])
 
 DEFAULT_AST_MEAN = -4.2677393
 DEFAULT_AST_STD = 4.5689974
-
-DEFAULT_AUDIO_EXTENSIONS = ["wav"]
 
 IRMAS_TRAIN_CLASS_COUNT = {
     "voi": 778,
@@ -171,6 +169,11 @@ DEFAULT_PRETRAINED_TAG_MAP = {
     SupportedModels.RESNEXT101_32X8D: TAG_IMAGENET1K_V2,
     SupportedModels.RESNEXT101_64X4D: TAG_IMAGENET1K_V1,
 }
+ALL_INSTRUMENTS = [e.value for e in InstrumentEnums]
+ALL_INSTRUMENTS_NAMES = [INSTRUMENT_TO_FULLNAME[ins] for ins in ALL_INSTRUMENTS]
+
+AUDIO_EXTENSIONS = ["wav", "mp3", "ogg"]
+
 
 USAGE_TEXT_PATHS = f"Usage:\t--train-paths <TYPE>:/path/to/dataset (for training)\n\t--val-paths <TYPE>:/path/to/dataset (for training)\n\t--test-paths <TYPE>:/path/to/dataset (for inference)\nSupported <TYPE>: {[ d.value for d in SupportedDatasetDirType]}"
 
@@ -197,6 +200,7 @@ def default_path(path: Path | None, default_value: Path, create_if_none=False):
 
 def dir_to_enum_and_path(
     string: str,
+    allow_raw_path=False,
 ) -> tuple[SupportedDatasetDirType, Path]:
     """
     Example:
@@ -205,6 +209,10 @@ def dir_to_enum_and_path(
     """
     delimiter = ":"
     pair = string.split(delimiter)
+
+    if len(pair) == 1 and allow_raw_path:
+        return SupportedDatasetDirType.INFERENCE, Path(string)
+
     if len(pair) != 2:
         raise InvalidArgument(
             f"Pair {pair} needs to have two elements split with '{delimiter}'."
@@ -225,13 +233,14 @@ def dir_to_enum_and_path(
 
 def parse_dataset_paths(
     data_dir: str | list[str],
+    allow_raw_path=False,
 ) -> list[tuple[SupportedDatasetDirType, Path]]:
     # Parse strings to dataset type and path
     try:
         if isinstance(data_dir, str):
-            return [dir_to_enum_and_path(data_dir)]
+            return [dir_to_enum_and_path(data_dir, allow_raw_path)]
         elif isinstance(data_dir, list):
-            return [dir_to_enum_and_path(d) for d in data_dir]
+            return [dir_to_enum_and_path(d, allow_raw_path) for d in data_dir]
     except InvalidArgument as e:
         msg = USAGE_TEXT_PATHS
         raise InvalidArgument(f"{str(e)}\n{msg}")
@@ -257,6 +266,8 @@ class ConfigDefault(Serializable):
     path_models: Path | None = create(None)
     path_models_quick: Path | None = create(None)
     path_background_noise: Path | None = create(None)
+    path_figures: Path | None = create(None)
+    path_embeddings: Path | None = create(None)
 
     train_paths: list[str] | None = create(None)
     """Dataset root directories that will be used for training in the following format: --train-paths irmastrain:/path/to/dataset or openmic:/path/to/dataset"""
@@ -266,6 +277,9 @@ class ConfigDefault(Serializable):
 
     test_paths: list[str] | None = create(None)
     """Dataset root directories that will be used for testing in the following format: --val-paths irmastest:/path/to/dataset openmic:/path/to/dataset"""
+
+    dataset_paths: list[str] | None = create(None)
+    """Dataset path with the following format format: --dataset-paths inference:/path/to/dataset openmic:/path/to/dataset"""
 
     # predict_paths: list[str] | None = create(None)
     # """Dataset root directories that will be used for predicting in the following format: --val-paths irmastest:/path/to/dataset openmic:/path/to/dataset"""
@@ -460,6 +474,13 @@ class ConfigDefault(Serializable):
         self.path_irmas_sample = default_path(
             self.path_irmas_sample, Path("data", "irmas_sample")
         )
+        self.path_irmas_train_features = default_path(
+            self.path_irmas_train_features,
+            Path(
+                "embeddings",
+                "data-irmas-train_ast_MIT-ast-finetuned-audioset-10-10-0.4593",
+            ),
+        )
         self.path_openmic = default_path(self.path_openmic, Path("data", "openmic"))
 
         self.path_models = default_path(
@@ -468,6 +489,14 @@ class ConfigDefault(Serializable):
         self.path_models_quick = default_path(
             self.path_models_quick, Path("models_quick"), create_if_none=True
         )
+        self.path_figures = default_path(
+            self.path_figures, Path("figures"), create_if_none=True
+        )
+
+        self.path_embeddings = default_path(
+            self.path_embeddings, Path("embeddings"), create_if_none=False
+        )
+
         self.path_background_noise = default_path(
             self.path_background_noise, Path("data", "ecs50")
         )
@@ -538,6 +567,7 @@ class ConfigDefault(Serializable):
         self.set_train_paths()
         self.set_val_paths()
         self.set_test_paths()
+        self.set_dataset_paths()
 
     def set_train_paths(self):
         if self.train_paths is None:
@@ -557,6 +587,12 @@ class ConfigDefault(Serializable):
         if self.test_paths is not None:
             self.test_paths = parse_dataset_paths(self.test_paths)
 
+    def set_dataset_paths(self):
+        if self.dataset_paths is not None:
+            self.dataset_paths = parse_dataset_paths(
+                self.dataset_paths, allow_raw_path=True
+            )
+
     def required_train_paths(self):
         if self.train_paths is None:
             raise InvalidArgument(f"--train-paths is required\n{USAGE_TEXT_PATHS}")
@@ -568,6 +604,10 @@ class ConfigDefault(Serializable):
     def required_test_paths(self):
         if self.train_paths is None:
             raise InvalidArgument(f"--test-paths is required\n{USAGE_TEXT_PATHS}")
+
+    def required_dataset_paths(self):
+        if self.dataset_paths is None:
+            raise InvalidArgument(f"--dataset-paths is required\n{USAGE_TEXT_PATHS}")
 
     def required_model(self):
         if self.model is None:
@@ -715,7 +755,9 @@ def get_default_value_for_field(field_str: str, cls=ConfigDefault):
 
 
 def get_default_config():
-    return ConfigDefault()
+    config = ConfigDefault()
+    config.after_init()
+    return config
 
 
 default_config = get_default_config()

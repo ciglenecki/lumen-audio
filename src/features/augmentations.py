@@ -41,10 +41,11 @@ class WaveformAugmentation:
                 noise_transform=AA.PolarityInversion(p=0.5),
                 p=1,
             )
+
+        except Exception:
             print(
                 f"Warning: skipping background noise because directory {path_background_noise} is invalid or has no sounds."
             )
-        except Exception:
             self.background_noise = None
 
         self.timeinv = AA.PolarityInversion(p=time_inversion_p)
