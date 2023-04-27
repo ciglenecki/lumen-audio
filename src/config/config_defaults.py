@@ -8,6 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
+from typing import Optional
 
 import pyrootutils
 import torch
@@ -168,6 +169,11 @@ DEFAULT_PRETRAINED_TAG_MAP = {
     SupportedModels.RESNEXT50_32X4D: TAG_IMAGENET1K_V2,
     SupportedModels.RESNEXT101_32X8D: TAG_IMAGENET1K_V2,
     SupportedModels.RESNEXT101_64X4D: TAG_IMAGENET1K_V1,
+    SupportedModels.CONVNEXT_TINY: TAG_IMAGENET1K_V1,
+    SupportedModels.CONVNEXT_SMALL: TAG_IMAGENET1K_V1,
+    SupportedModels.CONVNEXT_LARGE: TAG_IMAGENET1K_V1,
+    SupportedModels.CONVNEXT_BASE: TAG_IMAGENET1K_V1,
+    SupportedModels.MOBILENET_V3_LARGE: TAG_IMAGENET1K_V1,
 }
 ALL_INSTRUMENTS = [e.value for e in InstrumentEnums]
 ALL_INSTRUMENTS_NAMES = [INSTRUMENT_TO_FULLNAME[ins] for ins in ALL_INSTRUMENTS]
@@ -281,7 +287,7 @@ class ConfigDefault(Serializable):
     dataset_paths: list[str] | None = create(None)
     """Dataset path with the following format format: --dataset-paths inference:/path/to/dataset openmic:/path/to/dataset"""
 
-    # predict_paths: list[str] | None = create(None)
+    # predict_paths: Optional[list[str]] = create(None)
     # """Dataset root directories that will be used for predicting in the following format: --val-paths irmastest:/path/to/dataset openmic:/path/to/dataset"""
 
     train_only_dataset: bool = create(False)
@@ -415,7 +421,7 @@ class ConfigDefault(Serializable):
     head: SupportedHeads = create(SupportedHeads.DEEP_HEAD)
     """Type of classification head which will be used for classification. This is almost always the last layer."""
 
-    ckpt: str | None = create(None)
+    ckpt: Path | None = create(None)
     """.ckpt file, automatically restores model, epoch, step, LR schedulers, etc..."""
 
     use_fluffy: bool = create(False)
@@ -546,10 +552,34 @@ class ConfigDefault(Serializable):
                 SupportedModels.RESNEXT50_32X4D: True,
                 SupportedModels.RESNEXT101_32X8D: True,
                 SupportedModels.RESNEXT101_64X4D: True,
+                SupportedModels.CONVNEXT_TINY: True,
+                SupportedModels.CONVNEXT_SMALL: True,
+                SupportedModels.CONVNEXT_LARGE: True,
+                SupportedModels.CONVNEXT_BASE: True,
+                SupportedModels.MOBILENET_V3_LARGE: True,
             }
             self.use_rgb = USE_RGB[self.model]
 
-        # Dynamically set pretrained tag
+        # Dynamically set the image size
+        if self.model is not None and self.image_size is None:
+            IMAGE_SIZE_MAP = {
+                SupportedModels.AST: None,
+                SupportedModels.WAV2VEC_CNN: None,
+                SupportedModels.WAV2VEC: None,
+                SupportedModels.EFFICIENT_NET_V2_S: (384, 384),
+                SupportedModels.EFFICIENT_NET_V2_M: (480, 480),
+                SupportedModels.EFFICIENT_NET_V2_L: (480, 480),
+                SupportedModels.RESNEXT50_32X4D: (224, 224),
+                SupportedModels.RESNEXT101_32X8D: (224, 224),
+                SupportedModels.RESNEXT101_64X4D: (224, 224),
+                SupportedModels.CONVNEXT_TINY: (224, 224),
+                SupportedModels.CONVNEXT_SMALL: (224, 224),
+                SupportedModels.CONVNEXT_LARGE: (224, 224),
+                SupportedModels.CONVNEXT_BASE: (224, 224),
+                SupportedModels.MOBILENET_V3_LARGE: (224, 224),
+            }
+            self.image_size = IMAGE_SIZE_MAP[self.model]
+            # Dynamically set pretrained tag
         if self.model is not None and self.pretrained and self.pretrained_tag is None:
             if self.model not in DEFAULT_PRETRAINED_TAG_MAP:
                 raise InvalidArgument(
@@ -628,6 +658,12 @@ class ConfigDefault(Serializable):
         if self.model is None:
             raise InvalidArgument(f"--model is required {list(SupportedModels)}")
 
+    def required_ckpt(self):
+        if self.ckpt is None:
+            raise InvalidArgument(
+                "--ckpt path to a saved model (checkpoint) is required which usually ends with .ckpt"
+            )
+
     def required_audio_transform(self):
         if self.audio_transform is None:
             raise InvalidArgument(
@@ -683,6 +719,11 @@ class ConfigDefault(Serializable):
                 SupportedModels.RESNEXT50_32X4D: None,
                 SupportedModels.RESNEXT101_32X8D: None,
                 SupportedModels.RESNEXT101_64X4D: None,
+                SupportedModels.CONVNEXT_TINY: None,
+                SupportedModels.CONVNEXT_SMALL: None,
+                SupportedModels.CONVNEXT_LARGE: None,
+                SupportedModels.CONVNEXT_BASE: None,
+                SupportedModels.MOBILENET_V3_LARGE: None,
             }
             self.max_num_width_samples = MAX_NUM_WIDTH_SAMPLE[self.model]
 

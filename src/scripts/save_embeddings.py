@@ -69,20 +69,22 @@ def get_feature_extractor(
 
     if target_model_layer is not None:
         pass
+    elif model_enum in [
+        SupportedModels.EFFICIENT_NET_V2_S,
+        SupportedModels.EFFICIENT_NET_V2_M,
+        SupportedModels.EFFICIENT_NET_V2_L,
+        SupportedModels.RESNEXT50_32X4D,
+        SupportedModels.RESNEXT101_32X8D,
+        SupportedModels.RESNEXT101_64X4D,
+        SupportedModels.CONVNEXT_TINY,
+        SupportedModels.CONVNEXT_SMALL,
+        SupportedModels.CONVNEXT_LARGE,
+        SupportedModels.CONVNEXT_BASE,
+        SupportedModels.MOBILENET_V3_LARGE,
+    ]:
+        target_model_layer = "flatten"
     elif model_enum == SupportedModels.WAV2VEC_CNN:
         target_model_layer = "backbone.conv_layers.6.activation"
-    elif model_enum == SupportedModels.EFFICIENT_NET_V2_S:
-        target_model_layer = "flatten"
-    elif model_enum == SupportedModels.EFFICIENT_NET_V2_M:
-        target_model_layer = "flatten"
-    elif model_enum == SupportedModels.EFFICIENT_NET_V2_L:
-        target_model_layer = "flatten"
-    elif model_enum == SupportedModels.RESNEXT50_32X4D:
-        target_model_layer = "flatten"
-    elif model_enum == SupportedModels.RESNEXT101_32X8D:
-        target_model_layer = "flatten"
-    elif model_enum == SupportedModels.RESNEXT101_64X4D:
-        target_model_layer = "flatten"
     else:
         raise UnsupportedModel(
             f"Please add appropriate target_model_layer for model {model_enum}. You can pass the --target-model-layer instead."

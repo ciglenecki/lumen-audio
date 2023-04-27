@@ -148,6 +148,11 @@ if __name__ == "__main__":
     metric_mode_str = MetricMode(config.metric_mode).value
     optimizer_metric_str = OptimizeMetric(config.metric).value
 
+    csv_logger = pl_loggers.CSVLogger(
+        save_dir=str(output_dir),
+        name=experiment_name,
+        version=".",
+    )
     tensorboard_logger = pl_loggers.TensorBoardLogger(
         save_dir=str(output_dir),
         name=experiment_name,
@@ -201,14 +206,14 @@ if __name__ == "__main__":
             FinetuningCallback(finetune_head_epochs=config.finetune_head_epochs)
         )
 
-    callbacks.append(ModelSummary(max_depth=4))
+    callbacks.append(ModelSummary(max_depth=1))
 
     auto_lr_find = config.scheduler == SupportedScheduler.AUTO_LR
 
     # ================= TRAINER ========================
     trainer: pl.Trainer = pl.Trainer.from_argparse_args(
         pl_args,
-        logger=[tensorboard_logger],
+        logger=[tensorboard_logger, csv_logger],
         default_root_dir=output_dir,
         callbacks=callbacks,
     )

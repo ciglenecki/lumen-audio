@@ -5,9 +5,14 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from torch_scatter import scatter_max
 from torchmetrics.classification import MultilabelF1Score
 from torchvision.models import (
+    convnext_base,
+    convnext_large,
+    convnext_small,
+    convnext_tiny,
     efficientnet_v2_l,
     efficientnet_v2_m,
     efficientnet_v2_s,
+    mobilenet_v3_large,
     resnext50_32x4d,
     resnext101_32x8d,
     resnext101_64x4d,
@@ -27,6 +32,11 @@ TORCHVISION_CONSTRUCTOR_DICT = {
     SupportedModels.RESNEXT50_32X4D: resnext50_32x4d,
     SupportedModels.RESNEXT101_32X8D: resnext101_32x8d,
     SupportedModels.RESNEXT101_64X4D: resnext101_64x4d,
+    SupportedModels.CONVNEXT_TINY: convnext_tiny,
+    SupportedModels.CONVNEXT_SMALL: convnext_small,
+    SupportedModels.CONVNEXT_LARGE: convnext_large,
+    SupportedModels.CONVNEXT_BASE: convnext_base,
+    SupportedModels.MOBILENET_V3_LARGE: mobilenet_v3_large,
 }
 import time
 
@@ -151,7 +161,13 @@ class TorchvisionModel(ModelBase):
         #     for audio, title in zip(orig_audios, titles):
         #         print(title)
         #         play_audio(audio, transform.sampling_rate)
+
         #     pass
+
+        # logits_pred = self.forward(images)
+        # loss = self.loss_function(logits_pred, y)
+        # y_pred_prob = torch.sigmoid(logits_pred)
+        # y_pred = (y_pred_prob >= 0.5).float()
 
         sub_batches = torch.split(images, self.batch_size, dim=0)
         loss = 0
@@ -179,7 +195,6 @@ class TorchvisionModel(ModelBase):
         if type != "train":
             pass
             # y_final_out, _ = scatter_max(y_pred, file_indices, dim=0)
-
         loss = loss / len(images)
 
         # te = time.time()

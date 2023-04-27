@@ -228,8 +228,9 @@ class ModelBase(pl.LightningModule, ABC):
         params: Union[dict[str, Any], Namespace],
         metrics: Optional[dict[str, Any]] = None,
     ):
-        self.loggers[0].log_hyperparams(params)
-        self.loggers[0].finalize("success")
+        for logger in self.loggers:
+            logger.log_hyperparams(params)
+            logger.finalize("success")
 
     def _set_lr(self, lr: float):
         if self.trainer is not None:

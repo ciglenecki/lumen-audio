@@ -14,7 +14,6 @@ from pytorch_grad_cam.utils.image import show_cam_on_image
 
 from src.config import config_defaults
 from src.config.argparse_with_config import ArgParseWithConfig
-from src.config.config_defaults import parse_dataset_paths
 from src.data.datamodule import OurDataModule
 from src.features.audio_transform import get_audio_transform
 from src.features.augmentations import get_augmentations

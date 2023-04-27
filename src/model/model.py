@@ -23,6 +23,11 @@ def get_data_input_type(model_enum: SupportedModels) -> ModelInputDataType:
         SupportedModels.AST: ModelInputDataType.IMAGE,
         SupportedModels.WAV2VEC: ModelInputDataType.WAVEFORM,
         SupportedModels.WAV2VEC_CNN: ModelInputDataType.WAVEFORM,
+        SupportedModels.CONVNEXT_TINY: ModelInputDataType.IMAGE,
+        SupportedModels.CONVNEXT_SMALL: ModelInputDataType.IMAGE,
+        SupportedModels.CONVNEXT_LARGE: ModelInputDataType.IMAGE,
+        SupportedModels.CONVNEXT_BASE: ModelInputDataType.IMAGE,
+        SupportedModels.MOBILENET_V3_LARGE: ModelInputDataType.IMAGE,
     }
 
     if model_enum not in model_data_input_type:
@@ -42,6 +47,11 @@ model_constructor_map = {
     SupportedModels.RESNEXT50_32X4D: TorchvisionModel,
     SupportedModels.RESNEXT101_32X8D: TorchvisionModel,
     SupportedModels.RESNEXT101_64X4D: TorchvisionModel,
+    SupportedModels.CONVNEXT_TINY: ModelInputDataType.IMAGE,
+    SupportedModels.CONVNEXT_SMALL: ModelInputDataType.IMAGE,
+    SupportedModels.CONVNEXT_LARGE: ModelInputDataType.IMAGE,
+    SupportedModels.CONVNEXT_BASE: ModelInputDataType.IMAGE,
+    SupportedModels.MOBILENET_V3_LARGE: ModelInputDataType.IMAGE,
 }
 
 
