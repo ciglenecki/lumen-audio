@@ -102,5 +102,14 @@
 			"args": "--accelerator gpu --devices -1 --dataset-paths irmastest:data/irmas/test --ckpt models/04-20-15-53-30_FamedJuliett_efficient_net_v2_m/checkpoints/04-20-15-53-30_FamedJuliett_efficient_net_v2_m_val_acc_0.0000_val_loss_0.4319.ckpt --model EFFICIENT_NET_V2_M --batch-size 1 --num-workers 6",
 			"justMyCode": false
 		},
+		{
+			"name": "Server.py",
+			"type": "python",
+			"request": "launch",
+			"program": "src/server/main.py",
+			"console": "integratedTerminal",
+			"args": "-h",
+			"justMyCode": false
+		},
 	]
 }

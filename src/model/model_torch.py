@@ -211,38 +211,36 @@ class TorchvisionModel(ModelBase):
         return self._step(batch, batch_idx, type="val")
 
     def test_step(self, batch, batch_idx):
-        return self._step(batch, batch_idx, type="test")
+        images, y_true, file_indices, item_index = batch
+        loss, y_pred, y_pred_file = self.predict_step(batch, batch_idx)
+        return dict(loss=loss, y_pred=y_pred, y_pred_file=y_pred_file)
 
-    # def predict_step(self, batch, batch_idx: int, dataloader_idx: int = 0):
-    #     images, y, file_indices, item_index = batch
+    def test_epoch_end(self, outputs):
+        return super().test_epoch_end(outputs)
 
-    #     sub_batches = torch.split(images, self.batch_size, dim=0)
-    #     loss = 0
-    #     y_pred_prob = torch.zeros((len(images), self.num_labels), device=self.device)
-    #     y_pred = torch.zeros((len(images), self.num_labels), device=self.device)
+    def predict_step(self, batch, batch_idx: int, dataloader_idx: int = 0):
+        images, _, file_indices, item_index = batch
 
-    #     passed_images = 0
-    #     for sub_batch_image in sub_batches:
-    #         b_size = len(sub_batch_image)
-    #         start = passed_images
-    #         end = passed_images + b_size
+        sub_batches = torch.split(images, self.batch_size, dim=0)
+        loss = 0
+        y_pred_prob = torch.zeros((len(images), self.num_labels), device=self.device)
+        y_pred = torch.zeros((len(images), self.num_labels), device=self.device)
 
-    #         b_y = y[start:end]
-    #         b_logits_pred = self.forward(sub_batch_image)
-    #         b_loss = self.loss_function(b_logits_pred, b_y)
+        passed_images = 0
+        for sub_batch_image in sub_batches:
+            b_size = len(sub_batch_image)
+            start = passed_images
+            end = passed_images + b_size
 
-    #         b_y_pred_prob = torch.sigmoid(b_logits_pred)
-    #         b_y_pred = (b_y_pred_prob >= 0.5).float()
+            b_logits_pred = self.forward(sub_batch_image)
+            b_y_pred_prob = torch.sigmoid(b_logits_pred)
+            b_y_pred = (b_y_pred_prob >= 0.5).float()
 
-    #         loss += b_loss * b_size
-    #         y_pred_prob[start:end] = b_y_pred_prob
-    #         y_pred[start:end] = b_y_pred
+            y_pred_prob[start:end] = b_y_pred_prob
+            y_pred[start:end] = b_y_pred
 
-    #         passed_images += b_size
+            passed_images += b_size
 
-    #     y_final_out, _ = scatter_max(y_pred, file_indices, dim=0)
-
-    #     loss = loss / len(images)
-    #     return self.log_and_return_loss_step(
-    #         loss=loss, y_pred=y_pred, y_true=y, type=type
-    #     )
+        y_pred_file, _ = scatter_max(y_pred, file_indices, dim=0)
+        loss = loss / len(images)
+        return loss, y_pred, y_pred_file

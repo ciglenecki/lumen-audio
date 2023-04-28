@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 import pyrootutils
 import torch
@@ -275,7 +275,7 @@ class ConfigDefault(Serializable):
     path_figures: Path | None = create(None)
     path_embeddings: Path | None = create(None)
 
-    train_paths: list[str] | None = create(None)
+    train_paths: tuple[Path, SupportedDatasetDirType] | list[str] | None = create(None)
     """Dataset root directories that will be used for training in the following format: --train-paths irmastrain:/path/to/dataset or openmic:/path/to/dataset"""
 
     val_paths: list[str] | None = create(None)
@@ -284,7 +284,9 @@ class ConfigDefault(Serializable):
     test_paths: list[str] | None = create(None)
     """Dataset root directories that will be used for testing in the following format: --val-paths irmastest:/path/to/dataset openmic:/path/to/dataset"""
 
-    dataset_paths: list[str] | None = create(None)
+    dataset_paths: (list[str] | None | tuple[Path, SupportedDatasetDirType]) = create(
+        None
+    )
     """Dataset path with the following format format: --dataset-paths inference:/path/to/dataset openmic:/path/to/dataset"""
 
     # predict_paths: Optional[list[str]] = create(None)
@@ -787,8 +789,8 @@ class ConfigDefault(Serializable):
 
         return kwargs
 
-    def __repr__(self):
-        pass
+    # def __repr__(self):
+    #     pass
 
     def __str__(self):
         return self.dumps_yaml(allow_unicode=True, default_flow_style=False)
