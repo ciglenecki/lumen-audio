@@ -69,7 +69,6 @@ Low priority tasks:
 - [ ] ❗ check whatsup with pretrained weights (crop and resize)
 - [ ] **gradcam plots** create gradcam plots for trained model
   - [ ] 🖊️ report your findings in Google Docs
-- [ ] Train efficenet irmas only no aug with small `batch size=4`
 - [ ] **train with relabeled data (rep):** Include Ivan's relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
   - [ ] 🖊️ report your findings in Google Docs
 - [ ] **train with relabeled data (cleanlab):** Include train override csv. No augmentations. Compare both models metrics.
@@ -476,6 +475,7 @@ https://github.com/janmyler/web-audio-editor
 ## Done tasks
 
 Tasks:
+- [x] Train efficenet irmas only no aug with small `batch size=4`
 - [x] train  ResNeXt 50_32x4d on MelSpectrogram
   - [x] Compare how augmentations affect the final metrics:
     - [x] with no augmentations
