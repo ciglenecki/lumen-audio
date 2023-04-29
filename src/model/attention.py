@@ -27,4 +27,4 @@ class AttentionLayer(nn.Module):
         weights = self.w2(weights) / self.dk
         weights = self.softmax(weights)
         out = torch.sum(weights * hidden_states, dim=1)
-        return out
+        return out, weights

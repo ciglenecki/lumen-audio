@@ -93,5 +93,5 @@ class AttentionHead(nn.Module):
             features: torch.Tensor (N,T,D): N is batch size, T is the temporal length,
             D is the feature vector dimension
         """
-        attention = self.attention_layer(features)
+        attention,attention_weights = self.attention_layer(features)
         return self.classifer(attention)

@@ -168,6 +168,7 @@ DEFAULT_PRETRAINED_TAG_MAP = {
     SupportedModels.RESNEXT50_32X4D: TAG_IMAGENET1K_V2,
     SupportedModels.RESNEXT101_32X8D: TAG_IMAGENET1K_V2,
     SupportedModels.RESNEXT101_64X4D: TAG_IMAGENET1K_V1,
+    SupportedModels.CONVLSTM:None
 }
 ALL_INSTRUMENTS = [e.value for e in InstrumentEnums]
 ALL_INSTRUMENTS_NAMES = [INSTRUMENT_TO_FULLNAME[ins] for ins in ALL_INSTRUMENTS]
@@ -546,6 +547,7 @@ class ConfigDefault(Serializable):
                 SupportedModels.RESNEXT50_32X4D: True,
                 SupportedModels.RESNEXT101_32X8D: True,
                 SupportedModels.RESNEXT101_64X4D: True,
+                SupportedModels.CONVLSTM: False
             }
             self.use_rgb = USE_RGB[self.model]
 
@@ -683,6 +685,7 @@ class ConfigDefault(Serializable):
                 SupportedModels.RESNEXT50_32X4D: None,
                 SupportedModels.RESNEXT101_32X8D: None,
                 SupportedModels.RESNEXT101_64X4D: None,
+                SupportedModels.CONVLSTM: None
             }
             self.max_num_width_samples = MAX_NUM_WIDTH_SAMPLE[self.model]
 

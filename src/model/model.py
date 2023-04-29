@@ -9,6 +9,7 @@ from src.model.model_ast import ASTModelWrapper
 from src.model.model_torch import TorchvisionModel
 from src.model.model_wav2vec import Wav2VecWrapper
 from src.model.model_wav2vec_cnn import Wav2VecCnnWrapper
+from src.model.model_conv_lstm import ConvLSTM
 from src.utils.utils_exceptions import UnsupportedModel
 
 
@@ -23,6 +24,7 @@ def get_data_input_type(model_enum: SupportedModels) -> ModelInputDataType:
         SupportedModels.AST: ModelInputDataType.IMAGE,
         SupportedModels.WAV2VEC: ModelInputDataType.WAVEFORM,
         SupportedModels.WAV2VEC_CNN: ModelInputDataType.WAVEFORM,
+        SupportedModels.CONVLSTM : ModelInputDataType.IMAGE
     }
 
     if model_enum not in model_data_input_type:
@@ -42,6 +44,7 @@ model_constructor_map = {
     SupportedModels.RESNEXT50_32X4D: TorchvisionModel,
     SupportedModels.RESNEXT101_32X8D: TorchvisionModel,
     SupportedModels.RESNEXT101_64X4D: TorchvisionModel,
+    SupportedModels.CONVLSTM : ConvLSTM
 }
 
 
