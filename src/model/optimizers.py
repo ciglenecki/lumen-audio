@@ -26,7 +26,7 @@ def our_configure_optimizers(
     num_of_steps_in_epoch: int,
     scheduler_epochs: int,
     lr_onecycle_max=0.03,
-) -> tuple[list[torch.optim.Optimizer], list[torch.optim.lr_scheduler.LRScheduler]]:
+) -> tuple[list[torch.optim.Optimizer], list[torch.optim.lr_scheduler._LRScheduler]]:
     """
 
     WARNING: returns N optimizers for each parameter group in `list_of_module_params`. You should almost always send a single module.parameters() wrapped with a list []
