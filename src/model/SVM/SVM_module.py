@@ -181,37 +181,87 @@ class ManageData():
         #app_entropy, sample_entropy, Hjorth_parameters))
         Hjorth_parameters))
     
-class multilabelSVM(BaseEstimator):
+class multilabelSVM_linear(BaseEstimator):
 
-    def __init__(self, model_ = LinearSVC()):
-         self.model0 = model_
-         self.model1 = model_
-         self.model2 = model_
-         self.model3 = model_
-         self.model4 = model_
-         self.model5 = model_
-         self.model6 = model_
-         self.model7 = model_
-         self.model8 = model_
-         self.model9 = model_
-         self.model10 = model_
-         self.model11 = model_
+    def __init__(self, C=1):
+        self.C = C
     
     def fit(self, X = None, y = None):
         """Training a full model and returning a one-hot encoded vector which tells which instrument is present in the given data"""
         X = self.X_train if X is None else X
         y = self.y_train if y is None else y
 
+        self.model0 = LinearSVC(C=self.C, dual=False)
         self.model0.fit(X = X, y = y[:,0])
+        self.model1 = LinearSVC(C=self.C, dual=False)
         self.model1.fit(X = X, y = y[:,1])
+        self.model2 = LinearSVC(C=self.C, dual=False)
         self.model2.fit(X = X, y = y[:,2])
+        self.model3 = LinearSVC(C=self.C, dual=False)
         self.model3.fit(X = X, y = y[:,3])
+        self.model4 = LinearSVC(C=self.C, dual=False)
         self.model4.fit(X = X, y = y[:,4])
+        self.model5 = LinearSVC(C=self.C, dual=False)
         self.model5.fit(X = X, y = y[:,5])
+        self.model6 = LinearSVC(C=self.C, dual=False)
         self.model6.fit(X = X, y = y[:,6])
+        self.model7 = LinearSVC(C=self.C, dual=False)
         self.model7.fit(X = X, y = y[:,7])
+        self.model8 = LinearSVC(C=self.C, dual=False)
         self.model8.fit(X = X, y = y[:,8])
+        self.model9 = LinearSVC(C=self.C, dual=False)
         self.model9.fit(X = X, y = y[:,9])
+        self.model10 = LinearSVC(C=self.C, dual=False)
+        self.model10.fit(X = X, y = y[:,10])
+        
+        print('Training completed successfully!')
+        return self
+    
+    def predict(self, X = None):
+        """Gives a prediction for input X based on a model"""
+        X = self.X_val if X is None else X
+
+        prediction = np.array([self.model0.predict(X), self.model1.predict(X), self.model2.predict(X),
+                      self.model3.predict(X), self.model4.predict(X), self.model5.predict(X),
+                      self.model6.predict(X), self.model7.predict(X), self.model8.predict(X),
+                      self.model9.predict(X), self.model10.predict(X)])
+        
+        prediction = [prediction[:,i] for i in range(prediction.shape[1])]
+
+        return np.array(prediction)
+    
+class multilabelSVM(BaseEstimator):
+
+    def __init__(self, C=1, kernel='rbf'):
+        self.C = C
+        self.kernel = kernel
+    
+    def fit(self, X = None, y = None):
+        """Training a full model and returning a one-hot encoded vector which tells which instrument is present in the given data"""
+        X = self.X_train if X is None else X
+        y = self.y_train if y is None else y
+
+        self.model0 = SVC(C=self.C, kernel=self.kernel)
+        self.model0.fit(X = X, y = y[:,0])
+        self.model1 = SVC(C=self.C, kernel=self.kernel)
+        self.model1.fit(X = X, y = y[:,1])
+        self.model2 = SVC(C=self.C, kernel=self.kernel)
+        self.model2.fit(X = X, y = y[:,2])
+        self.model3 = SVC(C=self.C, kernel=self.kernel)
+        self.model3.fit(X = X, y = y[:,3])
+        self.model4 = SVC(C=self.C, kernel=self.kernel)
+        self.model4.fit(X = X, y = y[:,4])
+        self.model5 = SVC(C=self.C, kernel=self.kernel)
+        self.model5.fit(X = X, y = y[:,5])
+        self.model6 = SVC(C=self.C, kernel=self.kernel)
+        self.model6.fit(X = X, y = y[:,6])
+        self.model7 = SVC(C=self.C, kernel=self.kernel)
+        self.model7.fit(X = X, y = y[:,7])
+        self.model8 = SVC(C=self.C, kernel=self.kernel)
+        self.model8.fit(X = X, y = y[:,8])
+        self.model9 = SVC(C=self.C, kernel=self.kernel)
+        self.model9.fit(X = X, y = y[:,9])
+        self.model10 = SVC(C=self.C, kernel=self.kernel)
         self.model10.fit(X = X, y = y[:,10])
         
         print('Training completed successfully!')

@@ -33,6 +33,9 @@ def duration_histogram_val(x):
     plt.title('Validation data')
     plt.xlabel('duration in seconds')
     plt.ylabel('number of examples')
+    plt.savefig(r'.\data\exploratory_data_analysis\figures\duration_histogram_val.png')
+    plt.show()
+    plt.close()
 
 def instrument_duration_train(x, y):
     '''x = data.data_train, y = data.y_train'''
@@ -45,6 +48,9 @@ def instrument_duration_train(x, y):
     plt.xticks(ticks=np.arange(11), labels=labels)
     plt.title('Training data')
     plt.ylabel('duration in seconds')
+    plt.savefig(r'.\data\exploratory_data_analysis\figures\instrument_duration_train.png')
+    plt.show()
+    plt.close()
 
 def instrument_duration_val(x, y):
     '''x = data.data_val, y = data.y_val'''
@@ -57,6 +63,9 @@ def instrument_duration_val(x, y):
     plt.xticks(ticks=np.arange(11), labels=labels)
     plt.title('Validation data')
     plt.ylabel('duration in seconds')
+    plt.savefig(r'.\data\exploratory_data_analysis\figures\instrument_duration_val.png')
+    plt.show()
+    plt.close()
 
 def instrument_number_val(y):
     '''y = data.y_val'''
@@ -72,9 +81,12 @@ def instrument_number_val(y):
     plt.title('Validation data')
     plt.xlabel('number of instruments')
     plt.ylabel('number of examples')
+    plt.savefig(r'.\data\exploratory_data_analysis\figures\instrument_number_val.png')
+    plt.show()
+    plt.close()
 
 def data_correlation_matrix_train(X, y):
-    '''x = data.data_train, y = data.y_train'''
+    '''x = X.data_train, y = data.y_train'''
     a = np.concatenate((y, X), axis=1)
     labels = ['cel', 'cla', 'flu', 'gac', 'gel', 'org', 'pia', 'sax', 'tru', 'vio', 'voi',
         'mfcc1', 'mfcc2', 'mfcc3', 'mfcc4', 'mfcc5', 'mfcc6', 'mfcc7', 'mfcc8', 'mfcc9', 'mfcc10',
@@ -89,14 +101,16 @@ def data_correlation_matrix_train(X, y):
     plt.title('Correlation matrix for instruments and features in the IRMAS training set')
     plt.xticks(ticks=np.arange(39), labels=labels, rotation='vertical')
     plt.yticks(ticks=np.arange(39), labels=labels)
+    plt.savefig(r'.\data\exploratory_data_analysis\figures\data_correlation_matrix_train.png')
     plt.show()
+    plt.close()
     print('Top five features with the highest variance in correlation:')
     var = pd.DataFrame.var(corrM)
     var = pd.Series.sort_values(var, ascending= False)
     return var
 
 def data_correlation_matrix_val(X, y):
-    '''x = data.data_val, y = data.y_val'''
+    '''x = data.X_val, y = data.y_val'''
     a = np.concatenate((y, X), axis=1)
     labels = ['cel', 'cla', 'flu', 'gac', 'gel', 'org', 'pia', 'sax', 'tru', 'vio', 'voi',
         'mfcc1', 'mfcc2', 'mfcc3', 'mfcc4', 'mfcc5', 'mfcc6', 'mfcc7', 'mfcc8', 'mfcc9', 'mfcc10',
@@ -111,7 +125,9 @@ def data_correlation_matrix_val(X, y):
     plt.title('Correlation matrix for instruments and features in the IRMAS validation set')
     plt.xticks(ticks=np.arange(39), labels=labels, rotation='vertical')
     plt.yticks(ticks=np.arange(39), labels=labels)
+    plt.savefig(r'.\data\exploratory_data_analysis\figures\data_correlation_matrix_val.png')
     plt.show()
+    plt.close()
     print('Top five features with the highest variance in correlation:')
     var = pd.DataFrame.var(corrM)
     var = pd.Series.sort_values(var, ascending= False)
@@ -182,6 +198,9 @@ def data_clusters_train(X, y):
     ax11.set_ylabel('$PCA_1$')
     plt.tight_layout()
     plt.suptitle('Training data clusters', fontsize=16, y=1.01)
+    plt.savefig(r'.\data\exploratory_data_analysis\figures\data_clusters_train.png')
+    plt.show()
+    plt.close()
 
 def data_clusters_val(X, y):
     '''X=data.X_val, y=data.y_val'''
@@ -248,3 +267,6 @@ def data_clusters_val(X, y):
     ax11.set_ylabel('$PCA_1$')
     plt.tight_layout()
     plt.suptitle('Validation data clusters', fontsize=16, y=1.01)
+    plt.savefig(r'.\data\exploratory_data_analysis\figures\data_clusters_val.png')
+    plt.show()
+    plt.close()
