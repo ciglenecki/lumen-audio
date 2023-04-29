@@ -44,9 +44,7 @@ class Wav2VecWrapper(ModelBase):
         middle_size = int(
             math.sqrt(config_wav2vec.hidden_size * self.num_labels) + self.num_labels
         )
-        self.classifier = DeepHead(
-            [config_wav2vec.hidden_size, middle_size, self.num_labels]
-        )
+        self.classifier = DeepHead([config_wav2vec.hidden_size, self.num_labels])
 
         self.save_hyperparameters()
 

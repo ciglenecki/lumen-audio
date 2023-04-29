@@ -30,51 +30,45 @@ Low priority tasks:
 - [ ] add Contrastive loss from here https://kevinmusgrave.github.io/pytorch-metric-learning/losses/#contrastiveloss
 
 ## Matej:
-
+- [ ] create eval script which will caculate ALL metrics for the whole dataset
+  1. konfuzijska matrica
+  2. sve metrike, po instruemtima
+  3. roc curve
+  4. distrubicija dataseta
+  5. distrubicija broja instruemnta
+  6. vizualziacija gradijenata
+  7. embedding visualization
 - [ ] ❗create backend API/inference
   - [ ] load model in inference, caculate metrics the whole test irmas dataset (analitics)
     - [ ] should reuse the train.py script, just use different modes?
-    - [ ] create eval script which will caculate ALL metrics for the whole dataset
-  - [ ] any dataset/csv loader
   - [ ] http server with some loaded model which returns responses
+- [ ] Change ArcFace module so that it repeats embeddings 11 times
 - [ ] ❗create technical documentation
 - [ ] ❗create docker container
-- [ ] ⚠️ check for all models edge cases (0.1 sec, 2h)
-- [ ] ⚠️ download the whole IRMAS dataset
 - [ ] **visualize embedded features**: for each model with tensorboard embedder https://projector.tensorflow.org/
-- [ ] ⚠️ check the assumption that label instrument is present thought the whole audio (check n=200 samples and check how many occourances) VALIDATION
-  - holds up for most cases?
-  - [ ] 🖊️ report your findings in Google Docs
-- [ ] **Train Wav2Vec2 Transformer**: "m3hrdadfi/wav2vec2-base-100k-gtzan-music-genres"
-  - [ ] nothing better than simple CNN?
+- [ ] 🖊️ **OpenMIC guitars** - document what you did
 - [ ] pretraning: SparK https://github.com/keyu-tian/SparK
 
 ## Mirko:
-- [ ] ⚠️ create a CSV which splits IRMAS validation to train and validation. First, group the .wav examples by the same song and find union of labels. Apply http://scikit.ml/stratification.html Multi-label data stratification to split the data.
+- [ ] 🖊️ create model graveyard section in project documentation and populate it
+  - [ ] openl3
+  - [ ] fluffy??
+  - [ ] wav2vec
+  - [ ] maybe CRNN ?
+- [ ] Add CRNN to our codebase (SupportedModels enum everywhere)
+- [ ] Add Focal Loss, InstrumentFamilyLoss to `src/model/loss_functions.py` and add SupportedLosses
+- [ ] Add ArcFace module in codebase
 - [ ] **arcface**: add arcface loss (`src/model/loss_function.py`) in our codebase and RUN the train.py. Don't use pure arcface!. Run experiment with and without arcface.
-  - [ ] 🖊️ report your findings in Google Docs
-- [ ] create attention visualization
+- [x] create attention function vizualization
+  - [ ] make sure you get actual image of attention weights for some melespectrogram
 - ![](img/attention_weights.png)
 - [ ] **Fluffy**: Directly compare Fluffy to non. Fluffy (include metrics)
   - [ ] 🖊️ report your findings in Google Docs
-- [ ] Train OpenMIC with Wav2Vec2 CNN:
-  - if Fluffy showed no improvement in previous step then don't use Fluffy
-  - if Fluffy showed improvement train with Fluffy and no Fluffy
-  - [ ] 🖊️ report your findings in Google Docs
-- [ ] **OpenMIC guitars**: use cleanlab and Kmeans to find guitars. Openmic has 1 guitar label. Take pretrained AST and do feature extraction on IRMAS train only on electric and aucustic guitar examples. Create a script which takes the AST features and creates Kmeans between two classes. Cluster OpenMIC guitars, take the most confident examples and save the examples (and new labels).
-
 
 ## Rep:
+- [ ] ❗ check whatsup with pretrained weights (crop and resize)
 - [ ] **gradcam plots** create gradcam plots for trained model
   - [ ] 🖊️ report your findings in Google Docs
-- [ ] train  ResNeXt 50_32x4d on MelSpectrogram
-  - [ ] Compare how augmentations affect the final metrics:
-    - [x] with no augmentations
-    - [ ] with augmentations
-- [ ] train  ResNeXt 50_32x4d on MFCC
-  - [ ] Compare how augmentations affect the final metrics:
-    - [x] with no augmentations
-    - [ ] with augmentations
 - [ ] **train with relabeled data (rep):** Include Ivan's relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
   - [ ] 🖊️ report your findings in Google Docs
 - [ ] **train with relabeled data (cleanlab):** Include train override csv. No augmentations. Compare both models metrics.
@@ -82,11 +76,23 @@ Low priority tasks:
 - [ ] **Rep vs IRMAS:** perform validation on Rep's corected dataset to check how many labels are correctly marked in the original dataset
   - check if all instruments are correct
   - check if at least one instrument is correct
+  - hamming distance between Rep's and original
+  - how dirty is the training set in terms of including non-predominant instruments
   - [ ] 🖊️ report your findings in Google Docs
+- [ ] **attention head** on CNN model instead of deep classifier
+- [ ] **fluffy**: run training with Fluffy head on CNN backbone which was already trained before. Use IRMAS only + no augmentations. Don't use mulitple optimizers!
+- [ ] **Train Wav2Vec2 CNN**: IRMAS only no aug
+- [ ] **Train Wav2Vec2 Transformer**: IRMAS only no aug "m3hrdadfi/wav2vec2-base-100k-gtzan-music-genres"
+  - [ ] nothing better than simple CNN?
+- [ ] **Inference analysis**: run inference on single audio with multiple different durations (0.1 sec, 1 sec, 5 sec, 10 sec, 1 minute, 5 minutes, 30 minutes, 60 minutes)
+  - [ ] ⚠️ create csv file for loading 7 audios (look at `openmic_r0.8_n_8858.csv` structure)
+- [ ] **ArcFace**: Run CNN IRMAS only no aug with ArcFace module
+
 
 ## Vinko:
-
-
+- [ ] ⚠️ check the assumption that label instrument is present thought the whole audio (check n=200 samples and check how many occourances) VALIDATION
+  - holds up for most cases?
+  - [ ] 🖊️ report your findings in Google Docs
 - [ ] use the `get_metrics` functions from `src/train/metrics.py` to caculate metrics for each sample. The function returns mean metrics and metrics per instrument (make sure to use =True argument)
 - [ ] train 22 SVMs (RBF and lienar) using IRMAS training data
   - [ ] 🖊️ document the process, intution behind features and metrics
@@ -469,6 +475,17 @@ https://github.com/janmyler/web-audio-editor
 ## Done tasks
 
 Tasks:
+- [x] Train efficenet irmas only no aug with small `batch size=4`
+- [x] train  ResNeXt 50_32x4d on MelSpectrogram
+  - [x] Compare how augmentations affect the final metrics:
+    - [x] with no augmentations
+    - [x] with augmentations
+- [x] train  ResNeXt 50_32x4d on MFCC
+  - [x] Compare how augmentations affect the final metrics:
+    - [x] with no augmentations
+    - [x] with augmentations
+- [x] **OpenMIC guitars**: use cleanlab and Kmeans to find guitars. Openmic has 1 guitar label. Take pretrained AST and do feature extraction on IRMAS train only on electric and aucustic guitar examples. Create a script which takes the AST features and creates Kmeans between two classes. Cluster OpenMIC guitars, take the most confident examples and save the examples (and new labels).
+- [x] ⚠️ create a CSV which splits IRMAS validation to train and validation. First, group the .wav examples by the same song and find union of labels. Apply http://scikit.ml/stratification.html Multi-label data stratification to split the data.
 - [ ] use validation examples in train (without data leakage), check what's the total time of audio in train and val
 - [x] **augmentations**: time shift, pitch shift, sox
   - [x] add normalization after augmentations
@@ -501,6 +518,8 @@ Tasks:
     - shuffle 15% of patches
     - electra, is the patch shuffled?
 - [x] **ESC50:** download non instrument audio files and write data loader which are NOT instruments (@matej) this might not be important since the model usually gives [0,0,0,0,0] anyways: download ESC50 non instrument audio files and write data loader which are NOT instruments (@matej)
+- [x] any dataset/csv loader
+- [x] ⚠️ download the whole IRMAS dataset
 
 **Dataframe for one instrument (guitar):**
 
