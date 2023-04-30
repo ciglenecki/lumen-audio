@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from sklearn import feature_extraction
 from transformers import ASTFeatureExtractor
 
 from src.config.argparse_with_config import ArgParseWithConfig
@@ -11,6 +12,7 @@ from src.config.config_defaults import (
 from src.features.audio_transform_base import AudioTransformBase
 from src.utils.utils_audio import plot_spectrograms, spec_width_to_num_samples
 from src.utils.utils_dataset import get_example_val_sample
+from src.utils.utils_functions import timeit
 
 
 class AudioTransformAST(AudioTransformBase):
@@ -26,12 +28,14 @@ class AudioTransformAST(AudioTransformBase):
         pretrained_tag,
         hop_length: int,
         n_mels: int,
+        n_fft: int,
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.n_mels = n_mels
         self.hop_length = hop_length
+        self.n_fft = n_fft
         if pretrained_tag is None:
             self.feature_extractor = ASTFeatureExtractor(
                 sampling_rate=self.sampling_rate,
@@ -65,6 +69,7 @@ class AudioTransformAST(AudioTransformBase):
         spectrogram = spectrogram.transpose(-2, -1)
         return spectrogram
 
+    # @timeit
     def __call__(
         self, audio: torch.Tensor | np.ndarray
     ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -79,6 +84,22 @@ class AudioTransformAST(AudioTransformBase):
             audio = [a.numpy() for a in audio_tensors]
         else:
             audio = [audio]
+
+        # Kaldi requires audio's length to be at least n_fft (400)
+        # If there's only one chunk pad it with zero up to n_fft (400)
+        # If there are multiple chunks discard the last (problematic) one
+        min_waveform_length = self.n_fft
+        num_chunks = len(audio)
+        last_chunk = audio[-1]
+        last_chunk_length = len(last_chunk)
+        if last_chunk_length < min_waveform_length:
+            if num_chunks > 1:
+                audio.pop()
+            elif num_chunks == 1:
+                pad_width = (0, min_waveform_length - last_chunk_length)
+                audio[-1] = np.pad(
+                    last_chunk, pad_width, mode="constant", constant_values=0
+                )
 
         spectrogram = self.feature_extractor(
             audio,

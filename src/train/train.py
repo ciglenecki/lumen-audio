@@ -15,7 +15,7 @@ from pytorch_lightning.utilities.seed import seed_everything
 
 from src.config.config_defaults import ConfigDefault
 from src.config.config_train import get_config
-from src.data.datamodule import IRMASDataModule
+from src.data.datamodule import OurDataModule
 from src.enums.enums import (
     MetricMode,
     OptimizeMetric,
@@ -41,7 +41,7 @@ from src.utils.utils_functions import (
     stdout_to_file,
     to_yaml,
 )
-from src.utils.utils_model import print_modules
+from src.utils.utils_model import print_params
 
 
 def experiment_setup(config: ConfigDefault, pl_args: Namespace):
@@ -74,7 +74,8 @@ def experiment_setup(config: ConfigDefault, pl_args: Namespace):
         "================== PyTorch Lightning ==================\n\n",
         to_yaml(vars(pl_args)),
     )
-    # input("Review the config above. Press enter if you wish to continue: ")
+    if config.verify_config:
+        input("Review the config above. Press enter if you wish to continue: ")
     return experiment_name, experiment_dir, output_dir
 
 
@@ -110,7 +111,7 @@ if __name__ == "__main__":
     )
     collate_fn = get_collate_fn(config)
 
-    datamodule = IRMASDataModule(
+    datamodule = OurDataModule(
         train_paths=config.train_paths,
         val_paths=config.val_paths,
         test_paths=config.test_paths,
@@ -127,6 +128,7 @@ if __name__ == "__main__":
         concat_n_samples=concat_n_samples,
         sum_two_samples=SupportedAugmentations.SUM_TWO_SAMPLES in config.augmentations,
         use_weighted_train_sampler=config.use_weighted_train_sampler,
+        sampling_rate=config.sampling_rate,
     )
     datamodule.setup_for_train()
 
@@ -140,7 +142,7 @@ if __name__ == "__main__":
         loss_function = torch.nn.BCEWithLogitsLoss(**kwargs)
 
     model = get_model(config, loss_function=loss_function)
-    print_modules(model)
+    print_params(model)
 
     # ================= SETUP CALLBACKS (auto checkpoint, tensorboard, early stopping...)========================
     metric_mode_str = MetricMode(config.metric_mode).value
@@ -155,7 +157,7 @@ if __name__ == "__main__":
     )
 
     train_dataloader_size = len(datamodule.train_dataloader())
-    bar_refresh_rate = int(train_dataloader_size / config.bar_update)
+    bar_refresh_rate = min(int(train_dataloader_size / config.bar_update), 200)
 
     callback_early_stopping = EarlyStopping(
         monitor=optimizer_metric_str,

@@ -26,12 +26,14 @@ class SupportedAugmentations(Enum):
     CONCAT_N_SAMPLES = "concat_n"
     SUM_TWO_SAMPLES = "sum_two_samples"
 
+    # Softer augmentations
     BACKGROUND_NOISE = "background_noise"
     TIME_STRETCH = "time_stretch"
     TIME_SHIFT = "time_shift"
     PITCH = "pitch"
-
     COLOR_NOISE = "color_noise"
+
+    # Harder augmentations
     TIMEINV = "timeinv"
     TIME_MASK = "time_mask"
     SEVEN_BAND_EQ = "seven_band_eq"
@@ -66,6 +68,7 @@ class AudioTransforms(Enum):
 
     AST = "ast"
     MEL_SPECTROGRAM = "mel_spectrogram"
+    MULTI_SPECTROGRAM = "multi_spectrogram"
     WAV2VEC = "wav2vec"
     MFCC = "mfcc"
     WAV2VEC_CNN = "wav2vec_cnn"
@@ -78,6 +81,7 @@ class SupportedDatasetDirType(Enum):
     IRMAS_TEST = "irmastest"
     OPENMIC = "openmic"
     CSV = "csv"
+    INFERENCE = "inference"
 
 
 class MetricMode(Enum):

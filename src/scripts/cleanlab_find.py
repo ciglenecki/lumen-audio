@@ -9,10 +9,11 @@ from sklearn.model_selection import cross_val_predict
 from tqdm import tqdm
 
 import src.config.config_defaults as config_defaults
+from src.config.config_defaults import get_default_config
 
 
 def main():
-    config = config_defaults.get_default_config()
+    config = get_default_config()
 
     EMBEDDINGS_DIR = config.path_irmas_train_features
     TRAIN_DATASET_PATH = config.path_irmas_train

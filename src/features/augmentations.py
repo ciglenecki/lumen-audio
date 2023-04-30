@@ -8,6 +8,7 @@ from torchvision.transforms import RandomErasing
 
 from src.config.config_defaults import ConfigDefault
 from src.enums.enums import SupportedAugmentations
+from src.utils.utils_functions import timeit
 
 
 class WaveformAugmentation:
@@ -41,10 +42,11 @@ class WaveformAugmentation:
                 noise_transform=AA.PolarityInversion(p=0.5),
                 p=1,
             )
+
+        except Exception:
             print(
                 f"Warning: skipping background noise because directory {path_background_noise} is invalid or has no sounds."
             )
-        except Exception:
             self.background_noise = None
 
         self.timeinv = AA.PolarityInversion(p=time_inversion_p)
@@ -63,6 +65,7 @@ class WaveformAugmentation:
         # AA.LoudnessNormalization(max_lufs_in_db=-5, min_lufs_in_db=-15, p=0.5)
         self.time_mask = AA.TimeMask(min_band_part=0, max_band_part=0.2, p=1)
 
+    # @timeit
     def __call__(self, audio: np.ndarray) -> np.ndarray:
         if len(self.augmentations) == 0:
             return audio
@@ -117,6 +120,7 @@ class SpectrogramAugmentation:
         self.freq_mask = AA.SpecFrequencyMask(p=1)
         self.random_erase = RandomErasing(scale=(0.02, 0.2), ratio=(1, 2), p=1)
 
+    # @timeit
     def __call__(self, spectrogram: torch.Tensor | np.ndarray) -> torch.Tensor:
         if isinstance(spectrogram, np.ndarray):
             spectrogram = torch.tensor(spectrogram)

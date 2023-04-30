@@ -16,6 +16,7 @@ from src.utils.utils_dataset import (
     get_example_val_sample,
     remove_rgb_channel,
 )
+from src.utils.utils_functions import timeit
 
 
 class MelSpectrogram(AudioTransformBase):
@@ -43,6 +44,7 @@ class MelSpectrogram(AudioTransformBase):
         self.normalize_audio = normalize_audio
         self.normalize_image = normalize_image
 
+    # @timeit
     def __call__(
         self,
         audio: torch.Tensor | np.ndarray,
