@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-from sklearn import feature_extraction
 from transformers import ASTFeatureExtractor
 
 from src.config.argparse_with_config import ArgParseWithConfig
@@ -12,7 +11,6 @@ from src.config.config_defaults import (
 from src.features.audio_transform_base import AudioTransformBase
 from src.utils.utils_audio import plot_spectrograms, spec_width_to_num_samples
 from src.utils.utils_dataset import get_example_val_sample
-from src.utils.utils_functions import timeit
 
 
 class AudioTransformAST(AudioTransformBase):

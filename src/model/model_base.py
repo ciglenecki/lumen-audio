@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from argparse import Namespace
 from dataclasses import dataclass
-from re import split
 from typing import Any, Callable, Optional, Union
 
 import numpy as np
@@ -12,13 +11,13 @@ from pytorch_lightning.callbacks import BaseFinetuning
 from pytorch_lightning.core.optimizer import LightningOptimizer
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.utilities.types import LRSchedulerPLType
-from torch_scatter import scatter_max, scatter_mean
+from torch_scatter import scatter_max
 
 import src.config.config_defaults as config_defaults
 from src.config.config_defaults import ConfigDefault
 from src.enums.enums import MetricMode, OptimizeMetric, SupportedModels
 from src.model.fluffy import Fluffy, FluffyConfig
-from src.model.heads import HeadTypes
+from src.model.heads import DeepHead, HeadTypes
 from src.model.optimizers import (
     SupportedOptimizer,
     SupportedScheduler,
@@ -80,8 +79,6 @@ class ModelBase(pl.LightningModule, ABC):
         finetune_head_epochs: Optional[int],
         freeze_train_bn: bool,
         head_after: str | None,
-        head_constructor: Callable[[Any], HeadTypes],
-        head_hidden_dim: list[int],
         backbone_after: str | None,
         loss_function: torch.nn.modules.loss._Loss,
         lr: float,
@@ -101,6 +98,8 @@ class ModelBase(pl.LightningModule, ABC):
         pretrained_tag: str,
         fluffy_config: FluffyConfig | None = None,
         config: None | ConfigDefault = None,
+        head_constructor: Callable[[Any], HeadTypes] = DeepHead,
+        head_hidden_dim: list[int] = [],
         *args,
         **kwargs,
     ) -> None:

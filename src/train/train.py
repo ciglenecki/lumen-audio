@@ -26,7 +26,7 @@ from src.enums.enums import (
 )
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
 from src.features.augmentations import get_augmentations
-from src.features.chunking import collate_fn_feature, get_collate_fn
+from src.features.chunking import collate_fn_feature
 from src.model.model import get_model
 from src.train.callbacks import (
     FinetuningCallback,

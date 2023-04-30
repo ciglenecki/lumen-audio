@@ -5,8 +5,6 @@ from fastapi import APIRouter, UploadFile
 from fastapi.responses import StreamingResponse
 
 import src.server.controllers as controllers
-from src.config.config_defaults import InstrumentEnums
-from src.enums.enums import SupportedModels
 from src.server.interface import MultilabelPrediction
 from src.server.server_store import server_store
 

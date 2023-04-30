@@ -1,13 +1,8 @@
-from functools import partial
-from typing import Callable
-
 import torch
 import torch.nn.functional
 import torchvision.transforms.functional
 
-from src.config.config_defaults import NUM_RGB_CHANNELS, ConfigDefault
-from src.enums.enums import ModelInputDataType
-from src.model.model import get_data_input_type
+from src.config.config_defaults import NUM_RGB_CHANNELS
 
 
 def chunk_image_by_width(

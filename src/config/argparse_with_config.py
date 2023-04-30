@@ -1,6 +1,5 @@
 import argparse
 from operator import attrgetter
-from typing import Sequence
 
 import pytorch_lightning as pl
 import simple_parsing

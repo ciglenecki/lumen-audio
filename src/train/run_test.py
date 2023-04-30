@@ -1,16 +1,7 @@
-import argparse
 from collections.abc import Iterator  # Python >=3.9
-from typing import Callable, Generator
 
 import pytorch_lightning as pl
 import torch
-import yaml
-from pytorch_lightning.callbacks import (
-    EarlyStopping,
-    ModelCheckpoint,
-    ModelSummary,
-    TQDMProgressBar,
-)
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -18,14 +9,14 @@ from src.config.argparse_with_config import ArgParseWithConfig
 from src.config.config_defaults import ConfigDefault
 from src.data.datamodule import OurDataModule
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
-from src.features.chunking import collate_fn_feature, get_collate_fn
+from src.features.chunking import collate_fn_feature
 from src.model.model import SupportedModels, get_model, model_constructor_map
-from src.model.model_base import ModelBase, StepResult, SupportedModels
+from src.model.model_base import ModelBase, StepResult
 from src.train.metrics import get_metrics
 from src.utils.utils_exceptions import InvalidArgument, UnsupportedModel
 
 
-def get_model(
+def get_model_config_transform(
     config: ConfigDefault, args, device: torch.DeviceObjType
 ) -> tuple[SupportedModels, ConfigDefault, AudioTransformBase]:
     model_constructor: pl.LightningModule = model_constructor_map[config.model]
@@ -158,7 +149,9 @@ def validate_test_args(config: ConfigDefault):
 def main(args, config: ConfigDefault):
     validate_test_args(config)
     device = torch.device(args.device)
-    model, model_config, audio_transform = get_model(config, args, device)
+    model, model_config, audio_transform = get_model_config_transform(
+        config, args, device
+    )
     datamodule, data_loader = get_datamodule(config, audio_transform, model_config)
     testing_loop(device, model, datamodule, data_loader)
 

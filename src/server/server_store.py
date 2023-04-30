@@ -1,13 +1,10 @@
-import os
 from pathlib import Path
 
 import torch
 
 from features.chunking import collate_fn_feature
 from src.config.config_defaults import ConfigDefault
-from src.enums.enums import SupportedModels
-from src.features.audio_transform_base import AudioTransformBase
-from src.train.run_test import get_datamodule, get_model
+from src.train.run_test import get_datamodule, get_model_config_transform
 
 
 class ServerStore:
@@ -23,7 +20,9 @@ class ServerStore:
         # self.set_dataset(self.audio_transform, self.collate_fn, self.model_config)
 
     def set_model(self):
-        model, model_config, audio_transform = get_model(self.config, self.args)
+        model, model_config, audio_transform = get_model_config_transform(
+            self.config, self.args
+        )
         self.model = model
         self.model_config = model_config
         self.audio_transform = audio_transform

@@ -23,7 +23,7 @@ from src.config.argparse_with_config import ArgParseWithConfig
 from src.data.datamodule import OurDataModule
 from src.enums.enums import SupportedModels
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
-from src.features.chunking import collate_fn_feature, get_collate_fn
+from src.features.chunking import collate_fn_feature
 from src.model.model import get_model, model_constructor_map
 from src.utils.utils_dataset import instrument_multihot_to_idx
 from src.utils.utils_exceptions import InvalidArgument, UnsupportedModel

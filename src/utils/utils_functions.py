@@ -15,7 +15,9 @@ import yaml
 
 T = TypeVar("T")
 
-import time
+
+def min_max_scale(t: torch.Tensor | np.ndarray):
+    return (t - t.min()) / (t.max() - t.min())
 
 
 def dict_without_keys(d: dict, keys: list[str]):

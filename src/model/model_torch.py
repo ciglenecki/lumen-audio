@@ -1,9 +1,6 @@
 import torch
 import torch.nn as nn
-import torchmetrics
 from pytorch_lightning.loggers import TensorBoardLogger
-from torch_scatter import scatter_max
-from torchmetrics.classification import MultilabelF1Score
 from torchvision.models import (
     convnext_base,
     convnext_large,
@@ -18,11 +15,8 @@ from torchvision.models import (
     resnext101_64x4d,
 )
 
-from src.model.heads import DeepHead
 from src.model.model import SupportedModels
 from src.model.model_base import ForwardInput, ForwardOut, ModelBase
-from src.utils.utils_audio import plot_spectrograms
-from src.utils.utils_dataset import decode_instruments
 from src.utils.utils_exceptions import UnsupportedModel
 
 TORCHVISION_CONSTRUCTOR_DICT = {
@@ -38,10 +32,6 @@ TORCHVISION_CONSTRUCTOR_DICT = {
     SupportedModels.CONVNEXT_BASE: convnext_base,
     SupportedModels.MOBILENET_V3_LARGE: mobilenet_v3_large,
 }
-import time
-
-import src.config.config_defaults as config_defaults
-from src.utils.utils_functions import timeit
 
 
 class TorchvisionModel(ModelBase):

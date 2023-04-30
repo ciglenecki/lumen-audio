@@ -3,7 +3,6 @@ import torch
 
 from src.config.config_defaults import ConfigDefault
 from src.enums.enums import ModelInputDataType, SupportedModels
-from src.model.fluffy import FluffyConfig
 from src.model.heads import get_head_constructor
 from src.model.model_ast import ASTModelWrapper
 from src.model.model_torch import TorchvisionModel

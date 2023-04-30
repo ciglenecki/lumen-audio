@@ -1,10 +1,7 @@
-from typing import Any
-
 import numpy as np
 import torch
 from transformers import Wav2Vec2FeatureExtractor
 
-import src.config.config_defaults as config_defaults
 from src.features.audio_transform_base import AudioTransformBase
 
 

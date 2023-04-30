@@ -1,5 +1,3 @@
-from typing import Any
-
 import librosa
 import torch
 import torchaudio
@@ -10,7 +8,7 @@ from transformers.modeling_outputs import SequenceClassifierOutput
 import src.config.config_defaults as config_defaults
 from src.config.argparse_with_config import ArgParseWithConfig
 from src.model.model_base import ForwardInput, ForwardOut, ModelBase
-from src.utils.utils_audio import load_audio_from_file, play_audio, plot_spectrograms
+from src.utils.utils_audio import load_audio_from_file, play_audio
 from src.utils.utils_dataset import get_example_val_sample
 
 

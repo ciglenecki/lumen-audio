@@ -8,7 +8,6 @@ from torchvision.transforms import RandomErasing
 
 from src.config.config_defaults import ConfigDefault
 from src.enums.enums import SupportedAugmentations
-from src.utils.utils_functions import timeit
 
 
 class WaveformAugmentation:

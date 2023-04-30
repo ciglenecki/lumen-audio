@@ -13,7 +13,6 @@ import src.config.config_defaults as config_defaults
 from src.features.audio_transform_base import AudioTransformBase
 from src.utils.utils_audio import load_audio_from_file
 from src.utils.utils_dataset import decode_instruments
-from src.utils.utils_functions import timeit
 
 DatasetInternalItem = tuple[Path, np.ndarray]
 DatasetGetItem = tuple[torch.Tensor, torch.Tensor, torch.Tensor]

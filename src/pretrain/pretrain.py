@@ -1,6 +1,5 @@
 import os
 
-import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 from torch.nn.functional import cross_entropy
@@ -9,8 +8,6 @@ from tqdm import tqdm
 from transformers import get_linear_schedule_with_warmup
 
 from src.config.argparse_with_config import ArgParseWithConfig
-from src.config.config_defaults import *
-from src.data.dataset_irmas import *
 from src.data.dataset_irmas import IRMASDatasetPreTrain, IRMASDatasetTest
 from src.features.audio_transform import get_audio_transform
 from src.features.chunking import collate_fn_feature

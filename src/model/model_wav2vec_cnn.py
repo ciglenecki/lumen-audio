@@ -1,5 +1,3 @@
-from typing import Any
-
 import torch
 from pytorch_lightning.loggers import TensorBoardLogger
 from transformers import Wav2Vec2Config, Wav2Vec2Model

@@ -1,4 +1,3 @@
-import re
 from pathlib import Path
 
 import numpy as np
@@ -11,7 +10,9 @@ from src.utils.utils_exceptions import InvalidDataException
 
 def create_and_repeat_channel(images: torch.Tensor, num_repeat: int):
     # Create new dimension then repeat along it.
-    return images.unsqueeze(dim=1).repeat(1, num_repeat, 1, 1)
+    if len(images.shape) == 3:
+        return images.unsqueeze(dim=1).repeat(1, num_repeat, 1, 1)
+    return images.unsqueeze(dim=0).repeat(num_repeat, 1, 1)
 
 
 def add_rgb_channel(images: torch.Tensor):
@@ -21,6 +22,14 @@ def add_rgb_channel(images: torch.Tensor):
 def remove_rgb_channel(images: torch.Tensor):
     # Pick only one channel out of 3..
     return images[:, 0, :, :]
+
+
+def concat_images(
+    image_batch: list[torch.Tensor] | torch.Tensor | np.ndarray,
+):
+    if isinstance(image_batch, torch.Tensor) or isinstance(image_batch, np.ndarray):
+        image_batch = [torch.tensor(t) for t in image_batch]
+    return torch.cat(image_batch, dim=-1)
 
 
 def get_example_val_sample(target_sr: int = None) -> np.ndarray:

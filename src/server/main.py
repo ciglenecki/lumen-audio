@@ -1,5 +1,4 @@
 import json
-import sys
 import traceback
 from pathlib import Path
 
@@ -9,11 +8,8 @@ from fastapi import FastAPI, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, RedirectResponse
 from server_logger import logger
-from traitlets import default
 
 import src.server.router as router
-from src.config.argparse_with_config import ArgParseWithConfig
-from src.config.config_defaults import get_default_config
 from src.server.config_server import get_server_args
 from src.server.server_store import server_store
 

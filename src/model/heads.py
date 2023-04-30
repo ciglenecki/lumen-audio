@@ -1,5 +1,3 @@
-from typing import Literal
-
 import torch.nn as nn
 
 from src.enums.enums import SupportedHeads
