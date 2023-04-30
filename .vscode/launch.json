@@ -117,7 +117,7 @@
 			"request": "launch",
 			"program": "src/server/main.py",
 			"console": "integratedTerminal",
-			"args": "-h",
+			"args": "",
 			"justMyCode": false
 		},
 	]

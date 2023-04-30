@@ -675,6 +675,13 @@ class ConfigDefault(Serializable):
                 f"--audio-transform is required {list(AudioTransforms)}"
             )
 
+    def set_model_enum_from_ckpt(self) -> SupportedModels:
+        for e in list(SupportedModels):
+            if e.value in str(self.ckpt.stem):
+                self.model = e
+                break
+        return self.model
+
     def validate_train_args(self):
         """This function validates arguments before training."""
         self.required_train_paths()

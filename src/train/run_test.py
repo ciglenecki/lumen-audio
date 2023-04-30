@@ -129,10 +129,7 @@ def validate_test_args(config: ConfigDefault):
 
     # Automatically extract model type if it was not explicitly provided.
     if config.model is None:
-        for e in list(SupportedModels):
-            if e.value in str(config.ckpt.stem):
-                config.model = e
-                break
+        config.set_model_enum_from_ckpt()
 
     config.required_test_paths()
     config.required_model()

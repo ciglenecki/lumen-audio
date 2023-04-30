@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, create_model
 
@@ -7,9 +7,21 @@ from src.config.config_defaults import InstrumentEnums
 from src.enums.enums import SupportedDatasetDirType
 
 
-class PostPredictDirectory(BaseModel):
-    model_checkpoint: Path
-    dataset_dirs: tuple[SupportedDatasetDirType, Path]
+class DatasetDirDict(BaseModel):
+    dataset_dir_type: SupportedDatasetDirType
+    dataset_dir: Path
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "dataset_dir_type": "irmastest",
+                "dataset_dir": "data/irmas/test",
+            }
+        }
+
+
+class DatasetDirsI(BaseModel):
+    dataset_dirs: list[DatasetDirDict]
 
 
 class PostPredictDatasetRequest(BaseModel):
