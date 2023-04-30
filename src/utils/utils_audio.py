@@ -274,7 +274,7 @@ def play_audio(
         waveform, sampling_rate = librosa.load(audio, sr=None)
     elif isinstance(audio, torch.Tensor):
         assert sampling_rate is not None, "Provide sampling_rate argument"
-        waveform = audio.numpy()
+        waveform = audio.cpu().numpy()
     elif type(audio) is np.ndarray:
         assert sampling_rate is not None, "Provide sampling_rate argument"
         waveform = audio

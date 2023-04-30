@@ -57,6 +57,8 @@ class AudioToWav2Vec2(AudioTransformBase):
             audio, sampling_rate=self.sampling_rate, return_tensors="pt", padding=True
         )
 
-        processed_audio = processor_out.input_values
+        processed_audio = processor_out.input_values.squeeze(0)
+
+        # note: confirmed that listening to unnormalized audio (do_normalize=False) sounds good.
         assert len(processed_audio.shape) == 2
         return processed_audio

@@ -48,7 +48,7 @@ def get_audio_transform(
             **image_kwargs,
             **base_kwargs,
         )
-    elif audio_transform_enum in [AudioTransforms.WAV2VEC, AudioTransforms.WAV2VEC_CNN]:
+    elif audio_transform_enum is AudioTransforms.WAV2VEC:
         return AudioToWav2Vec2(
             pretrained_tag=config.pretrained_tag,
             **base_kwargs,

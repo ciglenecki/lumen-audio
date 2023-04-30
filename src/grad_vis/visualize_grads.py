@@ -24,18 +24,20 @@ from src.features.audio_transform import get_audio_transform
 from src.features.chunking import collate_fn_feature
 from src.model.model import get_model
 from src.utils.utils_dataset import concat_images
-from utils.utils_functions import min_max_scale
+from src.utils.utils_functions import min_max_scale
 
 
 def parse_args():
-    parser = ArgParseWithConfig()
-
-    parser.add_argument(
-        "--path_to_model",
-        type=str,
-        required=True,
-        help="Path to a trained model.",
+    parser = ArgParseWithConfig(
+        add_lightning_args=False,
+        config_pl_args=[
+            "--batch-size",
+            "--dataset-paths",
+            "--ckpt",
+            "--audio-transform",
+        ],
     )
+
     parser.add_argument(
         "--target_layer",
         type=str,
@@ -63,16 +65,17 @@ def parse_args():
         help="Plot size",
     )
 
-    args, config, pl_args = parser.parse_args()
+    args, config, _ = parser.parse_args()
+    config.required_ckpt()
     config.required_model()
     config.required_audio_transform()
     config.required_dataset_paths()
 
-    return args, config, pl_args
+    return args, config
 
 
 def image_plot_to_array():
-    """Get current matplotlib figure, create an in memory image and return numpy array image"""
+    """Get current matplotlib figure, create an in memory image and return numpy array image."""
 
     # Get current figure
     fig = plt.gcf()
@@ -97,7 +100,7 @@ def image_plot_to_array():
 
 
 def generate_spec_figure(image: torch.Tensor, height: int, width: int):
-    """Create a librosa melspectrogram figure in memory with nice colors"""
+    """Create a librosa melspectrogram figure in memory with nice colors."""
     my_dpi = 150
     plt.figure(figsize=(width / my_dpi, height / my_dpi), dpi=my_dpi)
     S_db = librosa.power_to_db(image, ref=np.max)
@@ -112,7 +115,7 @@ def generate_spec_figure(image: torch.Tensor, height: int, width: int):
 
 
 def resize_2d_image(image: torch.Tensor, height: int, width: int):
-    """Resize the image to height, width"""
+    """Resize the image to height, width."""
     return (
         torch.nn.functional.interpolate(
             image.unsqueeze(0).unsqueeze(0),
@@ -136,7 +139,7 @@ class MultiLabelBinaryClassifierOutputTarget:
 
 
 if __name__ == "__main__":
-    args, config, pl_args = parse_args()
+    args, config = parse_args()
     plot_width, plot_height = args.plotsize
 
     model_type = get_model(config, torch.nn.BCEWithLogitsLoss())
@@ -165,7 +168,7 @@ if __name__ == "__main__":
         train_only_dataset=False,
         concat_n_samples=None,
         sum_two_samples=False,
-        use_weighted_train_sampler=config.use_weighted_train_sampler,
+        use_weighted_train_sampler=False,
         sampling_rate=config.sampling_rate,
     )
     datamodule.setup_for_inference()

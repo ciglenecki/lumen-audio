@@ -24,7 +24,7 @@ class Wav2VecCnnWrapper(ModelBase):
             else time_dim_pooling_mode
         )
 
-        self.config = Wav2Vec2Config(
+        self.wav2vec_config = Wav2Vec2Config(
             pretrained_model_name_or_path=self.pretrained_tag,
             id2label=config_defaults.IDX_TO_INSTRUMENT,
             label2id=config_defaults.INSTRUMENT_TO_IDX,
@@ -35,11 +35,11 @@ class Wav2VecCnnWrapper(ModelBase):
 
         self.backbone = Wav2Vec2Model.from_pretrained(
             self.pretrained_tag,
-            config=self.config,
+            config=self.wav2vec_config,
             ignore_mismatched_sizes=True,
         ).feature_extractor
 
-        output_size = self.config.conv_dim[-1]
+        output_size = self.wav2vec_config.conv_dim[-1]
         self.classifier = self.create_head(head_input_size=output_size)
         self.save_hyperparameters()
 

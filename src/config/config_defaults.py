@@ -286,9 +286,6 @@ class ConfigDefault(Serializable):
     dataset_paths: list[str] | None = create(None)
     """Dataset path with the following format format: --dataset-paths inference:/path/to/dataset openmic:/path/to/dataset"""
 
-    # predict_paths: Optional[list[str]] = create(None)
-    # """Dataset root directories that will be used for predicting in the following format: --val-paths irmastest:/path/to/dataset openmic:/path/to/dataset"""
-
     train_only_dataset: bool = create(False)
     """Use only the train portion of the dataset and split it 0.8 0.2"""
 
