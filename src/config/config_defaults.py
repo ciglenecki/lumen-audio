@@ -334,11 +334,12 @@ class ConfigDefault(Serializable):
         dict(
             stretch_factors=[0.8, 1.25],
             time_inversion_p=0.5,
-            freq_mask_param=30,
+            freq_mask_param=60,
             hide_random_pixels_p=0.25,
             std_noise=0.01,
             concat_n_samples=3,
             path_background_noise=None,
+            time_mask_max_percentage=0.3,
         )
     )
     """Arguments are split by space, mutiple values are sep'ed by comma (,). E.g. stretch_factors=0.8,1.2 freq_mask_param=30 hide_random_pixels_p=0.5"""
