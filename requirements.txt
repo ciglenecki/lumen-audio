@@ -29,6 +29,7 @@ tensorboardX==2.6
 torchmetrics==0.11.4
 torch-scatter==2.1.1+pt20cu117
 grad-cam==1.4.6
+pytorch-metric-learning==2.1.0
 
 # ---------- https -------------#
 fastapi==0.95.1

@@ -32,6 +32,15 @@
 			"justMyCode": false
 		},
 		{
+			"name": "Train Wav2vec CNN weight",
+			"type": "python",
+			"request": "launch",
+			"program": "src/train/train.py",
+			"console": "integratedTerminal",
+			"args": "--train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --audio-transform WAV2VEC --model WAV2VEC_CNN --use-fluffy --head ATTENTION_HEAD --loss-function CROSS_ENTROPY_POS_WEIGHT --backbone-after classifier.heads --head-after classifier.heads --quick",
+			"justMyCode": false
+		},
+		{
 			"name": "Train TorchModel",
 			"type": "python",
 			"request": "launch",
