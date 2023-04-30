@@ -18,6 +18,13 @@ models_quick/
 embeddings/
 data/esc*
 
+data/openmic
+data/nsynth-train
+models/**
+models_archive/
+models_quick/
+embeddings/
+data/esc*
 # =============================================
 # Ignore files
 # =============================================
