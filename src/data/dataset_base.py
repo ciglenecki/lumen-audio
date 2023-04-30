@@ -13,7 +13,6 @@ import src.config.config_defaults as config_defaults
 from src.features.audio_transform_base import AudioTransformBase
 from src.utils.utils_audio import load_audio_from_file
 from src.utils.utils_dataset import decode_instruments
-from src.utils.utils_functions import timeit
 
 DatasetInternalItem = tuple[Path, np.ndarray]
 DatasetGetItem = tuple[torch.Tensor, torch.Tensor, torch.Tensor]
@@ -84,7 +83,7 @@ class DatasetBase(Dataset[DatasetGetItem]):
             stats.update(
                 {f"instrument {config_defaults.INSTRUMENT_TO_FULLNAME[k]}": len(v)}
             )
-            # stats.update({k: len(v)})
+            stats.update({k: len(v)})
 
         num_of_instruments_per_sample = {}
         for _, label in self.dataset_list:

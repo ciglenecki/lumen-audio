@@ -4,7 +4,6 @@ irmastrain:data/irmas/train.
 python3 src/scripts/calculate_std_and_mean.py --audio-transform MEL_SPECTROGRAM --test-paths
 irmastrain:data/irmas/train
 """
-import librosa
 import torch
 from tqdm import tqdm
 
@@ -12,7 +11,7 @@ from src.config.argparse_with_config import ArgParseWithConfig
 from src.config.config_defaults import ConfigDefault
 from src.data.datamodule import OurDataModule
 from src.features.audio_transform import get_audio_transform
-from src.features.chunking import collate_fn_spectrogram, get_collate_fn
+from src.features.chunking import collate_fn_feature
 from src.utils.utils_dataset import create_and_repeat_channel
 
 
@@ -29,10 +28,9 @@ def audios_to_flat_spectrograms(
 ):
     batch_size = images.size(0)
 
-    if num_channels == 1:
-        images = create_and_repeat_channel(
-            images, num_channels
-        )  # [Batch, Channel, Height, Width]
+    images = create_and_repeat_channel(
+        images, num_channels
+    )  # [Batch, Channel, Height, Width]
 
     flat_images = images.view(
         batch_size, images.size(1), -1
@@ -45,7 +43,7 @@ if __name__ == "__main__":
     transform = get_audio_transform(
         config, spectrogram_augmentation=None, waveform_augmentation=None
     )
-    collate_fn = collate_fn_spectrogram
+    collate_fn = collate_fn_feature
     datamodule = OurDataModule(
         train_paths=None,
         val_paths=None,

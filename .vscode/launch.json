@@ -37,7 +37,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --audio-transform MEL_SPECTROGRAM --model RESNEXT50_32X4D --backbone-after backbone.layer1.2 --head-after backbone.fc --num-workers 1 --batch-size 4 --quick --epoch 10",
+			"args": "--train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --backbone-after backbone.features --head-after backbone.classifier --model EFFICIENT_NET_V2_S --audio-transform MEL_SPECTROGRAM --finetune-head-epochs 3 --epochs 10 --batch-size 4 --accumulate_grad_batches 4 --augmentations --lr 1e-4",
 			"justMyCode": false
 		},
 		{
@@ -46,7 +46,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --audio-transform WAV2VEC_CNN --model WAV2VEC_CNN --use-fluffy --head ATTENTION_HEAD --use-multiple-optimizers --loss-function CROSS_ENTROPY_POS_WEIGHT --backbone-after classifier.heads --head-after classifier.heads --quick",
+			"args": "--accelerator gpu --devices -1 --train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --audio-transform WAV2VEC --model WAV2VEC_CNN --use-fluffy --head ATTENTION_HEAD --loss-function CROSS_ENTROPY_POS_WEIGHT --backbone-after classifier.heads --head-after classifier.heads --quick --augmentations CONCAT_N_SAMPLES --num-workers 0",
 			"justMyCode": false
 		},
 		{
@@ -73,7 +73,7 @@
 			"request": "launch",
 			"program": "src/grad_vis/visualize_grads.py",
 			"console": "integratedTerminal",
-			"args": "--dataset-paths irmastrain:data/irmas/train --path_to_model models_quick/04-14-15-25-32_CalmAlan_resnext50_32x4d/checkpoints/04-14-15-25-32_CalmAlan_resnext50_32x4d_val_acc_0.0000_val_loss_1.1923.ckpt --target_layer backbone.avgpool --model RESNEXT50_32X4D --audio-transform MEL_SPECTROGRAM --label vio --batch-size 1 --image-size 256 256",
+			"args": "--dataset-paths irmastest:data/irmas/test --ckpt models_quick/04-14-15-25-32_CalmAlan_resnext50_32x4d/checkpoints/04-14-15-25-32_CalmAlan_resnext50_32x4d_val_acc_0.0000_val_loss_1.1923.ckpt --target_layer backbone.avgpool --model RESNEXT50_32X4D --audio-transform MEL_SPECTROGRAM --label vio --batch-size 2",
 			"justMyCode": false
 		},
 		{
@@ -92,6 +92,24 @@
 			"program": "${file}",
 			"console": "integratedTerminal",
 			"justMyCode": true
+		},
+		{
+			"name": "Test.py",
+			"type": "python",
+			"request": "launch",
+			"program": "src/train/test.py",
+			"console": "integratedTerminal",
+			"args": "--accelerator gpu --devices -1 --test-paths irmastest:data/irmas/test --ckpt models_quick/04-29-17-15-23_SlickDelta_resnext50_32x4d/checkpoints/04-29-17-15-23_SlickDelta_resnext50_32x4d_val_acc_0.0000_val_loss_0.7160.ckpt --batch-size 8 --num-workers 8",
+			"justMyCode": false
+		},
+		{
+			"name": "Server.py",
+			"type": "python",
+			"request": "launch",
+			"program": "src/server/main.py",
+			"console": "integratedTerminal",
+			"args": "-h",
+			"justMyCode": false
 		},
 	]
 }

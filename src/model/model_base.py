@@ -1,7 +1,7 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from argparse import Namespace
-from re import split
-from typing import Any, Optional, Union
+from dataclasses import dataclass
+from typing import Any, Callable, Optional, Union
 
 import numpy as np
 import pytorch_lightning as pl
@@ -11,11 +11,13 @@ from pytorch_lightning.callbacks import BaseFinetuning
 from pytorch_lightning.core.optimizer import LightningOptimizer
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.utilities.types import LRSchedulerPLType
+from torch_scatter import scatter_max
 
 import src.config.config_defaults as config_defaults
 from src.config.config_defaults import ConfigDefault
 from src.enums.enums import MetricMode, OptimizeMetric, SupportedModels
-from src.model.fluffy import FluffyConfig
+from src.model.fluffy import Fluffy, FluffyConfig
+from src.model.heads import DeepHead, HeadTypes
 from src.model.optimizers import (
     SupportedOptimizer,
     SupportedScheduler,
@@ -27,6 +29,38 @@ from src.utils.utils_model import (
     get_all_modules_after,
     proper_weight_decay,
 )
+
+
+@dataclass
+class ForwardInput:
+    feature: torch.Tensor
+    y_true: torch.Tensor | None
+
+
+@dataclass
+class ForwardOut:
+    logits: torch.Tensor
+    loss: torch.Tensor | None
+
+
+class StepResult:
+    def __init__(self, step_dict: dict):
+        self.loss: torch.Tensor | None = step_dict.get("loss", None)
+        self.losses: torch.Tensor | None = step_dict.get("losses", None)
+        self.y_pred: torch.Tensor | None = step_dict.get("y_pred", None)
+        self.y_pred_prob: torch.Tensor | None = step_dict.get("y_pred_prob", None)
+        self.y_true: torch.Tensor | None = step_dict.get("y_true", None)
+        self.file_indices: torch.Tensor | None = step_dict.get("file_indices", None)
+        self.item_indices: torch.Tensor | None = step_dict.get("item_indices", None)
+        self.item_indices_unique: torch.Tensor | None = step_dict.get(
+            "item_indices_unique", None
+        )
+        self.y_true_file: torch.Tensor | None = step_dict.get("y_true_file", None)
+        self.y_pred_file: torch.Tensor | None = step_dict.get("y_pred_file", None)
+        self.y_pred_prob_file: torch.Tensor | None = step_dict.get(
+            "y_pred_prob_file", None
+        )
+        self.losses_file: torch.Tensor | None = step_dict.get("losses_file", None)
 
 
 class ModelBase(pl.LightningModule, ABC):
@@ -64,6 +98,8 @@ class ModelBase(pl.LightningModule, ABC):
         pretrained_tag: str,
         fluffy_config: FluffyConfig | None = None,
         config: None | ConfigDefault = None,
+        head_constructor: Callable[[Any], HeadTypes] = DeepHead,
+        head_hidden_dim: list[int] = [],
         *args,
         **kwargs,
     ) -> None:
@@ -74,7 +110,12 @@ class ModelBase(pl.LightningModule, ABC):
             epochs: number of training epochs. Used only if the LR scheduler depends on epochs size (onecycle, cosine...). Reduce on plateau LR scheduler doesn't get affected by this argument.
 
             freeze_train_bn: Whether or not to train the batch norm during the frozen stage of the training.
+
             head_after: Name of the submodule after which the all submodules are considered as head, e.g. classifier.dense
+
+            head_constructor: Constructor of the head, usually one from heads.py
+
+            head_hidden_dim: List of integers which specifies the hidden layers of head (classifer). For each integer one extra hidden layer will be created in the middle of the head (classifier). The integer value specifies number of  hidden dimensions.
 
             backbone_after: Name of the submodule after which the all submodules are considered as backbone, e.g. layer.11.dense"
 
@@ -117,6 +158,8 @@ class ModelBase(pl.LightningModule, ABC):
         self.fluffy_config = fluffy_config
         self.freeze_train_bn = freeze_train_bn
         self.head_after = head_after
+        self.head_constructor = head_constructor
+        self.head_hidden_dim = head_hidden_dim
         self.log_per_instrument_metrics = log_per_instrument_metrics
         self.loss_function = loss_function
         self.lr_backbone = lr  # lr once backbone gets unfrozen
@@ -146,6 +189,24 @@ class ModelBase(pl.LightningModule, ABC):
         self.backup_instruments = config_defaults.INSTRUMENT_TO_IDX
         self.save_hyperparameters()
 
+    def create_head(self, head_input_size: int) -> torch.nn.Module:
+        dimensions = [head_input_size]
+        dimensions.extend(self.head_hidden_dim)
+
+        if self.use_fluffy:
+            num_of_single_class = 1
+            dimensions.append(num_of_single_class)
+            classifer_kwargs = dict(dimensions=dimensions)
+            classifier = Fluffy(
+                head_constructor=self.head_constructor,
+                head_kwargs=classifer_kwargs,
+            )
+        else:
+            dimensions.append(self.num_labels)
+            classifer_kwargs = dict(dimensions=dimensions)
+            classifier = self.head_constructor(**classifer_kwargs)
+        return classifier
+
     def setup(self, stage: str) -> None:
         """Freezes (turn off require_grads) every submodule except trainable backbone and head."""
         out = super().setup(stage)
@@ -163,7 +224,124 @@ class ModelBase(pl.LightningModule, ABC):
         self.finetuning_step = 0
         return out
 
-    def log_and_return_loss_step(self, loss, y_pred, y_true, type):
+    @abstractmethod
+    def forward_wrapper(self, forward_input: ForwardInput) -> ForwardOut:
+        pass
+
+    def _step(
+        self,
+        batch,
+        batch_idx,
+        type: str,
+        log_metric_dict=True,
+        only_return_loss=True,
+        return_as_object=False,
+    ) -> dict[str, float | torch.Tensor | None] | StepResult:
+        features, y_true, file_indices, item_indices = batch
+
+        is_pred = type == "pred"
+
+        batch_y = None
+        y_true = y_true if not is_pred else None
+        loss = None
+
+        sub_batches = torch.split(features, self.batch_size, dim=0)
+        y_pred_prob = torch.zeros((len(features), self.num_labels), device=self.device)
+        y_pred = torch.zeros((len(features), self.num_labels), device=self.device)
+        losses = torch.zeros(len(features), device=self.device) if not is_pred else None
+
+        num_samples = 0
+        for batch_feature in sub_batches:
+            batch_size = len(batch_feature)
+            start = num_samples
+            end = num_samples + batch_size
+
+            if not is_pred:
+                batch_y = y_true[start:end]
+
+            forward_out = self.forward_wrapper(
+                ForwardInput(feature=batch_feature, y_true=batch_y)
+            )
+
+            batch_logits_pred, individual_losses = (
+                forward_out.logits,
+                forward_out.loss,
+            )
+
+            if individual_losses is not None:
+                if len(individual_losses.shape) != 0:
+                    batch_loss = individual_losses.view(batch_size, -1).mean(dim=1)
+                else:
+                    batch_loss = individual_losses
+                losses[start:end] = batch_loss
+
+            batch_y_pred_prob = torch.sigmoid(batch_logits_pred)
+            batch_y_pred = (batch_y_pred_prob >= 0.5).float()
+
+            y_pred_prob[start:end] = batch_y_pred_prob
+            y_pred[start:end] = batch_y_pred
+
+            num_samples += batch_size
+
+        if losses is not None:
+            loss = losses.mean()
+
+        return_dict = dict(loss=loss)
+        if log_metric_dict:
+            metric_dict = self.get_metric_dict(
+                loss=loss, y_pred=y_pred, y_true=y_true, type=type
+            )
+            self.log_dict(
+                metric_dict, on_step=True, on_epoch=True, logger=True, prog_bar=True
+            )
+            return_dict.update(metric_dict)
+
+        if not only_return_loss:
+            y_true_file, _ = scatter_max(y_true, file_indices, dim=0)
+            y_pred_file, _ = scatter_max(y_pred, file_indices, dim=0)
+            y_pred_prob_file, _ = scatter_max(y_pred_prob, file_indices, dim=0)
+            losses_file, _ = scatter_max(losses, file_indices, dim=0)
+            item_indices_unique = torch.unique_consecutive(item_indices)
+            return_dict.update(
+                dict(
+                    losses=losses,
+                    y_pred=y_pred,
+                    y_pred_prob=y_pred_prob,
+                    y_true=y_true,
+                    file_indices=file_indices,
+                    item_indices_unique=item_indices_unique,
+                    item_indices=item_indices,
+                    y_true_file=y_true_file,
+                    y_pred_file=y_pred_file,
+                    y_pred_prob_file=y_pred_prob_file,
+                    losses_file=losses_file,
+                )
+            )
+        if return_as_object:
+            return StepResult(return_dict)
+        return return_dict
+
+    def training_step(self, batch, batch_idx):
+        return self._step(
+            batch, batch_idx, type="train", log_metric_dict=True, only_return_loss=True
+        )
+
+    def validation_step(self, batch, batch_idx):
+        return self._step(
+            batch, batch_idx, type="val", log_metric_dict=True, only_return_loss=True
+        )
+
+    def test_step(self, batch, batch_idx):
+        return self._step(
+            batch, batch_idx, type="test", log_metric_dict=True, only_return_loss=False
+        )
+
+    def predict_step(self, batch, batch_idx: int):
+        return self._step(
+            batch, batch_idx, type="pred", log_metric_dict=False, only_return_loss=False
+        )
+
+    def get_metric_dict(self, loss, y_pred, y_true, type):
         """Has to return dictionary with 'loss'.
 
         Lightning uses loss variable to perform backwards
@@ -193,11 +371,6 @@ class ModelBase(pl.LightningModule, ABC):
             for k, v in metric_dict.items()
         }
 
-        self.log_dict(
-            metric_dict, on_step=True, on_epoch=True, logger=True, prog_bar=True
-        )
-        # add "loss" metric which is required for gradient caculation
-        metric_dict.update({"loss": loss})
         return metric_dict
 
     def head(self) -> Union[nn.ModuleList, nn.Module] | None:
@@ -228,8 +401,9 @@ class ModelBase(pl.LightningModule, ABC):
         params: Union[dict[str, Any], Namespace],
         metrics: Optional[dict[str, Any]] = None,
     ):
-        self.loggers[0].log_hyperparams(params)
-        self.loggers[0].finalize("success")
+        for logger in self.loggers:
+            logger.log_hyperparams(params)
+            logger.finalize("success")
 
     def _set_lr(self, lr: float):
         if self.trainer is not None:
@@ -335,7 +509,7 @@ class ModelBase(pl.LightningModule, ABC):
         module_params = proper_weight_decay(self, self.weight_decay)
 
         out = our_configure_optimizers(
-            list_of_module_params=[module_params],
+            parameters=module_params,
             scheduler_type=self.scheduler_type,
             metric_mode=self.metric_mode,
             plateau_epoch_patience=(self.early_stopping_metric_patience // 2) + 1,

@@ -29,6 +29,7 @@ from src.data.dataset_inference import InferenceDataset
 from src.data.dataset_irmas import IRMASDatasetTest, IRMASDatasetTrain
 from src.enums.enums import SupportedDatasetDirType
 from src.features.audio_transform_base import AudioTransformBase
+from src.utils.utils_functions import dict_without_keys
 
 
 class OurDataModule(pl.LightningDataModule):
@@ -153,8 +154,22 @@ class OurDataModule(pl.LightningDataModule):
             self.train_sampler = SubsetRandomSampler(train_indices.tolist())
         self.val_sampler = SequentialSampler(val_indices.tolist())
 
-        print("Train dataset stats\n", yaml.dump(self.get_train_dataset_stats()))
-        print("Val dataset stats\n", yaml.dump(self.get_val_dataset_stats()))
+        print(
+            "Train dataset stats\n",
+            yaml.dump(
+                dict_without_keys(
+                    self.get_train_dataset_stats(), config_defaults.ALL_INSTRUMENTS
+                )
+            ),
+        )
+        print(
+            "Val dataset stats\n",
+            yaml.dump(
+                dict_without_keys(
+                    self.get_val_dataset_stats(), config_defaults.ALL_INSTRUMENTS
+                )
+            ),
+        )
 
     def setup_for_inference(self):
         """Create dataset, indices and statictis for testing/inference."""
@@ -182,7 +197,14 @@ class OurDataModule(pl.LightningDataModule):
         self.test_size = len(test_indices)
         self.test_sampler = SequentialSampler(test_indices.tolist())
         prefix = "Validation(test)" if self.test_dataset == self.val_dataset else "Test"
-        print(f"{prefix} dataset classes", yaml.dump(self.get_test_dataset_stats()))
+        print(
+            f"{prefix} dataset stats\n",
+            yaml.dump(
+                dict_without_keys(
+                    self.get_test_dataset_stats(), config_defaults.ALL_INSTRUMENTS
+                )
+            ),
+        )
 
     def setup(self, stage=None):
         super().setup(stage)

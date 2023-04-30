@@ -168,6 +168,11 @@ DEFAULT_PRETRAINED_TAG_MAP = {
     SupportedModels.RESNEXT50_32X4D: TAG_IMAGENET1K_V2,
     SupportedModels.RESNEXT101_32X8D: TAG_IMAGENET1K_V2,
     SupportedModels.RESNEXT101_64X4D: TAG_IMAGENET1K_V1,
+    SupportedModels.CONVNEXT_TINY: TAG_IMAGENET1K_V1,
+    SupportedModels.CONVNEXT_SMALL: TAG_IMAGENET1K_V1,
+    SupportedModels.CONVNEXT_LARGE: TAG_IMAGENET1K_V1,
+    SupportedModels.CONVNEXT_BASE: TAG_IMAGENET1K_V1,
+    SupportedModels.MOBILENET_V3_LARGE: TAG_IMAGENET1K_V1,
 }
 ALL_INSTRUMENTS = [e.value for e in InstrumentEnums]
 ALL_INSTRUMENTS_NAMES = [INSTRUMENT_TO_FULLNAME[ins] for ins in ALL_INSTRUMENTS]
@@ -280,9 +285,6 @@ class ConfigDefault(Serializable):
 
     dataset_paths: list[str] | None = create(None)
     """Dataset path with the following format format: --dataset-paths inference:/path/to/dataset openmic:/path/to/dataset"""
-
-    # predict_paths: list[str] | None = create(None)
-    # """Dataset root directories that will be used for predicting in the following format: --val-paths irmastest:/path/to/dataset openmic:/path/to/dataset"""
 
     train_only_dataset: bool = create(False)
     """Use only the train portion of the dataset and split it 0.8 0.2"""
@@ -415,7 +417,10 @@ class ConfigDefault(Serializable):
     head: SupportedHeads = create(SupportedHeads.DEEP_HEAD)
     """Type of classification head which will be used for classification. This is almost always the last layer."""
 
-    ckpt: str | None = create(None)
+    head_hidden_dim: list[int] = create([])
+    """List of integers which specifies the hidden layers of head (classifer). For each integer one extra hidden layer will be created in the middle of the head (classifier). The integer value specifies number of  hidden dimensions."""
+
+    ckpt: Path | None = create(None)
     """.ckpt file, automatically restores model, epoch, step, LR schedulers, etc..."""
 
     use_fluffy: bool = create(False)
@@ -443,9 +448,6 @@ class ConfigDefault(Serializable):
 
     lr_warmup: float = create(3e-4)
     """warmup learning rate"""
-
-    use_multiple_optimizers: bool = create(False)
-    """Use multiple optimizers for Fluffy. Each head will have it's own optimizer."""
 
     # ======================== LOGS ===========================
     log_per_instrument_metrics: bool = create(True)
@@ -546,10 +548,34 @@ class ConfigDefault(Serializable):
                 SupportedModels.RESNEXT50_32X4D: True,
                 SupportedModels.RESNEXT101_32X8D: True,
                 SupportedModels.RESNEXT101_64X4D: True,
+                SupportedModels.CONVNEXT_TINY: True,
+                SupportedModels.CONVNEXT_SMALL: True,
+                SupportedModels.CONVNEXT_LARGE: True,
+                SupportedModels.CONVNEXT_BASE: True,
+                SupportedModels.MOBILENET_V3_LARGE: True,
             }
             self.use_rgb = USE_RGB[self.model]
 
-        # Dynamically set pretrained tag
+        # Dynamically set the image size
+        if self.model is not None and self.image_size is None:
+            IMAGE_SIZE_MAP = {
+                SupportedModels.AST: None,
+                SupportedModels.WAV2VEC_CNN: None,
+                SupportedModels.WAV2VEC: None,
+                SupportedModels.EFFICIENT_NET_V2_S: (384, 384),
+                SupportedModels.EFFICIENT_NET_V2_M: (480, 480),
+                SupportedModels.EFFICIENT_NET_V2_L: (480, 480),
+                SupportedModels.RESNEXT50_32X4D: (224, 224),
+                SupportedModels.RESNEXT101_32X8D: (224, 224),
+                SupportedModels.RESNEXT101_64X4D: (224, 224),
+                SupportedModels.CONVNEXT_TINY: (224, 224),
+                SupportedModels.CONVNEXT_SMALL: (224, 224),
+                SupportedModels.CONVNEXT_LARGE: (224, 224),
+                SupportedModels.CONVNEXT_BASE: (224, 224),
+                SupportedModels.MOBILENET_V3_LARGE: (224, 224),
+            }
+            self.image_size = IMAGE_SIZE_MAP[self.model]
+            # Dynamically set pretrained tag
         if self.model is not None and self.pretrained and self.pretrained_tag is None:
             if self.model not in DEFAULT_PRETRAINED_TAG_MAP:
                 raise InvalidArgument(
@@ -578,6 +604,15 @@ class ConfigDefault(Serializable):
             self.weight_decay = 0
         if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAMW:
             self.weight_decay = 1e-2
+
+        if self.model is not None and len(self.head_hidden_dim) > 0:
+            if (
+                self.head_hidden_dim != list(sorted(self.head_hidden_dim, reverse=True))
+                or len(self.head_hidden_dim) > 2
+            ):
+                raise InvalidArgument(
+                    "--head-hidden-dim values should have descending values and shouldn't contain more than 2 values"
+                )
 
         self.set_train_paths()
         self.set_val_paths()
@@ -628,6 +663,12 @@ class ConfigDefault(Serializable):
         if self.model is None:
             raise InvalidArgument(f"--model is required {list(SupportedModels)}")
 
+    def required_ckpt(self):
+        if self.ckpt is None:
+            raise InvalidArgument(
+                "--ckpt path to a saved model (checkpoint) is required which usually ends with .ckpt"
+            )
+
     def required_audio_transform(self):
         if self.audio_transform is None:
             raise InvalidArgument(
@@ -666,23 +707,23 @@ class ConfigDefault(Serializable):
                 f"You have to pass the --lr-onecycle-max if you use the {self.scheduler}",
             )
 
-        if self.model != SupportedModels.WAV2VEC_CNN and self.use_multiple_optimizers:
-            raise InvalidArgument(
-                "You can't use mutliple optimizers if you are not using Fluffy!",
-            )
-
         if self.max_num_width_samples is None:
             # There's no max num width for image based models because maximum is defined by their architecture.
             MAX_NUM_WIDTH_SAMPLE = {
                 SupportedModels.AST: 1024,
-                SupportedModels.WAV2VEC_CNN: self.sampling_rate * 3,
-                SupportedModels.WAV2VEC: self.sampling_rate * 3,
+                SupportedModels.WAV2VEC_CNN: self.sampling_rate * 3 * 2,
+                SupportedModels.WAV2VEC: self.sampling_rate * 10,
                 SupportedModels.EFFICIENT_NET_V2_S: None,
                 SupportedModels.EFFICIENT_NET_V2_M: None,
                 SupportedModels.EFFICIENT_NET_V2_L: None,
                 SupportedModels.RESNEXT50_32X4D: None,
                 SupportedModels.RESNEXT101_32X8D: None,
                 SupportedModels.RESNEXT101_64X4D: None,
+                SupportedModels.CONVNEXT_TINY: None,
+                SupportedModels.CONVNEXT_SMALL: None,
+                SupportedModels.CONVNEXT_LARGE: None,
+                SupportedModels.CONVNEXT_BASE: None,
+                SupportedModels.MOBILENET_V3_LARGE: None,
             }
             self.max_num_width_samples = MAX_NUM_WIDTH_SAMPLE[self.model]
 
@@ -746,8 +787,8 @@ class ConfigDefault(Serializable):
 
         return kwargs
 
-    def __repr__(self):
-        pass
+    # def __repr__(self):
+    #     pass
 
     def __str__(self):
         return self.dumps_yaml(allow_unicode=True, default_flow_style=False)

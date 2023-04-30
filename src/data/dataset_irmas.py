@@ -8,7 +8,6 @@ from pathlib import Path
 import librosa
 import numpy as np
 import pandas as pd
-from torch.utils.data import Dataset
 from tqdm import tqdm
 
 import src.config.config_defaults as config_defaults
@@ -152,12 +151,36 @@ class IRMASDatasetTest(DatasetBase):
         return dataset_list
 
 
-class InstrumentInference(Dataset):
-    pass
+class IRMASDatasetPreTrain(IRMASDatasetTrain):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def __getitem__(self, index: int):
+        features, _, _ = super().__getitem__(index)
+
+        valid_indices = np.arange(len(self.dataset))
+        valid_indices = valid_indices[valid_indices != index]
+        random_index = np.random.choice(valid_indices, 1)[0]
+        features_random, _, _ = super().__getitem__(random_index)
+
+        return features, features_random
 
 
 def test_sum_and_concat():
-    dataset = IRMASDatasetTrain()
+    config = config_defaults.get_default_config()
+    dataset = IRMASDatasetTrain(
+        dataset_path=config.path_irmas_train,
+        audio_transform=None,
+        normalize_audio=False,
+        concat_n_samples=None,
+        sum_two_samples=None,
+        sampling_rate=config.sampling_rate,
+        train_override_csvs=None,
+        num_classes=config.num_labels,
+    )
+
+    dataset.concat_n_samples = 4
+
     sr = 16_000
     audio_1, _ = librosa.load("data/irmas/train/cel/[cel][cla]0001__1.wav", sr=sr)
     audio_2, _ = librosa.load("data/irmas/train/cla/[cla][cla]0150__1.wav", sr=sr)
@@ -198,7 +221,18 @@ def test_sum_and_concat():
 
 
 def test_simple_sum():
-    dataset = IRMASDatasetTrain()
+    config = config_defaults.get_default_config()
+    dataset = IRMASDatasetTrain(
+        dataset_path=config.path_irmas_train,
+        audio_transform=None,
+        normalize_audio=False,
+        concat_n_samples=None,
+        sum_two_samples=None,
+        sampling_rate=config.sampling_rate,
+        train_override_csvs=None,
+        num_classes=config.num_labels,
+    )
+
     sr = 16_000
     audio_1, _ = librosa.load("data/irmas/train/cel/[cel][cla]0001__1.wav", sr=sr)
     audio_2, _ = librosa.load("data/irmas/train/cla/[cla][cla]0150__1.wav", sr=sr)
@@ -230,7 +264,18 @@ def test_simple_sum():
 
 
 def test_simple_concat():
-    dataset = IRMASDatasetTrain()
+    config = config_defaults.get_default_config()
+    dataset = IRMASDatasetTrain(
+        dataset_path=config.path_irmas_train,
+        audio_transform=None,
+        normalize_audio=False,
+        concat_n_samples=None,
+        sum_two_samples=None,
+        sampling_rate=config.sampling_rate,
+        train_override_csvs=None,
+        num_classes=config.num_labels,
+    )
+    dataset.concat_n_samples = 2
     sr = 16_000
     audio_1, _ = librosa.load("data/irmas/train/cel/[cel][cla]0001__1.wav", sr=sr)
     audio_2, _ = librosa.load("data/irmas/train/cla/[cla][cla]0150__1.wav", sr=sr)

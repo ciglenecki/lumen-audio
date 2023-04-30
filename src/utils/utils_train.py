@@ -1,7 +1,4 @@
-from typing import Any, Union
-
 import torch
-import torch.nn as nn
 
 
 def multi_acc(y_pred_log, y_test):

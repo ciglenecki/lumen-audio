@@ -1,5 +1,3 @@
-from typing import Any
-
 import librosa
 import torch
 import torchaudio
@@ -9,8 +7,8 @@ from transformers.modeling_outputs import SequenceClassifierOutput
 
 import src.config.config_defaults as config_defaults
 from src.config.argparse_with_config import ArgParseWithConfig
-from src.model.model_base import ModelBase
-from src.utils.utils_audio import load_audio_from_file, play_audio, plot_spectrograms
+from src.model.model_base import ForwardInput, ForwardOut, ModelBase
+from src.utils.utils_audio import load_audio_from_file, play_audio
 from src.utils.utils_dataset import get_example_val_sample
 
 
@@ -41,84 +39,25 @@ class ASTModelWrapper(ModelBase):
             )
         )
 
-        # middle_size = int(
-        #     math.sqrt(config.hidden_size * self.num_labels) + self.num_labels
-        # )
-        # self.backbone.classifier = DeepHead([ast_config.hidden_size, self.num_labels])
+        self.backbone.classifier = self.create_head(ast_config.hidden_size)
         self.save_hyperparameters()
 
-    def forward(self, audio: torch.Tensor, labels: torch.Tensor):
+    def forward(self, image: torch.Tensor):
         out: SequenceClassifierOutput = self.backbone.forward(
-            audio,
+            image,
             output_attentions=True,
             return_dict=True,
-            labels=labels,
         )
-        return out.loss, out.logits
+        return out.logits
 
-    def _step(self, batch, batch_idx, type: str):
-        """
-        - batch_size: 4.
-        - `batch` size can actually be bigger (10) because of chunking.
-        - Split the `batch` with batch_size
-        - sub_batches = [[4, height, width], [4, height, width], [2, height, width]]
-        """
-
-        images, y, file_indices, item_indices = batch
-
-        # plot_spectrograms(
-        #     images.detach().cpu(),
-        #     sampling_rate=self.config.sampling_rate,
-        #     n_fft=self.config.n_fft,
-        #     n_mels=self.config.n_mels,
-        #     hop_length=self.config.hop_length,
-        #     y_axis=None,
-        # )
-
-        sub_batches = torch.split(images, self.batch_size, dim=0)
-        loss = 0
-        y_pred_prob = torch.zeros((len(images), self.num_labels), device=self.device)
-        y_pred = torch.zeros((len(images), self.num_labels), device=self.device)
-
-        passed_images = 0
-        for sub_batch_image in sub_batches:
-            b_size = len(sub_batch_image)
-            start = passed_images
-            end = passed_images + b_size
-
-            b_y = y[start:end]
-            b_loss, b_logits_pred = self.forward(sub_batch_image, labels=b_y)
-            b_y_pred_prob = torch.sigmoid(b_logits_pred)
-            b_y_pred = (b_y_pred_prob >= 0.5).float()
-
-            loss += b_loss * b_size
-            y_pred_prob[start:end] = b_y_pred_prob
-            y_pred[start:end] = b_y_pred
-
-            passed_images += b_size
-        if type != "train":
-            pass
-            # y_final_out, _ = scatter_max(y_pred, file_indices, dim=0)
-
-        loss = loss / len(images)
-        return self.log_and_return_loss_step(
-            loss=loss, y_pred=y_pred, y_true=y, type=type
-        )
-
-    def training_step(self, batch, batch_idx):
-        return self._step(batch, batch_idx, type="train")
-
-    def validation_step(self, batch, batch_idx):
-        return self._step(batch, batch_idx, type="val")
-
-    def test_step(self, batch, batch_idx):
-        return self._step(batch, batch_idx, type="test")
-
-    def predict_step(
-        self, batch: torch.Tensor, batch_idx: int, dataloader_idx: int = 0
-    ) -> Any:
-        # TODO:
-        pass
+    def forward_wrapper(self, forward_input: ForwardInput) -> ForwardOut:
+        image, y_true = forward_input.feature, forward_input.y_true
+        logits_pred = self.forward(image)
+        if y_true is not None:
+            loss = self.loss_function(logits_pred, y_true)
+        else:
+            loss = None
+        return ForwardOut(logits=logits_pred, loss=loss)
 
 
 if __name__ == "__main__":

@@ -20,7 +20,6 @@ from tqdm import tqdm
 from src.config.config_defaults import (
     ALL_INSTRUMENTS,
     INSTRUMENT_TO_FULLNAME,
-    InstrumentEnums,
     get_default_config,
 )
 from src.utils.utils_dataset import encode_instruments

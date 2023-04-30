@@ -1,13 +1,8 @@
-from functools import partial
-from typing import Callable
-
 import torch
 import torch.nn.functional
 import torchvision.transforms.functional
 
-from src.config.config_defaults import NUM_RGB_CHANNELS, ConfigDefault
-from src.enums.enums import ModelInputDataType
-from src.model.model import get_data_input_type
+from src.config.config_defaults import NUM_RGB_CHANNELS
 
 
 def chunk_image_by_width(
@@ -151,16 +146,16 @@ def undo_image_chunking(spectrogram: torch.Tensor, n_mel_bins: int) -> torch.Ten
     return spectrogram
 
 
-def collate_fn_spectrogram(
-    examples: list[tuple[torch.Tensor], torch.Tensor]
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+def collate_fn_feature(
+    examples: list[list[torch.Tensor], torch.Tensor]
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Example:
-    Image shape: [Chunks, Channel, Height, Width]
+    Image shape: [Chunks, Channel, ...feature]
     Label shape: [Label]
     Dataset index: [1]
 
-    Batch is tuple (image, label, dataset index)
+    Batch is tuple (feature, label, dataset index)
     batch = [
         [[3,4], [5,6]], [1,0,0], 851
         [[2,3], [1,7]], [0,0,1], 532
@@ -168,130 +163,42 @@ def collate_fn_spectrogram(
     ]
     """
 
-    # Count total number of images (sum of all chunks)
-    num_images = 0
+    # Count total number of features (sum of all chunks)
+    num_features = 0
     for e in examples:
-        image_chunks = e[0]
-        num_images += image_chunks.shape[0]
+        feature_chunks = e[0]
+        num_features += feature_chunks.shape[0]
 
     example_item = examples[0]
-    example_image = example_item[0]
+    example_feature = example_item[0]
     example_label = example_item[1]
-    image_shape = tuple(example_image.shape[1:])
+    feature_shape = tuple(example_feature.shape[1:])
 
     # Create empty matrices
-    images = torch.empty((num_images, *image_shape))
-    labels = torch.empty((num_images, example_label.shape[-1]))
-    file_indices = torch.empty(num_images, dtype=torch.int64)
-    item_indices = torch.empty(num_images, dtype=torch.int64)
+    features = torch.empty((num_features, *feature_shape))
+    labels = torch.empty((num_features, example_label.shape[-1]))
+    file_indices = torch.empty(num_features, dtype=torch.int64)
+    item_indices = torch.empty(num_features, dtype=torch.int64)
 
-    images_passed = 0
+    features_passed = 0
     for unique_file_idx, item in enumerate(examples):
-        image_chunks, label, dataset_index = item
-        num_chunks = image_chunks.shape[0]
+        feature_chunks, label, dataset_index = item
+        num_chunks = feature_chunks.shape[0]
 
-        start = images_passed
-        end = images_passed + num_chunks
+        start = features_passed
+        end = features_passed + num_chunks
 
-        images[start:end] = image_chunks
+        features[start:end] = feature_chunks
         labels[start:end] = label
         file_indices[start:end] = torch.full((num_chunks,), unique_file_idx)
         item_indices[start:end] = torch.full((num_chunks,), int(dataset_index))
 
-        images_passed += num_chunks
+        features_passed += num_chunks
 
-    return images, labels, file_indices, item_indices
-
-
-def collate_fn_audio(
-    batch: list[tuple[torch.Tensor, torch.Tensor]], max_num_width_samples
-):
-    """Batch is tuple (waveform, label)
-
-    Example:
-
-        batch size = 3
-        max_size = 2
-
-        batch = [
-            [5, 6, 1, 2, 3], [1,0,0]
-            [1, 5, 3, 8, 9], [0,0,1]
-            [2, 5, 3, 1, 7], [0,1,0]
-        ]
-
-        output_audio_batch = [
-            [5, 6],
-            [1, 2],
-            [3, 0],
-              ....,
-            [3, 1],
-            [7, 0],
-        ]
-
-        output_lables_batch = [
-            [1,0,0],
-            [1,0,0],
-            [1,0,0],
-            .......,
-            [0,1,0],
-            [0,1,0]
-        ]
-
-        output_labels = [
-            0,
-            0,
-            0,
-            ...,
-            2,
-            2
-        ]
-        output = output_image_batch, output_lables_batch, output_labels
-    """
-    audio_chunks, labels, file_indices = [], [], []
-    for file_idx, (audio, label) in enumerate(batch):
-        chunks = list(torch.split(audio, max_num_width_samples))
-        audio_chunks.extend(chunks)  # [[5,6], [1,2], [3]]
-        repeat_times = len(chunks)
-
-        repeated_labels = label.repeat([repeat_times, 1])
-        labels.extend(repeated_labels)  # [[1,0,0], [1,0,0], [1,0,0]]
-
-        file_id_repeated = torch.full([repeat_times], file_idx)
-        file_indices.extend(file_id_repeated)  # [0, 0, 0]
-
-    audio_chunks = torch.nn.utils.rnn.pad_sequence(
-        audio_chunks,
-        batch_first=True,
-        padding_value=0.0,
-    )  # Shape [chunks, width, height]
-
-    labels = torch.vstack(labels)  # Shape [audio_chunks, labels]
-    file_indices = torch.vstack(file_indices)  # Shape [audio_chunks, 1]
-
-    return audio_chunks, labels, file_indices
+    return features, labels, file_indices, item_indices
 
 
-def get_collate_fn(config: ConfigDefault) -> Callable:
-    data_input_type = get_data_input_type(model_enum=config.model)
-    if data_input_type == ModelInputDataType.IMAGE:
-        return collate_fn_spectrogram
-    elif data_input_type == ModelInputDataType.WAVEFORM:
-        return partial(
-            collate_fn_audio,
-            max_num_width_samples=config.max_num_width_samples * config.sampling_rate,
-        )
-    else:
-        raise Exception(f"Unsupported data input type {data_input_type}")
-
-
-####################################################################################
-####################################################################################
-# TEST
-####################################################################################
-####################################################################################
-
-
-def test_collate_fn_spectrogram():
+def test_collate_fn_feature():
     num_chunks = 3
     image_width = 384
     image_height = 384
@@ -316,7 +223,7 @@ def test_collate_fn_spectrogram():
         (spectrogram_3, label_3, dataset_id_3),
     ]
 
-    batch = collate_fn_spectrogram(examples)
+    batch = collate_fn_feature(examples)
     images, labels, file_indices, item_indices = batch
     assert torch.all(file_indices[0:3] == 0)
     assert torch.all(file_indices[3:6] == 1)
@@ -339,7 +246,7 @@ def test_collate_fn_spectrogram():
     assert torch.all(item_indices[id_3] == dataset_id_3)
 
 
-def test_collate_fn_spectrogram_rgb():
+def test_collate_fn_feature_rgb():
     num_chunks = 3
     image_width = 384
     image_height = 384
@@ -364,7 +271,7 @@ def test_collate_fn_spectrogram_rgb():
         (spectrogram_3, label_3, dataset_id_3),
     ]
 
-    batch = collate_fn_spectrogram(examples)
+    batch = collate_fn_feature(examples)
     images, labels, file_indices, item_indices = batch
     assert torch.all(file_indices[0:3] == 0)
     assert torch.all(file_indices[3:6] == 1)
@@ -387,7 +294,7 @@ def test_collate_fn_spectrogram_rgb():
     assert torch.all(item_indices[id_3] == dataset_id_3)
 
 
-def test_collate_fn_spectrogram_greyscale():
+def test_collate_fn_feature_greyscale():
     num_chunks = 3
     image_width = 384
     image_height = 384
@@ -412,7 +319,7 @@ def test_collate_fn_spectrogram_greyscale():
         (spectrogram_3, label_3, dataset_id_3),
     ]
 
-    batch = collate_fn_spectrogram(examples)
+    batch = collate_fn_feature(examples)
     images, labels, file_indices, item_indices = batch
     assert torch.all(file_indices[0:3] == 0)
     assert torch.all(file_indices[3:6] == 1)
@@ -435,7 +342,7 @@ def test_collate_fn_spectrogram_greyscale():
     assert torch.all(item_indices[id_3] == dataset_id_3)
 
 
-def test_collate_fn_spectrogram_single():
+def test_collate_fn_feature_single():
     num_chunks = 1
     image_width = 1
     image_height = 1
@@ -450,7 +357,7 @@ def test_collate_fn_spectrogram_single():
         (spectrogram_1, label_1, dataset_id_1),
     ]
 
-    batch = collate_fn_spectrogram(examples)
+    batch = collate_fn_feature(examples)
     images, labels, file_indices, item_indices = batch
     assert torch.all(file_indices[0:1] == 0)
 
@@ -461,7 +368,7 @@ def test_collate_fn_spectrogram_single():
     assert torch.all(item_indices[id_1] == dataset_id_1)
 
 
-def test_collate_fn_spectrogram_diff_sizes():
+def test_collate_fn_feature_diff_sizes():
     image_width = 384
     image_height = 384
 
@@ -485,7 +392,7 @@ def test_collate_fn_spectrogram_diff_sizes():
         (spectrogram_3, label_3, dataset_id_3),
     ]
 
-    batch = collate_fn_spectrogram(examples)
+    batch = collate_fn_feature(examples)
     images, labels, file_indices, item_indices = batch
     assert torch.all(file_indices[0:4] == 0)
     assert torch.all(file_indices[4 : 4 + 5] == 1)
