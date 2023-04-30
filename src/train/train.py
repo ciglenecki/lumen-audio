@@ -13,6 +13,7 @@ from pytorch_lightning.callbacks import (
 )
 from pytorch_lightning.utilities.seed import seed_everything
 
+from src.config import config_defaults
 from src.config.config_defaults import ConfigDefault
 from src.config.config_train import get_config
 from src.data.datamodule import OurDataModule
@@ -25,7 +26,7 @@ from src.enums.enums import (
 )
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
 from src.features.augmentations import get_augmentations
-from src.features.chunking import get_collate_fn
+from src.features.chunking import collate_fn_feature, get_collate_fn
 from src.model.model import get_model
 from src.train.callbacks import (
     FinetuningCallback,
@@ -36,6 +37,7 @@ from src.train.callbacks import (
 from src.utils.utils_dataset import calc_instrument_weight
 from src.utils.utils_functions import (
     add_prefix_to_keys,
+    dict_with_keys,
     get_timestamp,
     random_codeword,
     stdout_to_file,
@@ -109,7 +111,7 @@ if __name__ == "__main__":
         if SupportedAugmentations.CONCAT_N_SAMPLES in config.augmentations
         else None
     )
-    collate_fn = get_collate_fn(config)
+    collate_fn = collate_fn_feature
 
     datamodule = OurDataModule(
         train_paths=config.train_paths,
@@ -133,13 +135,18 @@ if __name__ == "__main__":
     datamodule.setup_for_train()
 
     if config.loss_function == SupportedLossFunctions.CROSS_ENTROPY:
-        loss_function = torch.nn.BCEWithLogitsLoss(**config.loss_function_kwargs)
+        loss_function = torch.nn.BCEWithLogitsLoss(
+            **config.loss_function_kwargs, reduction="none"
+        )
     if config.loss_function == SupportedLossFunctions.CROSS_ENTROPY_POS_WEIGHT:
+        instrument_count = dict_with_keys(
+            datamodule.get_train_dataset_stats(), config_defaults.ALL_INSTRUMENTS
+        )
         kwargs = {
             **config.loss_function_kwargs,
-            "pos_weight": calc_instrument_weight(datamodule.count_classes()),
+            "pos_weight": calc_instrument_weight(instrument_count),
         }
-        loss_function = torch.nn.BCEWithLogitsLoss(**kwargs)
+        loss_function = torch.nn.BCEWithLogitsLoss(**kwargs, reduction="none")
 
     model = get_model(config, loss_function=loss_function)
     print_params(model)

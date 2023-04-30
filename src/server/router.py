@@ -2,10 +2,13 @@ from typing import List
 
 from description import get_models_desc, predict_images_desc
 from fastapi import APIRouter, UploadFile
+from fastapi.responses import StreamingResponse
 
+import src.server.controllers as controllers
 from src.config.config_defaults import InstrumentEnums
 from src.enums.enums import SupportedModels
 from src.server.interface import MultilabelPrediction
+from src.server.server_store import server_store
 
 router = APIRouter(prefix="/model")
 
@@ -17,27 +20,22 @@ router = APIRouter(prefix="/model")
     description=get_models_desc,
 )
 async def get_models():
-    return [e.name for e in SupportedModels]
+    return server_store.get_available_models()
 
 
 @router.post(
-    "/predict-sound-file",
+    "/predict-directory",
     tags=["predict"],
     response_model=List[MultilabelPrediction],
     description=predict_images_desc,
 )
-async def predict_sound(model_name: str, images: List[UploadFile]):
-    return [{e: 0 for e in InstrumentEnums}]
+async def predict_sound(model_path: str, directory: List[UploadFile]):
+    controllers.set_server_store_model(model_path)
+    controllers.set_server_store_directory(directory)
 
-
-@router.post(
-    "/predict-sound-file",
-    tags=["predict"],
-    response_model=List[MultilabelPrediction],
-    description=predict_images_desc,
-)
-async def predict_sound(model_name: str, images: List[UploadFile]):
-    return [{e: 0 for e in InstrumentEnums}]
+    return StreamingResponse(
+        controllers.predict_directory(), media_type="application/json"
+    )
 
 
 # @router.post(

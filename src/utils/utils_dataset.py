@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 import numpy as np
@@ -27,6 +28,23 @@ def get_example_val_sample(target_sr: int = None) -> np.ndarray:
     audio_path = Path(config.path_irmas_test, "1 - Hank's Other Bag-14.wav")
     audio, _ = load_audio_from_file(audio_path, target_sr=target_sr)
     return audio
+
+
+def multihot_to_dict(multi_hot_array: np.ndarray) -> dict[str, int]:
+    """Returns JSON-like structure given multi hot array
+    Example:
+        input: [0,0,0,1,0,0,0,1,0]
+        returns {
+            "cel": 0,
+            ...
+            "gac": 1,
+            ...
+        }
+    """
+    return {
+        instrument: int(flag)
+        for flag, instrument in zip(multi_hot_array, config_defaults.ALL_INSTRUMENTS)
+    }
 
 
 def encode_instruments(instruments: list[str]) -> np.ndarray:

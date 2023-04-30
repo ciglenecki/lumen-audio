@@ -46,7 +46,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --audio-transform WAV2VEC_CNN --model WAV2VEC_CNN --use-fluffy --head ATTENTION_HEAD --use-multiple-optimizers --loss-function CROSS_ENTROPY_POS_WEIGHT --backbone-after classifier.heads --head-after classifier.heads --quick",
+			"args": "--accelerator gpu --devices -1 --train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --audio-transform WAV2VEC_CNN --model WAV2VEC_CNN --use-fluffy --head ATTENTION_HEAD --loss-function CROSS_ENTROPY_POS_WEIGHT --backbone-after classifier.heads --head-after classifier.heads --quick --augmentations",
 			"justMyCode": false
 		},
 		{
@@ -73,7 +73,7 @@
 			"request": "launch",
 			"program": "src/grad_vis/visualize_grads.py",
 			"console": "integratedTerminal",
-			"args": "--dataset-paths irmastrain:data/irmas/train --path_to_model models_quick/04-14-15-25-32_CalmAlan_resnext50_32x4d/checkpoints/04-14-15-25-32_CalmAlan_resnext50_32x4d_val_acc_0.0000_val_loss_1.1923.ckpt --target_layer backbone.avgpool --model RESNEXT50_32X4D --audio-transform MEL_SPECTROGRAM --label vio --batch-size 1 --image-size 256 256",
+			"args": "--dataset-paths irmastrain:data/irmas/train --path_to_model models_quick/04-14-15-25-32_CalmAlan_resnext50_32x4d/checkpoints/04-14-15-25-32_CalmAlan_resnext50_32x4d_val_acc_0.0000_val_loss_1.1923.ckpt --target_layer backbone.avgpool --model RESNEXT50_32X4D --audio-transform MEL_SPECTROGRAM --label vio --batch-size 1",
 			"justMyCode": false
 		},
 		{
@@ -99,7 +99,7 @@
 			"request": "launch",
 			"program": "src/train/test.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --dataset-paths irmastest:data/irmas/test --ckpt models/04-20-15-53-30_FamedJuliett_efficient_net_v2_m/checkpoints/04-20-15-53-30_FamedJuliett_efficient_net_v2_m_val_acc_0.0000_val_loss_0.4319.ckpt --model EFFICIENT_NET_V2_M --batch-size 1 --num-workers 6",
+			"args": "--accelerator gpu --devices -1 --test-paths irmastest:data/irmas/test --ckpt models_quick/04-29-17-15-23_SlickDelta_resnext50_32x4d/checkpoints/04-29-17-15-23_SlickDelta_resnext50_32x4d_val_acc_0.0000_val_loss_0.7160.ckpt --batch-size 8 --num-workers 8",
 			"justMyCode": false
 		},
 		{

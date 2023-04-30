@@ -8,17 +8,28 @@ models_quick/04-14-15-25-32_CalmAlan_resnext50_32x4d/checkpoints/04-14-15-25-
 import operator
 
 import cv2
+import librosa
+import librosa.display
+import matplotlib.colors as colors
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
+import torchvision
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from PIL import Image
 from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
 
 from src.config import config_defaults
 from src.config.argparse_with_config import ArgParseWithConfig
 from src.data.datamodule import OurDataModule
+from src.features.audio_to_spectrogram import MelSpectrogram
 from src.features.audio_transform import get_audio_transform
-from src.features.augmentations import get_augmentations
-from src.features.chunking import get_collate_fn
+from src.features.chunking import collate_fn_feature
 from src.model.model import get_model
+from src.utils.utils_audio import plot_spectrograms
+from src.utils.utils_dataset import add_rgb_channel, concat_images
+from utils.utils_functions import min_max_scale
 
 
 def parse_args():
@@ -57,6 +68,22 @@ def parse_args():
     return args, config, pl_args
 
 
+def img_to_rgb():
+    # Get current figure
+    fig = plt.gcf()
+    fig.axes[0].get_xaxis().set_visible(False)
+    fig.axes[0].get_yaxis().set_visible(False)
+    canvas = FigureCanvas(fig)
+    canvas.draw()
+    w, h = canvas.get_width_height()
+    cb = plt.colorbar()  # remove colorbar
+    cb.remove()
+    plt.axis("off")  # remove axis
+    plt.savefig("wtf.png")
+    img_array = np.frombuffer(canvas.tostring_rgb(), dtype="uint8").reshape(h, w, 3)
+    return img_array
+
+
 class MultiLabelBinaryClassifierOutputTarget:
     def __init__(self, output_index):
         self.output_index = output_index
@@ -64,7 +91,7 @@ class MultiLabelBinaryClassifierOutputTarget:
     def __call__(self, model_output):
         if len(model_output.shape) == 1:
             model_output = model_output.unsqueeze(0)
-        return -model_output[:, self.output_index]
+        return (-1) * model_output[:, self.output_index]
 
 
 if __name__ == "__main__":
@@ -89,7 +116,7 @@ if __name__ == "__main__":
         drop_last_sample=config.drop_last,
         train_audio_transform=None,
         val_audio_transform=audio_transform,
-        collate_fn=get_collate_fn(config),
+        collate_fn=collate_fn_feature,
         normalize_audio=config.normalize_audio,
         normalize_image=config.normalize_image,
         train_only_dataset=False,
@@ -101,34 +128,66 @@ if __name__ == "__main__":
     datamodule.setup_for_inference()
 
     test_dataloader = datamodule.test_dataloader()
-    for inputs, labels, ids, _ in test_dataloader:
+    for images, labels, file_indices, _ in test_dataloader:
+        # images = torchvision.transforms.Resize(size=(384, 384))(
+        #     torchvision.transforms.ToTensor()(Image.open("cat.jpg")).unsqueeze_(0)
+        # )
         instrument_idx = config_defaults.INSTRUMENT_TO_IDX[args.label]
         targets = [MultiLabelBinaryClassifierOutputTarget(instrument_idx)]
-        res = cam(input_tensor=inputs, targets=targets)
+        grads_mask = cam(input_tensor=images, targets=targets)
 
-        unique_ids = torch.unique(ids)
+        if len(grads_mask.shape) == 2:
+            regrads_masks = grads_mask[np.newaxis, ...]
+
+        unique_indices = torch.unique(file_indices)
         grouped_tensors = []
-        for idx in unique_ids:
-            indices = torch.where(ids == idx)
 
-            grouped_example = torch.cat([torch.tensor(i) for i in res[indices]], dim=-1)
+        for file_idx in unique_indices:
+            batch_file_indices = torch.where(file_indices == file_idx)
+            image_grouped = images[batch_file_indices]
+            grads_mask_grouped = grads_mask[batch_file_indices]
 
-            grouped_example_rgb = torch.cat(
-                [torch.tensor(i) for i in inputs[indices]], dim=-1
+            grads_mask_catted = concat_images(grads_mask_grouped)
+            image_catted = concat_images(image_grouped)
+
+            image_catted = audio_transform.undo(image_catted.unsqueeze(dim=0))[0]
+
+            my_dpi = 150
+            width = 1200
+            height = 600
+
+            plt.figure(figsize=(width / my_dpi, height / my_dpi), dpi=my_dpi)
+            S_db = librosa.power_to_db(image_catted, ref=np.max)
+            librosa.display.specshow(
+                S_db,
+                y_axis="mel",
+                x_axis=None,
+                sr=config.sampling_rate,
+                hop_length=config.hop_length,
+                n_fft=config.n_fft,
+            )
+            image_catted = img_to_rgb() / 255
+
+            grads_width = grads_mask_catted.shape[-1]
+            grads_mask_catted = (
+                torch.nn.functional.interpolate(
+                    grads_mask_catted.unsqueeze(0).unsqueeze(0),
+                    size=(height, width),
+                    mode="bilinear",
+                    align_corners=False,
+                )
+                .squeeze(0)
+                .squeeze(0)
             )
 
-            grouped_example = (grouped_example - grouped_example.min()) / (
-                grouped_example.max() - grouped_example.min()
+            grads_mask_catted = min_max_scale(grads_mask_catted)
+            image_catted = cv2.cvtColor(
+                image_catted.astype("float32"), cv2.COLOR_BGR2RGB
             )
-            grouped_example_rgb = (grouped_example_rgb - grouped_example_rgb.min()) / (
-                grouped_example_rgb.max() - grouped_example_rgb.min()
+            final_img = show_cam_on_image(
+                image_catted, grads_mask_catted, use_rgb=True, image_weight=0.5
             )
-
-            final_img = visualization = show_cam_on_image(
-                grouped_example_rgb.detach().cpu().permute(1, 2, 0).numpy(),
-                grouped_example.detach().cpu().numpy(),
-            )
-
+            # plt.imshow(final_img)
             cv2.imshow("img", final_img)
             cv2.waitKey(0)
             cv2.destroyAllWindows()

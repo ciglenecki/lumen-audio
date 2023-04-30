@@ -275,7 +275,7 @@ class ConfigDefault(Serializable):
     path_figures: Path | None = create(None)
     path_embeddings: Path | None = create(None)
 
-    train_paths: tuple[Path, SupportedDatasetDirType] | list[str] | None = create(None)
+    train_paths: list[str] | None = create(None)
     """Dataset root directories that will be used for training in the following format: --train-paths irmastrain:/path/to/dataset or openmic:/path/to/dataset"""
 
     val_paths: list[str] | None = create(None)
@@ -284,9 +284,7 @@ class ConfigDefault(Serializable):
     test_paths: list[str] | None = create(None)
     """Dataset root directories that will be used for testing in the following format: --val-paths irmastest:/path/to/dataset openmic:/path/to/dataset"""
 
-    dataset_paths: (list[str] | None | tuple[Path, SupportedDatasetDirType]) = create(
-        None
-    )
+    dataset_paths: list[str] | None = create(None)
     """Dataset path with the following format format: --dataset-paths inference:/path/to/dataset openmic:/path/to/dataset"""
 
     # predict_paths: Optional[list[str]] = create(None)
@@ -423,6 +421,9 @@ class ConfigDefault(Serializable):
     head: SupportedHeads = create(SupportedHeads.DEEP_HEAD)
     """Type of classification head which will be used for classification. This is almost always the last layer."""
 
+    head_hidden_dim: list[int] = create([])
+    """List of integers which specifies the hidden layers of head (classifer). For each integer one extra hidden layer will be created in the middle of the head (classifier). The integer value specifies number of  hidden dimensions."""
+
     ckpt: Path | None = create(None)
     """.ckpt file, automatically restores model, epoch, step, LR schedulers, etc..."""
 
@@ -451,9 +452,6 @@ class ConfigDefault(Serializable):
 
     lr_warmup: float = create(3e-4)
     """warmup learning rate"""
-
-    use_multiple_optimizers: bool = create(False)
-    """Use multiple optimizers for Fluffy. Each head will have it's own optimizer."""
 
     # ======================== LOGS ===========================
     log_per_instrument_metrics: bool = create(True)
@@ -611,6 +609,15 @@ class ConfigDefault(Serializable):
         if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAMW:
             self.weight_decay = 1e-2
 
+        if self.model is not None and len(self.head_hidden_dim) > 0:
+            if (
+                self.head_hidden_dim != list(sorted(self.head_hidden_dim, reverse=True))
+                or len(self.head_hidden_dim) > 2
+            ):
+                raise InvalidArgument(
+                    "--head-hidden-dim values should have descending values and shouldn't contain more than 2 values"
+                )
+
         self.set_train_paths()
         self.set_val_paths()
         self.set_test_paths()
@@ -704,17 +711,12 @@ class ConfigDefault(Serializable):
                 f"You have to pass the --lr-onecycle-max if you use the {self.scheduler}",
             )
 
-        if self.model != SupportedModels.WAV2VEC_CNN and self.use_multiple_optimizers:
-            raise InvalidArgument(
-                "You can't use mutliple optimizers if you are not using Fluffy!",
-            )
-
         if self.max_num_width_samples is None:
             # There's no max num width for image based models because maximum is defined by their architecture.
             MAX_NUM_WIDTH_SAMPLE = {
                 SupportedModels.AST: 1024,
-                SupportedModels.WAV2VEC_CNN: self.sampling_rate * 3,
-                SupportedModels.WAV2VEC: self.sampling_rate * 3,
+                SupportedModels.WAV2VEC_CNN: self.sampling_rate * 3 * 2,
+                SupportedModels.WAV2VEC: self.sampling_rate * 10,
                 SupportedModels.EFFICIENT_NET_V2_S: None,
                 SupportedModels.EFFICIENT_NET_V2_M: None,
                 SupportedModels.EFFICIENT_NET_V2_L: None,

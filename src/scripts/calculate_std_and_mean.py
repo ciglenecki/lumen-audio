@@ -12,7 +12,7 @@ from src.config.argparse_with_config import ArgParseWithConfig
 from src.config.config_defaults import ConfigDefault
 from src.data.datamodule import OurDataModule
 from src.features.audio_transform import get_audio_transform
-from src.features.chunking import collate_fn_spectrogram, get_collate_fn
+from src.features.chunking import collate_fn_feature, get_collate_fn
 from src.utils.utils_dataset import create_and_repeat_channel
 
 
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     transform = get_audio_transform(
         config, spectrogram_augmentation=None, waveform_augmentation=None
     )
-    collate_fn = collate_fn_spectrogram
+    collate_fn = collate_fn_feature
     datamodule = OurDataModule(
         train_paths=None,
         val_paths=None,

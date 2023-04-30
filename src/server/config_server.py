@@ -1,6 +1,8 @@
 import functools
 from pathlib import Path
 
+import torch
+
 from src.config.argparse_with_config import ArgParseWithConfig
 from src.config.config_defaults import get_default_config
 
@@ -24,6 +26,12 @@ def get_server_args():
         action="store_true",
         default=False,
         help="Use hot reload, not recommanded.",
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="cuda:0" if torch.cuda.is_available() else "cpu",
+        help="The device to be used eg. cuda:0.",
     )
     args, config, pl_args = parser.parse_args()
     return args, config, pl_args

@@ -123,6 +123,7 @@ if __name__ == "__main__":
         pretrained_tag=TAG_AST_AUDIOSET,
         sampling_rate=config.sampling_rate,
         hop_length=config.hop_length,
+        n_fft=config.n_fft,
         n_mels=config.n_mels,
         spectrogram_augmentation=None,
         waveform_augmentation=None,

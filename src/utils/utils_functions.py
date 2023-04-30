@@ -18,6 +18,14 @@ T = TypeVar("T")
 import time
 
 
+def dict_without_keys(d: dict, keys: list[str]):
+    return {x: d[x] for x in d if x not in keys}
+
+
+def dict_with_keys(d: dict, keys: list[str]):
+    return {x: d[x] for x in d if x in keys}
+
+
 def parse_kwargs(kwargs_strs: list[str], list_sep=",", key_value_sep="="):
     """
 

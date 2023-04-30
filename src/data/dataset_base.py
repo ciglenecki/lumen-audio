@@ -84,7 +84,7 @@ class DatasetBase(Dataset[DatasetGetItem]):
             stats.update(
                 {f"instrument {config_defaults.INSTRUMENT_TO_FULLNAME[k]}": len(v)}
             )
-            # stats.update({k: len(v)})
+            stats.update({k: len(v)})
 
         num_of_instruments_per_sample = {}
         for _, label in self.dataset_list:
