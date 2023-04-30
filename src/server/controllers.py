@@ -1,5 +1,8 @@
+from pathlib import Path
+
 from fastapi.encoders import jsonable_encoder
 
+from src.enums.enums import SupportedDatasetDirType
 from src.server.server_store import server_store
 from src.train.run_test import testing_generator
 from src.utils.utils_dataset import multihot_to_dict
@@ -20,7 +23,11 @@ def predict_directory() -> str:
 
 def set_server_store_model(model_path: str):
     server_store.config.ckpt = model_path
+    server_store.set_model()
 
 
-def set_server_store_directory(model_path: str):
-    pass
+def set_server_store_directory(
+    dataset_paths: list[tuple[SupportedDatasetDirType, Path]]
+):
+    server_store.config.dataset_paths = dataset_paths
+    server_store.set_dataset()

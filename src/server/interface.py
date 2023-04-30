@@ -4,11 +4,12 @@ from typing import Optional
 from pydantic import BaseModel, create_model
 
 from src.config.config_defaults import InstrumentEnums
+from src.enums.enums import SupportedDatasetDirType
 
 
 class PostPredictDirectory(BaseModel):
-    model_path: Path
-    directory: Path
+    model_checkpoint: Path
+    dataset_dirs: tuple[SupportedDatasetDirType, Path]
 
 
 class PostPredictDatasetRequest(BaseModel):

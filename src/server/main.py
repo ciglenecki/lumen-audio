@@ -10,7 +10,6 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from server_logger import logger
 
 import src.server.router as router
-from src.server.config_server import get_server_args
 from src.server.server_store import server_store
 
 # include project path so that .env file can be read from all locations
@@ -63,12 +62,10 @@ with open(Path(Path(__file__).parent.resolve(), "openapi_spec.json"), "w+") as f
     file.close()
 
 if __name__ == "__main__":
-    args, config, _ = get_server_args()
-    server_store.set_config(config, args)
     uvicorn.run(
         "main:app",
-        host=args.host,
-        port=args.port,
+        host=server_store.args.host,
+        port=server_store.args.port,
         loop="asyncio",
-        reload=args.hot_reload,
+        reload=server_store.args.hot_reload,
     )

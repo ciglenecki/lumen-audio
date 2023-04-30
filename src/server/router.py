@@ -1,11 +1,16 @@
+import tempfile
+from pathlib import Path
 from typing import List
 
 from description import get_models_desc, predict_images_desc
-from fastapi import APIRouter, UploadFile
+from fastapi import APIRouter, FastAPI, File, UploadFile
 from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
+from starlette.datastructures import URLPath
 
 import src.server.controllers as controllers
-from src.server.interface import MultilabelPrediction
+from src.enums.enums import SupportedDatasetDirType
+from src.server.interface import MultilabelPrediction, PostPredictDirectory
 from src.server.server_store import server_store
 
 router = APIRouter(prefix="/model")
@@ -14,7 +19,7 @@ router = APIRouter(prefix="/model")
 @router.get(
     "s",
     tags=["available models"],
-    response_model=List[str],
+    response_model=List[Path],
     description=get_models_desc,
 )
 async def get_models():
@@ -27,9 +32,11 @@ async def get_models():
     response_model=List[MultilabelPrediction],
     description=predict_images_desc,
 )
-async def predict_sound(model_path: str, directory: List[UploadFile]):
-    controllers.set_server_store_model(model_path)
-    controllers.set_server_store_directory(directory)
+async def predict_directory(
+    model_checkpoint: Path, dataset_dirs: list[tuple[SupportedDatasetDirType, str]]
+):
+    controllers.set_server_store_model(model_checkpoint)
+    controllers.set_server_store_directory(dataset_dirs)
 
     return StreamingResponse(
         controllers.predict_directory(), media_type="application/json"

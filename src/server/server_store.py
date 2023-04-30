@@ -2,14 +2,16 @@ from pathlib import Path
 
 import torch
 
-from features.chunking import collate_fn_feature
 from src.config.config_defaults import ConfigDefault
+from src.features.chunking import collate_fn_feature
+from src.server.config_server import get_server_args
 from src.train.run_test import get_datamodule, get_model_config_transform
 
 
 class ServerStore:
     def __init__(self):
-        self.config = None
+        args, config, _ = get_server_args()
+        self.set_config(config, args)
 
     def set_config(self, config: ConfigDefault, args):
         self.config = config
@@ -46,7 +48,7 @@ class ServerStore:
         )
 
     def get_available_models(self) -> list[Path]:
-        return [path for path in self.args.model_dir.rglob("*.ckpt")]
+        return [str(path) for path in self.args.model_dir.rglob("*.ckpt")]
 
 
 server_store = ServerStore()
