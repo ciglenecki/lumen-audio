@@ -1,3 +1,5 @@
+from math import ceil
+
 import numpy as np
 import torch
 from transformers import Wav2Vec2FeatureExtractor
@@ -44,7 +46,7 @@ class AudioToWav2Vec2(AudioTransformBase):
 
         first_chunk: torch.Tensor = audio[0]  # if first chunk == first chunk
         first_chunk_width = first_chunk.shape[-1]  # 16_000
-        num_first_chunk_repeats = max(1, int(diff / first_chunk_width))  # 8
+        num_first_chunk_repeats = max(1, ceil(diff / first_chunk_width))  # 8
         repeated_first_chunk = np.concatenate(
             [first_chunk] * num_first_chunk_repeats, axis=-1
         )
@@ -57,8 +59,9 @@ class AudioToWav2Vec2(AudioTransformBase):
             audio, sampling_rate=self.sampling_rate, return_tensors="pt", padding=True
         )
 
-        processed_audio = processor_out.input_values.squeeze(0)
+        processed_audio = processor_out.input_values
 
         # note: confirmed that listening to unnormalized audio (do_normalize=False) sounds good.
-        assert len(processed_audio.shape) == 2
+        if len(processed_audio.shape) != 2:
+            assert True, "hm"
         return processed_audio

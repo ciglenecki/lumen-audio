@@ -1,3 +1,5 @@
+from math import ceil
+
 import torch
 import torch.nn.functional
 import torchvision.transforms.functional
@@ -119,7 +121,7 @@ def chunk_image_by_width(
         # diff = 384 - 50 = 334
         first_chunk: torch.Tensor = chunks[0]  # [384, 50] if first chunk == first chunk
         first_chunk_width = first_chunk.shape[-1]  # 50
-        num_first_chunk_repeats = max(1, int(diff / first_chunk_width))  # 8
+        num_first_chunk_repeats = max(1, ceil(diff / first_chunk_width))  # 8
         repeated_first_chunk = torch.cat(
             [first_chunk] * num_first_chunk_repeats, dim=-1
         )  # [384, 334]
