@@ -43,10 +43,7 @@ class DatasetBase(Dataset[DatasetGetItem]):
         self.train_override_csvs = train_override_csvs
         self.use_concat = concat_n_samples is not None and concat_n_samples > 1
         self.use_sum = sum_n_samples is not None and sum_n_samples > 1
-        # list of tuples which contains
-        #   - paths of audio files ("filename.wav")
-        #   - multihot encoded labels ([1,0,0,0,0])
-        # [ ("file1.wav", [1,0,0,0,0])]
+
         self.dataset_list: list[tuple[Path, np.ndarray]] = self.create_dataset_list()
         self.instrument_idx_list: dict[
             str, list[int]
@@ -60,12 +57,20 @@ class DatasetBase(Dataset[DatasetGetItem]):
     @abstractmethod
     def create_dataset_list(self) -> list[tuple[Path, np.ndarray]]:
         """Please implement this class so that `self.dataset_path` becomes a list of tuples which
-        contains paths and multihot encoded labels.
+        contains paths and multihot encoded labels. Use `self.dataset_path` (directory or a .csv
+        file) to load and save files to a list.
 
-        Use `self.dataset_path` (directory or a .csv file) to load and save files to a list.
+        e.g. [("file1.wav", [1,0,0,0,0]), ("file2.wav", [0,1,1,0,1])]
         """
 
     def create_instrument_idx_list(self) -> dict[str, list[int]]:
+        """
+        Creates a dictionary of instruments, values are indices of dataset items (audios)
+        {
+            "cel": [83, 13, 34, ...]
+            "gel": [23, 10, 19, ...]
+        }
+        """
         instrument_idx_list = {e.value: [] for e in config_defaults.InstrumentEnums}
 
         for item_idx, (_, labels) in enumerate(self.dataset_list):
@@ -78,6 +83,10 @@ class DatasetBase(Dataset[DatasetGetItem]):
         return len(self.dataset_list)
 
     def caculate_stats(self) -> dict:
+        """Caculates dataset statistics.
+
+        Number of audios per instrument, total size and number of instruments in audios
+        """
         stats = {}
         for k, v in self.instrument_idx_list.items():
             # Set short and full name
@@ -99,6 +108,7 @@ class DatasetBase(Dataset[DatasetGetItem]):
 
     # @timeit
     def load_sample(self, item_idx: int) -> tuple[np.ndarray, np.ndarray, Path]:
+        """Gets item from dataset_list and loads the audio."""
         audio_path, labels = self.dataset_list[item_idx]
         audio, _ = load_audio_from_file(
             audio_path,
@@ -117,6 +127,11 @@ class DatasetBase(Dataset[DatasetGetItem]):
     def sample_n_negative_samples(
         self, n: int, original_labels: np.ndarray
     ) -> tuple[list[np.ndarray], list[np.ndarray], list[Path]]:
+        """Returns n negative samples.
+
+        Negative sample is sample that has different label compared to original_labels.
+        """
+
         # Take all instruments and exclude ones from the original label
         negative_indices_pool = self.all_instrument_indices[
             ~original_labels.astype(bool)
@@ -164,24 +179,24 @@ class DatasetBase(Dataset[DatasetGetItem]):
 
         Example 1:
 
-            use_concat: True
-            use_sum: False
+            concat_n_samples: 3
+            sum_n_samples: 1
 
             audios: __x__, __a__, __b__
             returns: |__x__|__a__|__b__|
 
         Example 2:
 
-            use_concat: False
-            use_sum: True
+            concat_n_samples: 1
+            sum_n_samples: 2
 
             audios: __x__, __a___
             returns: |__xa__|
 
-        Example 1:
+        Example 3:
 
-            use_concat: 3
-            use_sum: True
+            concat_n_samples: 3
+            sum_n_samples: 2
 
             audios: __x__, __a__, __b__, ..., __e__
 
@@ -216,7 +231,11 @@ class DatasetBase(Dataset[DatasetGetItem]):
         return audios, labels
 
     def concat_and_sum_random_negative_samples(self, original_audio, original_labels):
-        """Finds (num_negative_sampels * 2) - 1 negative samples which are concated and summed to original audio. Negative audio sample doesn't share original audio's labels"""
+        """Mines appropriate number of negative samples which are concated and summed to original
+        audio.
+
+        Negative audio sample has different label compared to original audio's label
+        """
 
         if self.use_concat and self.use_sum:
             num_negative_sampels = self.concat_n_samples * self.sum_n_samples

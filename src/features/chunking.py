@@ -12,74 +12,76 @@ def chunk_image_by_width(
     image: torch.Tensor,
     pad_value: float | str = "repeat",
 ):
-    """EXAMPLE 1 Target image size: (384, 384)
+    """Example 1: Target image size: (384, 384)
 
-    Image:
-    (128 x 1024)
-    |========================================|
-    |                                        |
-    |========================================|
+        Image:
+        (128 x 1024)
+        |========================================|
+        |                                        |
+        |========================================|
 
-    Step 1: scale height only
-    (384 x 1024)
-    |========================================|
-    |                                        |
-    |                                        |
-    |========================================|
+        Step 1: scale height only
+        (384 x 1024)
+        |========================================|
+        |                                        |
+        |                                        |
+        |========================================|
 
-    Step 2: split image
-    |==============|==============|==========|
-    |  (384, 384)  |  (384, 384)  |(384, 256)|
-    |              |              |          |
-    |==============|==============|==========|
+        Step 2: split image
+        |==============|==============|==========|
+        |  (384, 384)  |  (384, 384)  |(384, 256)|
+        |              |              |          |
+        |==============|==============|==========|
 
-    Step 3a): pad with zeros on the right
-    |==============|==============|==============|
-    |  (384, 384)  |  (384, 384)  |  (384, 384)0 |
-    |              |              |            0 |
-    |==============|==============|==============|
+        Step 3a): pad with zeros on the right
+        |==============|==============|==============|
+        |  (384, 384)  |  (384, 384)  |  (384, 384)0 |
+        |              |              |            0 |
+        |==============|==============|==============|
 
-    Step 3b): repeat with first chunk
-    |==============|==============|==============|
-    |1 (384, 384)  |  (384, 384)  |  (384, 384)1 |
-    |1             |              |            1 |
-    |==============|==============|==============|
+        Step 3b): repeat with first chunk
+        |==============|==============|==============|
+        |x (384, 384)  |  (384, 384)  |  (384, 384)x |
+        |x             |              |            x |
+        |==============|==============|==============|
 
-    Returns 3x (384, 384)
+        Returns 3x (384, 384)
 
 
-    EXAMPLE 2
-    Target image size: (384, 384)
+    Example 2:
+        Target image size: (384, 384)
 
-    Image:
-    (128 x 100)
-    |====|
-    |    |
-    |====|
+        Image:
+        (128 x 100)
+        |====|
+        |    |
+        |====|
 
-    Step 1: scale height only
-    (384 x 100)
-    |====|
-    |    |
-    |    |
-    |====|
+        Step 1: scale height only
+        (384 x 100)
+        |====|
+        |    |
+        |    |
+        |====|
 
-    Step 2: repeat images
-    |====================|
-    | 100  100  100  100 |
-    |                    |
-    |====================|
+        Step 2: repeat images
+        |====================|
+        | 100  100  100  100 |
+        |                    |
+        |====================|
 
-    Step 3: cut excess
-    |=================|
-    |100  100  100  84|
-    |                 |
-    |=================|
+        Step 3: cut excess
+        |=================|
+        |100  100  100  84|
+        |                 |
+        |=================|
 
-    Returns 1x (384, 384)
+        Returns 1x (384, 384)
     """
+
     image_height, image_width = target_image_size
-    # Simulate that this is a batch of images
+
+    # Add batch dimension
     # [Batch, height, width] = [1, 128, 1024]
     image = image.unsqueeze(0)
 
@@ -114,10 +116,8 @@ def chunk_image_by_width(
         )
 
     elif diff > 0 and type(pad_value) is str:
-        """Take the first chunk, glue it to the last (which is shorter).
-
-        If first chunk is last chunk then repeat it until the size is large enough.
-        """
+        # Take the first chunk, glue it to the last (which is shorter).
+        # If first chunk is last chunk then repeat it until the size is large enough.
         # diff = 384 - 50 = 334
         first_chunk: torch.Tensor = chunks[0]  # [384, 50] if first chunk == first chunk
         first_chunk_width = first_chunk.shape[-1]  # 50
@@ -128,7 +128,7 @@ def chunk_image_by_width(
 
         # Remove remove excess width caused by repeating
         repeated_first_chunk = repeated_first_chunk[..., :diff]  # [384, 334]
-        chunks[-1] = torch.cat((chunks[-1], repeated_first_chunk), dim=-1)  # [384, 334]
+        chunks[-1] = torch.cat((chunks[-1], repeated_first_chunk), dim=-1)  # [384, 384]
 
     if len(chunks) == 1:
         return chunks[0].float()
@@ -142,27 +142,26 @@ def chunk_image_by_width(
 
 def undo_image_chunking(spectrogram: torch.Tensor, n_mel_bins: int) -> torch.Tensor:
     spectrogram = torch.cat(tuple(spectrogram), dim=-1).unsqueeze(0)
+    spectrogram_width = spectrogram.shape[-1]
     spectrogram = torchvision.transforms.functional.resize(
-        spectrogram, size=(n_mel_bins, spectrogram.shape[-1]), antialias=False
+        spectrogram, size=(n_mel_bins, spectrogram_width), antialias=False
     )
     return spectrogram
 
 
 def collate_fn_feature(
-    examples: list[list[torch.Tensor], torch.Tensor]
+    examples: list[list[torch.Tensor], torch.Tensor, torch.Tensor]
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-    """
-    Example:
-    Image shape: [Chunks, Channel, ...feature]
-    Label shape: [Label]
-    Dataset index: [1]
+    """Example item: Image shape: [Chunks, Channel, ...feature] Label shape: [Label] Dataset index:
 
-    Batch is tuple (feature, label, dataset index)
-    batch = [
-        [[3,4], [5,6]], [1,0,0], 851
-        [[2,3], [1,7]], [0,0,1], 532
-        [[9,3], [2,1]], [0,1,0], 91
-    ]
+    [1]
+
+    Returns a tuple (feature, label, file index, dataset index)
+        batch = [
+            [[3,4], [5,6]], [1,0,0], 0, 851
+            [[2,3], [1,7]], [0,0,1], 0, 532
+            [[9,3], [2,1]], [0,1,0], 1, 91
+        ]
     """
 
     # Count total number of features (sum of all chunks)

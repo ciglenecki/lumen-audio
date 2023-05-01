@@ -28,9 +28,9 @@ class WaveformAugmentation:
         self.augmentations = augmentations
         self.sampling_rate = sampling_rate
         self.time_mask_max_percentage = time_mask_max_percentage
-        # if min_snr_in_db and max_snr_in_db are lower than the noise is louder
+
         self.color_noise = TA.AddColoredNoise(
-            min_snr_in_db=3,
+            min_snr_in_db=3,  # smaller min_snr_in_db => louder nouse
             max_snr_in_db=25,
             p=1,
             sample_rate=self.sampling_rate,
@@ -72,7 +72,7 @@ class WaveformAugmentation:
         )
 
     def to_type(self, audio: torch.Tensor | np.ndarray, t: Callable):
-        """Convert to torch/np if needed."""
+        """Converts audio to torch or numpy (only if needed)"""
         if isinstance(audio, torch.Tensor) and t == np.array:
             return self.to_numpy(audio)
         elif isinstance(audio, np.ndarray) and t == torch.tensor:

@@ -112,6 +112,7 @@ def print_frozen_params(module: Union[nn.ModuleList, nn.Module]):
 
 
 def proper_weight_decay(model: nn.Module, weight_decay: float):
+    """Weight decay are not applied to bias parameteres."""
     decay_parameters = get_parameter_names(model, [nn.LayerNorm])
     decay_parameters = [name for name in decay_parameters if "bias" not in name]
 

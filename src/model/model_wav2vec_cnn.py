@@ -8,6 +8,8 @@ from src.model.model_base import ForwardInput, ForwardOut, ModelBase
 
 
 class Wav2VecCnnWrapper(ModelBase):
+    """Wav2Vec2's convolution (no transformer!) model."""
+
     loggers: list[TensorBoardLogger]
 
     def __init__(

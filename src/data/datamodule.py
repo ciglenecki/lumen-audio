@@ -40,11 +40,7 @@ class OurDataModule(pl.LightningDataModule):
     class_count_dict: dict[str, int]
 
     """
-    OurDataModule is responsible for efficiently creating datasets creating a
-    indexing strategy (SubsetRandomSampler) for each dataset.
-    Any preprocessing which requires aggregation of data,
-    such as caculating the mean and standard deviation of the dataset
-    should be performed here.
+    OurDataModule is responsible for creating datasets and indexing strategy (SubsetRandomSampler) for each dataset.
     """
 
     def __init__(
@@ -172,12 +168,12 @@ class OurDataModule(pl.LightningDataModule):
         )
 
     def setup_for_inference(self):
-        """Create dataset, indices and statictis for testing/inference."""
+        """Create test dataset, indices and statictis for testing/inference."""
         self.test_dataset = self.concat_datasets_from_tuples(
             self.test_paths, self.val_audio_transform
         )
 
-        # Simply reuse val dataset as train if train is not provided.
+        # Reuse val dataset as test if test is not provided.
         if self.test_dataset is None and self.val_dataset is not None:
             self.test_dataset = self.val_dataset
             test_indices = np.arange(len(self.val_dataset))
@@ -219,6 +215,9 @@ class OurDataModule(pl.LightningDataModule):
         dataset_paths: list[tuple[SupportedDatasetDirType, Path]] | None,
         transform: AudioTransformBase,
     ) -> None | ConcatDataset:
+        """Creates one dataset (ConcatDataset) from mutliple datasets specified in
+        dataset_paths."""
+
         if dataset_paths is None:
             return None
 
@@ -298,7 +297,7 @@ class OurDataModule(pl.LightningDataModule):
     def train_dataloader(self) -> DataLoader[ConcatDataset[DatasetGetItem]]:
         assert (
             self.train_dataset is not None
-        ), 'To access the train dataloader please call datamodule.setup("fit") after creating datamodule.'
+        ), "To access the train dataloader please call setup_for_train() after creating datamodule."
         return DataLoader(
             self.train_dataset,
             batch_size=self.batch_size,
@@ -312,7 +311,7 @@ class OurDataModule(pl.LightningDataModule):
     def val_dataloader(self) -> DataLoader[ConcatDataset[DatasetGetItem]]:
         assert (
             self.val_dataset is not None
-        ), 'To access the val dataloader please call datamodule.setup("fit") after creating datamodule.'
+        ), "To access the val dataloader please call datamodule.setup_for_train() after creating datamodule."
         return DataLoader(
             self.val_dataset,
             batch_size=self.batch_size,
@@ -326,7 +325,7 @@ class OurDataModule(pl.LightningDataModule):
     def test_dataloader(self) -> DataLoader[ConcatDataset[DatasetGetItem]]:
         assert (
             self.test_dataset is not None
-        ), 'To access the test dataloader please call datamodule.setup("test") after creating datamodule.'
+        ), "To access the test dataloader please call datamodule.setup_for_inference() after creating datamodule."
         return DataLoader(
             self.test_dataset,
             batch_size=self.batch_size,
@@ -340,7 +339,7 @@ class OurDataModule(pl.LightningDataModule):
     def predict_dataloader(self) -> DataLoader[ConcatDataset[DatasetGetItem]]:
         assert (
             self.test_dataset is not None
-        ), "Can't use predict_dataloader without test dataset"
+        ), "To access the predict dataloader please call datamodule.setup_for_inference() after creating datamodule."
         return DataLoader(
             self.test_dataset,
             batch_size=self.batch_size,
