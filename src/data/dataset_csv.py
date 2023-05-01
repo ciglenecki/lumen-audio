@@ -4,11 +4,10 @@ import numpy as np
 import pandas as pd
 
 import src.config.config_defaults as config_defaults
-from src.config.config_defaults import AUDIO_EXTENSIONS, get_default_config
+from src.config.config_defaults import AUDIO_EXTENSIONS
 from src.data.dataset_base import DatasetBase
 from src.utils.utils_exceptions import InvalidArgument
 
-config = get_default_config()
 glob_expressions = [f"*.{ext}" for ext in AUDIO_EXTENSIONS]
 
 

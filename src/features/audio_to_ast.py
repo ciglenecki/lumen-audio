@@ -9,18 +9,15 @@ from src.config.config_defaults import (
     TAG_AST_AUDIOSET,
 )
 from src.features.audio_transform_base import AudioTransformBase
-from src.utils.utils_audio import plot_spectrograms, spec_width_to_num_samples
+from src.utils.utils_audio import (
+    iron_audios,
+    plot_spectrograms,
+    spec_width_to_num_samples,
+)
 from src.utils.utils_dataset import get_example_val_sample
 
 
 class AudioTransformAST(AudioTransformBase):
-
-    """Resamples audio, converts it to mono, does AST feature extraction which extracts spectrogram
-    (mel filter banks) from audio.
-
-    Warning: resampling should be done here. AST does the job.
-    """
-
     def __init__(
         self,
         pretrained_tag,
@@ -90,14 +87,10 @@ class AudioTransformAST(AudioTransformBase):
         num_chunks = len(audio)
         last_chunk = audio[-1]
         last_chunk_length = len(last_chunk)
-        if last_chunk_length < min_waveform_length:
-            if num_chunks > 1:
-                audio.pop()
-            elif num_chunks == 1:
-                pad_width = (0, min_waveform_length - last_chunk_length)
-                audio[-1] = np.pad(
-                    last_chunk, pad_width, mode="constant", constant_values=0
-                )
+        if last_chunk_length < min_waveform_length and num_chunks > 1:
+            audio.pop()
+        else:
+            audio = iron_audios(audio, target_width=self.max_audio_length)
 
         spectrogram = self.feature_extractor(
             audio,

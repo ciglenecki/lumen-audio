@@ -1,3 +1,4 @@
+"""Script which extracts guitar sounds from OpenMIC."""
 from pathlib import Path
 
 import pandas as pd

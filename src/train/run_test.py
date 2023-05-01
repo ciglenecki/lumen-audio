@@ -54,9 +54,10 @@ def get_datamodule(
         normalize_image=model_config.normalize_image,
         train_only_dataset=False,
         concat_n_samples=None,
-        sum_two_samples=None,
+        sum_n_samples=None,
         use_weighted_train_sampler=False,
         sampling_rate=model_config.sampling_rate,
+        train_override_csvs=config.train_override_csvs,
     )
     datamodule.setup_for_inference()
     data_loader = datamodule.test_dataloader()

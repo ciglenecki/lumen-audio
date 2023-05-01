@@ -111,6 +111,11 @@ if __name__ == "__main__":
         if SupportedAugmentations.CONCAT_N_SAMPLES in config.augmentations
         else None
     )
+    sum_n_samples = (
+        config.aug_kwargs["sum_n_samples"]
+        if SupportedAugmentations.SUM_N_SAMPLES in config.augmentations
+        else None
+    )
     collate_fn = collate_fn_feature
 
     datamodule = OurDataModule(
@@ -128,9 +133,10 @@ if __name__ == "__main__":
         normalize_image=config.normalize_image,
         train_only_dataset=config.train_only_dataset,
         concat_n_samples=concat_n_samples,
-        sum_two_samples=SupportedAugmentations.SUM_TWO_SAMPLES in config.augmentations,
+        sum_n_samples=sum_n_samples,
         use_weighted_train_sampler=config.use_weighted_train_sampler,
         sampling_rate=config.sampling_rate,
+        train_override_csvs=config.train_override_csvs,
     )
     datamodule.setup_for_train()
 

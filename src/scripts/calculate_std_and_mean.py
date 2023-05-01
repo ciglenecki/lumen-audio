@@ -59,9 +59,10 @@ if __name__ == "__main__":
         normalize_image=config.normalize_image,
         train_only_dataset=config.train_only_dataset,
         concat_n_samples=None,
-        sum_two_samples=None,
+        sum_n_samples=None,
         use_weighted_train_sampler=False,
         sampling_rate=config.sampling_rate,
+        train_override_csvs=config.train_override_csvs,
     )
     datamodule.setup("test")
 

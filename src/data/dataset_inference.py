@@ -39,7 +39,7 @@ class InferenceDataset(DatasetBase):
         """
         kwargs = dict(
             num_classes=0,
-            sum_two_samples=False,
+            sum_n_samples=False,
             concat_n_samples=None,
             train_override_csvs=None,
         )
@@ -49,7 +49,7 @@ class InferenceDataset(DatasetBase):
             sampling_rate=sampling_rate,
             normalize_audio=normalize_audio,
             **kwargs,
-        )  # sets self.dataset
+        )
 
     def create_dataset_list(self) -> list[tuple[Path, np.ndarray]]:
         """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)"""
