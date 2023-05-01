@@ -168,6 +168,7 @@ class OurDataModule(pl.LightningDataModule):
                 )
             ),
         )
+        self._log_indices()
 
     def setup_for_inference(self):
         """Create test dataset, indices and statictis for testing/inference."""
@@ -203,14 +204,16 @@ class OurDataModule(pl.LightningDataModule):
                 )
             ),
         )
+        self._log_indices()
 
     def setup(self, stage=None):
         super().setup(stage)
-        if stage in ["fit"]:  # train + validate
-            self.setup_for_train()
-        elif stage in ["predict", "test"]:
-            self.setup_for_inference()
-        self._log_indices()
+        return
+        # if stage in ["fit"]:  # train + validate
+        #     self.setup_for_train()
+        # elif stage in ["predict", "test"]:
+        #     self.setup_for_inference()
+        # self._log_indices()
 
     def concat_datasets_from_tuples(
         self,
@@ -226,7 +229,7 @@ class OurDataModule(pl.LightningDataModule):
         datasets: list[Dataset] = []
         for dataset_enum, dataset_path in dataset_paths:
             print(
-                f"Creating dataset {dataset_enum.value.upper()} from {str(dataset_path)}"
+                f"================== Creating dataset {dataset_enum.value.upper()} from {str(dataset_path)} ==================\n"
             )
             if dataset_enum == SupportedDatasetDirType.IRMAS_TRAIN:
                 dataset = IRMASDatasetTrain(

@@ -376,7 +376,7 @@ class ConfigDefault(Serializable):
     weight_decay: float | None = create(None)
     """Maximum lr OneCycle scheduler reaches"""
 
-    freeze_train_bn: bool = create(False)
+    finetune_train_bn: bool = create(True)
     """If true, the batch norm will be trained even if module is frozen."""
 
     quick: bool = create(False)
