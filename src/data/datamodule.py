@@ -63,6 +63,7 @@ class OurDataModule(pl.LightningDataModule):
         use_weighted_train_sampler,
         sampling_rate: int,
         num_classes: int = config_defaults.DEFAULT_NUM_LABELS,
+        train_override_csvs: list[Path] | None = None,
     ):
         super().__init__()
         self.batch_size = batch_size
@@ -87,6 +88,7 @@ class OurDataModule(pl.LightningDataModule):
         self.train_dataset = None
         self.val_dataset = None
         self.test_dataset = None
+        self.train_override_csvs = train_override_csvs
 
         self._train_stats: dict | None = None
         self._val_stats: dict | None = None
@@ -234,7 +236,7 @@ class OurDataModule(pl.LightningDataModule):
                     concat_n_samples=self.concat_n_samples,
                     sum_n_samples=self.sum_n_samples,
                     sampling_rate=self.sampling_rate,
-                    train_override_csvs=None,
+                    train_override_csvs=self.train_override_csvs,
                     num_classes=self.num_classes,
                 )
             elif dataset_enum == SupportedDatasetDirType.IRMAS_TEST:
@@ -245,7 +247,7 @@ class OurDataModule(pl.LightningDataModule):
                     concat_n_samples=False,
                     sum_n_samples=False,
                     sampling_rate=self.sampling_rate,
-                    train_override_csvs=None,
+                    train_override_csvs=self.train_override_csvs,
                     num_classes=self.num_classes,
                 )
             elif dataset_enum == SupportedDatasetDirType.OPENMIC:
@@ -258,7 +260,7 @@ class OurDataModule(pl.LightningDataModule):
                     concat_n_samples=self.concat_n_samples,
                     sum_n_samples=self.sum_n_samples,
                     sampling_rate=self.sampling_rate,
-                    train_override_csvs=None,
+                    train_override_csvs=self.train_override_csvs,
                     num_classes=self.num_classes,
                 )
             elif dataset_enum == SupportedDatasetDirType.INFERENCE:

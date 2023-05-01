@@ -170,6 +170,7 @@ if __name__ == "__main__":
         sum_n_samples=False,
         use_weighted_train_sampler=False,
         sampling_rate=config.sampling_rate,
+        train_override_csvs=config.train_override_csvs,
     )
     datamodule.setup_for_inference()
 
