@@ -64,7 +64,7 @@ if __name__ == "__main__":
         sampling_rate=config.sampling_rate,
         train_override_csvs=config.train_override_csvs,
     )
-    datamodule.setup("test")
+    datamodule.setup_for_inference()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dataloader = datamodule.test_dataloader()

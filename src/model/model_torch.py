@@ -67,7 +67,7 @@ class TorchvisionModel(ModelBase):
             weights=self.pretrained_tag, progress=True, **backbone_kwargs
         )
 
-        print("Backbone before changing the classifier:")
+        print("\n================== Backbone before changing the classifier:\n")
         print(list(self.backbone.children())[-1])
 
         # TODO: cutting off model so that Attention head fits

@@ -82,7 +82,7 @@ class ModelBase(pl.LightningModule, ABC):
         epochs: Optional[int],
         finetune_head: bool,
         finetune_head_epochs: Optional[int],
-        freeze_train_bn: bool,
+        finetune_train_bn: bool,
         head_after: str | None,
         backbone_after: str | None,
         loss_function: torch.nn.modules.loss._Loss,
@@ -114,7 +114,7 @@ class ModelBase(pl.LightningModule, ABC):
 
             epochs: number of training epochs. Used only if the LR scheduler depends on epochs size (onecycle, cosine...). Reduce on plateau LR scheduler doesn't get affected by this argument.
 
-            freeze_train_bn: Whether or not to train the batch norm during the frozen stage of the training.
+            finetune_train_bn: Whether or not to train the batch norm during the frozen stage of the training.
 
             head_after: Name of the submodule after which the all submodules are considered as head, e.g. classifier.dense
 
@@ -161,7 +161,7 @@ class ModelBase(pl.LightningModule, ABC):
         self.batch_size = batch_size
         self.epochs = epochs
         self.fluffy_config = fluffy_config
-        self.freeze_train_bn = freeze_train_bn
+        self.finetune_train_bn = finetune_train_bn
         self.head_after = head_after
         self.head_constructor = head_constructor
         self.head_hidden_dim = head_hidden_dim
@@ -224,7 +224,7 @@ class ModelBase(pl.LightningModule, ABC):
         )
 
         if self.head() is not None and self.trainable_backbone() is not None:
-            BaseFinetuning.freeze(self, train_bn=self.freeze_train_bn)
+            BaseFinetuning.freeze(self, train_bn=self.finetune_train_bn)
             BaseFinetuning.make_trainable(self.trainable_backbone())
             BaseFinetuning.make_trainable(self.head())
 

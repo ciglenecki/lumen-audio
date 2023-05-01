@@ -14,6 +14,7 @@ import src.config.config_defaults as config_defaults
 from src.features.audio_transform_base import AudioTransformBase
 from src.utils.utils_audio import load_audio_from_file
 from src.utils.utils_dataset import decode_instruments, encode_instruments
+from src.utils.utils_functions import dict_without_keys
 
 DatasetInternalItem = tuple[Path, np.ndarray]
 DatasetGetItem = tuple[torch.Tensor, torch.Tensor, torch.Tensor]
@@ -52,7 +53,12 @@ class DatasetBase(Dataset[DatasetGetItem]):
             str, list[int]
         ] = self.create_instrument_idx_list()
         self.stats = self.caculate_stats()
-        print(yaml.dump(self.stats, default_flow_style=False))
+        print(
+            yaml.dump(
+                dict_without_keys(self.stats, config_defaults.ALL_INSTRUMENTS),
+                default_flow_style=False,
+            )
+        )
         assert (
             self.dataset_list
         ), "Property `dataset_list` (type: list[tuple[Path, np.ndarray]]) should be set in create_dataset_list() function."

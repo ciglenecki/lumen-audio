@@ -2,6 +2,7 @@ from typing import Callable, Union
 
 import pytorch_lightning.callbacks
 import torch.nn as nn
+from pytorch_lightning.callbacks import BaseFinetuning
 from tabulate import tabulate
 from torchmetrics.metric import Metric
 from transformers.trainer_pt_utils import get_parameter_names
@@ -90,6 +91,14 @@ def get_all_modules_after(
     return modules
 
 
+def print_trainable_modules(module: Union[nn.ModuleList, nn.Module]):
+    print("\n================== Learnable modules ==================\n")
+    for m in BaseFinetuning.flatten_modules(module):
+        if any([p.requires_grad for p in m.parameters()]):
+            print(m)
+    print("\n", count_module_params(module))
+
+
 def print_params(module: Union[nn.ModuleList, nn.Module], filter_fn=None):
     """Print params."""
     headers = ["Parameter name", "Req.grad", "Num."]
@@ -102,12 +111,12 @@ def print_params(module: Union[nn.ModuleList, nn.Module], filter_fn=None):
 
 
 def print_learnable_params(module: Union[nn.ModuleList, nn.Module]):
-    print("\n================== Learnable params ==================")
+    print("\n================== Learnable params ==================\n")
     print_params(module, lambda x: x.requires_grad)
 
 
 def print_frozen_params(module: Union[nn.ModuleList, nn.Module]):
-    print("\n================== Frozen params ==================")
+    print("\n================== Frozen params ==================\n")
     print_params(module, lambda x: not x.requires_grad)
 
 
