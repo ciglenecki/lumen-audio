@@ -78,7 +78,7 @@ def get_all_modules_after(
 
     if not found_layer:
         raise ValueError(
-            f"module_str '{module_str}' not found. should be (e.g. layer3.2)"
+            f"module_str '{module_str}' not found. Here are 10 last modules {[name for name, _ in list(module.named_modules())[-10:]]}. Rest of the modules are logged to CLI."
         )
 
     if len(modules) == 0:

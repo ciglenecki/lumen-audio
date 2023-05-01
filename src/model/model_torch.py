@@ -67,44 +67,57 @@ class TorchvisionModel(ModelBase):
             weights=self.pretrained_tag, progress=True, **backbone_kwargs
         )
 
-        print("------------------------------------------")
-        print("\n")
         print("Backbone before changing the classifier:")
         print(list(self.backbone.children())[-1])
-        print("\n")
-        print("------------------------------------------")
 
+        # TODO: cutting off model so that Attention head fits
+        # if backbone_constructor in {
+        #     resnext50_32x4d,
+        #     resnext101_32x8d,
+        #     resnext101_64x4d,
+        # }:
+        #     target_layer = "avgpool"
+        #     target_layer_idx = -1
+        #     for i, (module_name, _) in enumerate(self.backbone.named_modules()):
+        #         if module_name == target_layer:
+        #             target_layer_idx = i
+        #     target_module_name, _ = list(self.backbone.named_modules())[
+        #         target_layer_idx - 1
+        #     ]
+        #     self.backbone = create_feature_extractor(
+        #         self.backbone, return_nodes=[target_module_name]
+        #     )
 
         if backbone_constructor in {
+            resnext50_32x4d,
+            resnext101_32x8d,
+            resnext101_64x4d,
+        }:
+            old_linear = self.backbone.fc
+            last_dim = old_linear.in_features
+            head = self.create_head(head_input_size=last_dim)
+            self.backbone.fc = head
+        elif backbone_constructor in {
+            mobilenet_v3_large,
+            efficientnet_v2_s,
+            efficientnet_v2_m,
+            efficientnet_v2_l,
             convnext_tiny,
             convnext_small,
             convnext_base,
             convnext_large,
         }:
-            last_module_name, last_module = list(self.backbone.named_modules())[-1]
-            last_dim = last_module.in_features
+            old_linear = self.backbone.classifier[-1]
+            last_dim = old_linear.in_features
             head = self.create_head(head_input_size=last_dim)
             self.backbone.classifier[-1] = head
         else:
-            last_module_name = [
-                i[0]
-                for i in self.backbone.named_modules()
-                if "." not in i[0] and i[0] != ""
-            ][-1]
-            last_module = getattr(self.backbone, last_module_name)
-            last_dim = (
-                [i for i in last_module if isinstance(i, nn.Linear)][0].in_features
-                if isinstance(last_module, nn.Sequential)
-                else last_module.in_features
+            raise UnsupportedModel(
+                f"Please implement classifier logic for model {self.model_enum}"
             )
-            head = self.create_head(head_input_size=last_dim)
-            setattr(self.backbone, last_module_name, head)
 
-        print("\n")
-        print("Backbone after changing the classifier:")
+        print("\n\nBackbone after changing the classifier:")
         print(list(self.backbone.children())[-1])
-        print("\n")
-        print("------------------------------------------")
 
         self.save_hyperparameters()
 

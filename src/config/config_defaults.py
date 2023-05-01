@@ -756,6 +756,28 @@ class ConfigDefault(Serializable):
                 "Please set --finetune-heads-epochs int so it's bigger than 0 and less than --epochs int."
             )
 
+        if self.head == SupportedHeads.ATTENTION_HEAD:
+            SUPPORTS_ATTENTION_HEAD = {
+                SupportedModels.AST: True,
+                SupportedModels.WAV2VEC_CNN: True,
+                SupportedModels.WAV2VEC: True,
+                SupportedModels.EFFICIENT_NET_V2_S: False,
+                SupportedModels.EFFICIENT_NET_V2_M: False,
+                SupportedModels.EFFICIENT_NET_V2_L: False,
+                SupportedModels.RESNEXT50_32X4D: False,
+                SupportedModels.RESNEXT101_32X8D: False,
+                SupportedModels.RESNEXT101_64X4D: False,
+                SupportedModels.CONVNEXT_TINY: False,
+                SupportedModels.CONVNEXT_SMALL: False,
+                SupportedModels.CONVNEXT_LARGE: False,
+                SupportedModels.CONVNEXT_BASE: False,
+                SupportedModels.MOBILENET_V3_LARGE: False,
+            }
+            if not SUPPORTS_ATTENTION_HEAD[self.model]:
+                raise InvalidArgument(
+                    f"You can't use ATTENTION_HEAD with {self.model}. Only models {[k.name for k, v in SUPPORTS_ATTENTION_HEAD.items() if v]} support it."
+                )
+
     def isfloat(self, x: str):
         try:
             float(x)
