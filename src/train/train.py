@@ -136,8 +136,10 @@ if __name__ == "__main__":
         sum_n_samples=sum_n_samples,
         use_weighted_train_sampler=config.use_weighted_train_sampler,
         sampling_rate=config.sampling_rate,
+        train_override_csvs=config.train_override_csvs,
     )
     datamodule.setup_for_train()
+    datamodule.setup_for_inference()
 
     if config.loss_function == SupportedLossFunctions.CROSS_ENTROPY:
         loss_function = torch.nn.BCEWithLogitsLoss(
@@ -154,7 +156,6 @@ if __name__ == "__main__":
         loss_function = torch.nn.BCEWithLogitsLoss(**kwargs, reduction="none")
 
     model = get_model(config, loss_function=loss_function)
-    print_params(model)
 
     # ================= SETUP CALLBACKS (auto checkpoint, tensorboard, early stopping...)========================
     metric_mode_str = MetricMode(config.metric_mode).value
@@ -215,7 +216,10 @@ if __name__ == "__main__":
 
     if config.finetune_head:
         callbacks.append(
-            FinetuningCallback(finetune_head_epochs=config.finetune_head_epochs)
+            FinetuningCallback(
+                finetune_head_epochs=config.finetune_head_epochs,
+                train_bn=config.finetune_train_bn,
+            )
         )
 
     callbacks.append(ModelSummary(max_depth=1))

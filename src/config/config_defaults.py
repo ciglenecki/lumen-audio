@@ -295,7 +295,7 @@ class ConfigDefault(Serializable):
     num_labels: int = create(DEFAULT_NUM_LABELS)
     """Total number of possible lables"""
 
-    train_override_csvs: Path | None = create(None)
+    train_override_csvs: list[Path] | None = create(None)
     """CSV files with columns 'filename, sax, gac, org, ..., cla' where filename is path and each instrument is either 0 or 1"""
 
     # ======================== DPS ===========================
@@ -376,7 +376,7 @@ class ConfigDefault(Serializable):
     weight_decay: float | None = create(None)
     """Maximum lr OneCycle scheduler reaches"""
 
-    freeze_train_bn: bool = create(False)
+    finetune_train_bn: bool = create(True)
     """If true, the batch norm will be trained even if module is frozen."""
 
     quick: bool = create(False)
@@ -762,6 +762,28 @@ class ConfigDefault(Serializable):
             raise InvalidArgument(
                 "Please set --finetune-heads-epochs int so it's bigger than 0 and less than --epochs int."
             )
+
+        if self.head == SupportedHeads.ATTENTION_HEAD:
+            SUPPORTS_ATTENTION_HEAD = {
+                SupportedModels.AST: True,
+                SupportedModels.WAV2VEC_CNN: True,
+                SupportedModels.WAV2VEC: True,
+                SupportedModels.EFFICIENT_NET_V2_S: False,
+                SupportedModels.EFFICIENT_NET_V2_M: False,
+                SupportedModels.EFFICIENT_NET_V2_L: False,
+                SupportedModels.RESNEXT50_32X4D: False,
+                SupportedModels.RESNEXT101_32X8D: False,
+                SupportedModels.RESNEXT101_64X4D: False,
+                SupportedModels.CONVNEXT_TINY: False,
+                SupportedModels.CONVNEXT_SMALL: False,
+                SupportedModels.CONVNEXT_LARGE: False,
+                SupportedModels.CONVNEXT_BASE: False,
+                SupportedModels.MOBILENET_V3_LARGE: False,
+            }
+            if not SUPPORTS_ATTENTION_HEAD[self.model]:
+                raise InvalidArgument(
+                    f"You can't use ATTENTION_HEAD with {self.model}. Only models {[k.name for k, v in SUPPORTS_ATTENTION_HEAD.items() if v]} support it."
+                )
 
     def isfloat(self, x: str):
         try:

@@ -2,6 +2,7 @@ from typing import Callable, Union
 
 import pytorch_lightning.callbacks
 import torch.nn as nn
+from pytorch_lightning.callbacks import BaseFinetuning
 from tabulate import tabulate
 from torchmetrics.metric import Metric
 from transformers.trainer_pt_utils import get_parameter_names
@@ -78,7 +79,7 @@ def get_all_modules_after(
 
     if not found_layer:
         raise ValueError(
-            f"module_str '{module_str}' not found. should be (e.g. layer3.2)"
+            f"module_str '{module_str}' not found. Here are 10 last modules {[name for name, _ in list(module.named_modules())[-10:]]}. Rest of the modules are logged to CLI."
         )
 
     if len(modules) == 0:
@@ -88,6 +89,14 @@ def get_all_modules_after(
         )
 
     return modules
+
+
+def print_trainable_modules(module: Union[nn.ModuleList, nn.Module]):
+    print("\n================== Learnable modules ==================\n")
+    for m in BaseFinetuning.flatten_modules(module):
+        if any([p.requires_grad for p in m.parameters()]):
+            print(m)
+    print("\n", count_module_params(module))
 
 
 def print_params(module: Union[nn.ModuleList, nn.Module], filter_fn=None):
@@ -102,12 +111,12 @@ def print_params(module: Union[nn.ModuleList, nn.Module], filter_fn=None):
 
 
 def print_learnable_params(module: Union[nn.ModuleList, nn.Module]):
-    print("\n================== Learnable params ==================")
+    print("\n================== Learnable params ==================\n")
     print_params(module, lambda x: x.requires_grad)
 
 
 def print_frozen_params(module: Union[nn.ModuleList, nn.Module]):
-    print("\n================== Frozen params ==================")
+    print("\n================== Frozen params ==================\n")
     print_params(module, lambda x: not x.requires_grad)
 
 

@@ -81,7 +81,7 @@ def get_model(
         head_after=config.head_after,
         lr_onecycle_max=config.lr_onecycle_max,
         log_per_instrument_metrics=config.log_per_instrument_metrics,
-        freeze_train_bn=config.freeze_train_bn,
+        finetune_train_bn=config.finetune_train_bn,
         model_enum=model_enum,
         loss_function=loss_function,
         head_constructor=head_constructor,
