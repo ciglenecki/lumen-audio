@@ -5,15 +5,16 @@ from fastapi.encoders import jsonable_encoder
 
 from src.server.interface import DatasetDirDict
 from src.server.server_store import server_store
-from src.train.run_test import testing_generator
+from src.train.run_test import inference_loop
 from src.utils.utils_dataset import multihot_to_dict
 
 
 def test_directory() -> str:
-    for out in testing_generator(
+    for out in inference_loop(
         server_store.device,
         server_store.model,
         server_store.data_loader,
+        server_store.datamodule,
     ):
         entries = {}
 

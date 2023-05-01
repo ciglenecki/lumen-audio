@@ -4,7 +4,7 @@ import torch
 
 from src.config.config_defaults import ConfigDefault
 from src.server.config_server import get_server_args
-from src.train.run_test import get_datamodule, get_model_config_transform
+from src.train.run_test import get_inference_datamodule, get_inference_model_objs
 
 
 class ServerStore:
@@ -22,7 +22,7 @@ class ServerStore:
         # self.set_dataset(self.audio_transform, self.collate_fn, self.model_config)
 
     def set_model(self):
-        model, model_config, audio_transform = get_model_config_transform(
+        model, model_config, audio_transform = get_inference_model_objs(
             self.config, self.args, self.device
         )
         self.model = model
@@ -40,7 +40,7 @@ class ServerStore:
         if model_config is not None:
             self.model_config = model_config
 
-        self.datamodule, self.data_loader = get_datamodule(
+        self.datamodule, self.data_loader = get_inference_datamodule(
             self.config, self.audio_transform, self.model_config
         )
 
