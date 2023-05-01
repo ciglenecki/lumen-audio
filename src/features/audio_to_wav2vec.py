@@ -32,7 +32,7 @@ class AudioToWav2Vec2(AudioTransformBase):
         else:
             audio = [audio]
 
-        audio = iron_audios(audio, self.max_num_width_samples)
+        audio = iron_audios(audio, target_width=self.max_num_width_samples)
 
         processor_out = self.processor(
             audio, sampling_rate=self.sampling_rate, return_tensors="pt", padding=True
