@@ -53,11 +53,6 @@ class IRMASDatasetTrain(DatasetBase):
         }
         """
         dataset_list = []
-        if self.train_override_csvs:
-            dfs = [pd.read_csv(csv_path) for csv_path in self.train_override_csvs]
-            df = pd.concat(dfs, ignore_index=True)
-            df.set_index("filename", inplace=True)
-
         glob_generators = [
             self.dataset_path.rglob(glob_exp) for glob_exp in glob_expressions
         ]
@@ -68,12 +63,8 @@ class IRMASDatasetTrain(DatasetBase):
             )  # 110__[org][dru][jaz_blu]1117__2 => ["org", "dru", "jaz_blue"]
 
             path_str = str(path)
-            if self.train_override_csvs and path_str in df.index:  # override label
-                inner_instrument_indices = np.where(df.loc[path_str])[0]
-                item_instruments = df.columns[inner_instrument_indices]
-            else:
-                instrument = characteristics[0]
-                item_instruments = [instrument]
+            instrument = characteristics[0]
+            item_instruments = [instrument]
 
             labels = encode_instruments(item_instruments)
 

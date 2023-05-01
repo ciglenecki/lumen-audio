@@ -295,7 +295,7 @@ class ConfigDefault(Serializable):
     num_labels: int = create(DEFAULT_NUM_LABELS)
     """Total number of possible lables"""
 
-    train_override_csvs: Path | None = create(None)
+    train_override_csvs: list[Path] | None = create(None)
     """CSV files with columns 'filename, sax, gac, org, ..., cla' where filename is path and each instrument is either 0 or 1"""
 
     # ======================== DPS ===========================

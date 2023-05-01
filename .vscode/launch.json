@@ -37,7 +37,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--train-paths irmastrain:data/irmas/train csv:data/openmic_r0.8_n_8858.csv --val-paths irmastest:data/irmas/test --backbone-after backbone.features --head-after backbone.classifier --model EFFICIENT_NET_V2_S --audio-transform MEL_SPECTROGRAM --finetune-head-epochs 3 --epochs 10 --batch-size 1 --accumulate_grad_batches 4 --lr 1e-4 --quick",
+			"args": "--train-paths irmastrain:data/irmas/train csv:data/openmic_r0.8_n_8858.csv --val-paths irmastest:data/irmas/test --backbone-after backbone.features --head-after backbone.classifier --model EFFICIENT_NET_V2_S --audio-transform MEL_SPECTROGRAM --finetune-head-epochs 3 --epochs 10 --batch-size 1 --accumulate_grad_batches 4 --lr 1e-4",
 			"justMyCode": false
 		},
 		{
