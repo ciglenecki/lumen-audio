@@ -1,10 +1,9 @@
-from math import ceil
-
 import numpy as np
 import torch
 from transformers import Wav2Vec2FeatureExtractor
 
 from src.features.audio_transform_base import AudioTransformBase
+from src.utils.utils_audio import iron_audios
 
 
 class AudioToWav2Vec2(AudioTransformBase):
@@ -33,27 +32,7 @@ class AudioToWav2Vec2(AudioTransformBase):
         else:
             audio = [audio]
 
-        last_chunk = audio[-1]
-        last_chunk_length = len(last_chunk)
-        diff = self.max_num_width_samples - last_chunk_length
-
-        # zero padding:
-        # if last_chunk_length < self.max_num_width_samples:
-        #     pad_width = (0, self.max_num_width_samples - last_chunk_length)
-        #     audio[-1] = np.pad(
-        #         last_chunk, pad_width, mode="constant", constant_values=0
-        #     )
-
-        first_chunk: torch.Tensor = audio[0]  # if first chunk == first chunk
-        first_chunk_width = first_chunk.shape[-1]  # 16_000
-        num_first_chunk_repeats = max(1, ceil(diff / first_chunk_width))  # 8
-        repeated_first_chunk = np.concatenate(
-            [first_chunk] * num_first_chunk_repeats, axis=-1
-        )
-
-        # Remove remove excess width caused by repeating
-        repeated_first_chunk = repeated_first_chunk[..., :diff]
-        audio[-1] = np.concatenate((audio[-1], repeated_first_chunk), axis=-1)
+        audio = iron_audios(audio, target_width=self.max_num_width_samples)
 
         processor_out = self.processor(
             audio, sampling_rate=self.sampling_rate, return_tensors="pt", padding=True
@@ -62,6 +41,6 @@ class AudioToWav2Vec2(AudioTransformBase):
         processed_audio = processor_out.input_values
 
         # note: confirmed that listening to unnormalized audio (do_normalize=False) sounds good.
-        if len(processed_audio.shape) != 2:
-            assert True, "hm"
+        assert len(processed_audio.shape) == 2
+
         return processed_audio

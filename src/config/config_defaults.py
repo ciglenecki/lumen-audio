@@ -148,7 +148,7 @@ IRMAS_TRAIN_CLASS_COUNT = {
 _default_augmentations_set = set(SupportedAugmentations)
 _default_augmentations_set.discard(SupportedAugmentations.RANDOM_ERASE)
 _default_augmentations_set.discard(SupportedAugmentations.CONCAT_N_SAMPLES)
-# _default_augmentations_set.discard(SupportedAugmentations.SUM_TWO_SAMPLES)
+# _default_augmentations_set.discard(SupportedAugmentations.SUM_N_SAMPLES)
 _default_augmentations_set.discard(SupportedAugmentations.NORM_AFTER_TIME_AUGS)
 _default_augmentations_list = list(_default_augmentations_set)
 
@@ -330,7 +330,7 @@ class ConfigDefault(Serializable):
     augmentations: list[SupportedAugmentations] = create(_default_augmentations_list)
     """Transformation which will be performed on audio and labels"""
 
-    aug_kwargs: dict | str = create(
+    aug_kwargs: list[str] = create(
         dict(
             stretch_factors=[0.8, 1.25],
             time_inversion_p=0.5,
@@ -338,6 +338,7 @@ class ConfigDefault(Serializable):
             hide_random_pixels_p=0.25,
             std_noise=0.01,
             concat_n_samples=3,
+            sum_n_samples=3,
             path_background_noise=None,
             time_mask_max_percentage=0.3,
         )
@@ -510,15 +511,17 @@ class ConfigDefault(Serializable):
         self.output_dir = self.path_models
 
         # aug_kwargs can be either a dictionary or a string which will be parsed as kwargs dict
-        if self.aug_kwargs is not None and isinstance(self.aug_kwargs, str):
+        if self.aug_kwargs is not None and not isinstance(self.aug_kwargs, dict):
             try:
+                if isinstance(self.aug_kwargs, str):
+                    self.aug_kwargs = [self.aug_kwargs]
                 override_kwargs = self.parse_kwargs(self.aug_kwargs)
             except Exception as e:
                 raise InvalidArgument(
                     f"{str(e)}\n. --aug-kwargs should have the following structure: 'key=value1,value2 key2=value3' e.g. 'stretch_factors=0.8,1.2 freq_mask_param=30'"
                 )
 
-            self.aug_kwargs = get_default_value_for_field("aug_kwargs", self)
+            self.aug_kwargs: dict = get_default_value_for_field("aug_kwargs", self)
             self.aug_kwargs.update(override_kwargs)
 
         if (
@@ -597,7 +600,23 @@ class ConfigDefault(Serializable):
             if self.augmentations == get_default_value_for_field("augmentations", self):
                 _augmentations_set = set(self.augmentations)
                 _augmentations_set.add(SupportedAugmentations.CONCAT_N_SAMPLES)
-                _augmentations_set.add(SupportedAugmentations.SUM_TWO_SAMPLES)
+                _augmentations_set.add(SupportedAugmentations.SUM_N_SAMPLES)
+                self.augmentations = list(_augmentations_set)
+
+        # Dynamically wav2vec attributes and augmentations
+        if self.model == SupportedModels.WAV2VEC and self.pretrained:
+            if self.augmentations == get_default_value_for_field("augmentations", self):
+                _augmentations_set = set(self.augmentations)
+                _augmentations_set.add(SupportedAugmentations.CONCAT_N_SAMPLES)
+                self.aug_kwargs["concat_n_samples"] = 3
+                self.augmentations = list(_augmentations_set)
+
+        # Dynamically wav2vec attributes and augmentations
+        if self.model == SupportedModels.WAV2VEC_CNN and self.pretrained:
+            if self.augmentations == get_default_value_for_field("augmentations", self):
+                _augmentations_set = set(self.augmentations)
+                _augmentations_set.add(SupportedAugmentations.CONCAT_N_SAMPLES)
+                self.aug_kwargs["concat_n_samples"] = 2
                 self.augmentations = list(_augmentations_set)
 
         # Set typical weight decay for optimizers.
