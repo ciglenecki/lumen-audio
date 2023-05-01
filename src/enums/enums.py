@@ -29,7 +29,7 @@ class SupportedAugmentations(Enum):
 
     # Dataset
     CONCAT_N_SAMPLES = "concat_n"
-    SUM_TWO_SAMPLES = "sum_two_samples"
+    SUM_N_SAMPLES = "sum_n_samples"
 
     # Softer augmentations
     BACKGROUND_NOISE = "background_noise"

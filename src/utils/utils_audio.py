@@ -1,6 +1,7 @@
 import math
 import os
 import subprocess
+from math import ceil
 from pathlib import Path, PurePath
 from tempfile import NamedTemporaryFile
 from typing import Literal
@@ -40,6 +41,40 @@ def stereo_to_mono(audio: torch.Tensor | np.ndarray):
         return torch.mean(audio, dim=0).unsqueeze(0)
     elif isinstance(audio, np.ndarray):
         return librosa.to_mono(audio)
+
+
+def iron_audios(audios: list[np.ndarray], target_width: int):
+    """Add first audio to last audio so that last audio has equal length as all audios. Assumption:
+    all audios in list have the same size except the last one. If there's only one audio it will
+    repeat itself.
+
+        target_width = 100
+        audios: |100|100|55|
+        returns |100|100|100|
+
+        target_width = 100
+        audios: |55|
+        returns |100|
+
+    Args:
+        audios: _description_
+    """
+    last_chunk = audios[-1]
+    last_chunk_length = len(last_chunk)
+    diff = target_width - last_chunk_length
+
+    # Find how many times should first chunk be repeated (usually >1 for first chunk == first chunk)
+    first_chunk: torch.Tensor = audios[0]
+    first_chunk_width = first_chunk.shape[-1]
+    num_first_chunk_repeats = max(1, ceil(diff / first_chunk_width))
+    repeated_first_chunk = np.concatenate(
+        [first_chunk] * num_first_chunk_repeats, axis=-1
+    )
+
+    # Remove remove excess width caused by repeating
+    repeated_first_chunk = repeated_first_chunk[..., :diff]
+    audios[-1] = np.concatenate((audios[-1], repeated_first_chunk), axis=-1)
+    return audios
 
 
 def time_mask_audio(audio: np.ndarray, percentage: float, fill_value: float = 0):

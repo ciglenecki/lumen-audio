@@ -39,7 +39,7 @@ class InferenceDataset(DatasetBase):
         """
         kwargs = dict(
             num_classes=0,
-            sum_two_samples=False,
+            sum_n_samples=False,
             concat_n_samples=None,
             train_override_csvs=None,
         )

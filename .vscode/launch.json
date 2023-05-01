@@ -28,7 +28,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --train-paths irmastrain:data/irmas/train --lr 5e-5 --batch-size 2 --num-workers 4 --audio-transform WAV2VEC --model WAV2VEC --epochs 40  --backbone-after layers.9 --head-after deep_head --quick",
+			"args": "--accelerator gpu --devices -1 --train-paths irmastrain:data/irmas/train --lr 5e-5 --num-workers 4 --audio-transform WAV2VEC --model WAV2VEC --epochs 40  --backbone-after layers.9 --head-after deep_head --augmentations CONCAT_N_SAMPLES --aug-kwargs concat_n_samples=5 sum_n_samples=1 --num-workers 1 --batch-size 1 --skip-validation",
 			"justMyCode": false
 		},
 		{
@@ -37,7 +37,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --backbone-after backbone.features --head-after backbone.classifier --model EFFICIENT_NET_V2_S --audio-transform MEL_SPECTROGRAM --finetune-head-epochs 3 --epochs 10 --batch-size 4 --accumulate_grad_batches 4 --augmentations --lr 1e-4",
+			"args": "--train-paths irmastrain:data/irmas/train csv:data/openmic_r0.8_n_8858.csv --val-paths irmastest:data/irmas/test --backbone-after backbone.features --head-after backbone.classifier --model EFFICIENT_NET_V2_S --audio-transform MEL_SPECTROGRAM --finetune-head-epochs 3 --epochs 10 --batch-size 1 --accumulate_grad_batches 4 --augmentations --lr 1e-4 --augmentations CONCAT_N_SAMPLES SUM_N_SAMPLES --aug-kwargs concat_n_samples=1 sum_n_samples=3 --num-workers 0 --skip-validation",
 			"justMyCode": false
 		},
 		{

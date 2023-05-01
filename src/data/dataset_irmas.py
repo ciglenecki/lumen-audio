@@ -11,11 +11,10 @@ import pandas as pd
 from tqdm import tqdm
 
 import src.config.config_defaults as config_defaults
-from src.config.config_defaults import AUDIO_EXTENSIONS, get_default_config
+from src.config.config_defaults import AUDIO_EXTENSIONS
 from src.data.dataset_base import DatasetBase, DatasetInternalItem
 from src.utils.utils_dataset import encode_instruments, multi_hot_encode
 
-config = get_default_config()
 glob_expressions = [f"*.{ext}" for ext in AUDIO_EXTENSIONS]
 
 
@@ -173,13 +172,14 @@ def test_sum_and_concat():
         audio_transform=None,
         normalize_audio=False,
         concat_n_samples=None,
-        sum_two_samples=None,
+        sum_n_samples=None,
         sampling_rate=config.sampling_rate,
         train_override_csvs=None,
         num_classes=config.num_labels,
     )
 
     dataset.concat_n_samples = 4
+    dataset.sum_n_samples = 2
 
     sr = 16_000
     audio_1, _ = librosa.load("data/irmas/train/cel/[cel][cla]0001__1.wav", sr=sr)
@@ -198,16 +198,64 @@ def test_sum_and_concat():
     audios = [audio_1, audio_2, audio_3, audio_4]
     labels = [label_1, label_2, label_3, label_4]
     final_audio, final_labels = dataset.concat_and_sum(
-        audios, labels, use_concat=True, sum_two_samples=True
+        audios, labels, use_concat=True, use_sum=True
     )
 
-    top = np.concatenate([audio_1, audio_2])
-    bottom = np.concatenate([audio_3, audio_4])
-    max_len = np.max([len(top), len(bottom)])
+    top = np.concatenate([audio_1, audio_2, audio_3, audio_4])
+    top, bottom = np.array_split(top, 2)
+    max_len = len(top)
+    if len(bottom) != max_len:
+        pad_width = (0, max_len - len(bottom))
+        bottom = np.pad(bottom, pad_width, mode="constant", constant_values=0)
+    test_audio = np.mean([top, bottom], axis=0)
+    test_labels = np.logical_or.reduce(labels).astype(labels[0].dtype)
+    print(test_audio.shape, final_audio.shape)
+    assert len(test_audio.shape) == 1
+    assert len(final_audio.shape) == 1
+    assert np.all(np.isclose(test_audio, final_audio))
+    assert np.all(np.isclose(test_labels, final_labels))
 
-    if len(top) != max_len:
-        pad_width = (0, max_len - len(top))
-        top = np.pad(top, pad_width, mode="constant", constant_values=0)
+
+def test_sum_and_concat_3():
+    config = config_defaults.get_default_config()
+    dataset = IRMASDatasetTrain(
+        dataset_path=config.path_irmas_train,
+        audio_transform=None,
+        normalize_audio=False,
+        concat_n_samples=None,
+        sum_n_samples=None,
+        sampling_rate=config.sampling_rate,
+        train_override_csvs=None,
+        num_classes=config.num_labels,
+    )
+
+    dataset.concat_n_samples = 4
+    dataset.sum_n_samples = 2
+
+    sr = 16_000
+    audio_1, _ = librosa.load("data/irmas/train/cel/[cel][cla]0001__1.wav", sr=sr)
+    audio_2, _ = librosa.load("data/irmas/train/cla/[cla][cla]0150__1.wav", sr=sr)
+    audio_3, _ = librosa.load("data/irmas/train/flu/[flu][cla]0346__1.wav", sr=sr)
+    audio_4, _ = librosa.load(
+        "data/irmas/train/flu/008__[flu][nod][cla]0393__1.wav", sr=sr
+    )
+    # Simulate different legnth
+    audio_1, audio_2, audio_3 = audio_1[5:], audio_2[3:], audio_3[2:]
+    label_1 = encode_instruments(["cel"])
+    label_2 = encode_instruments(["cla"])
+    label_3 = encode_instruments(["flu"])
+    label_4 = encode_instruments(["flu"])
+
+    audios = [audio_1, audio_2, audio_3, audio_4]
+    labels = [label_1, label_2, label_3, label_4]
+    final_audio, final_labels = dataset.concat_and_sum(
+        audios, labels, use_concat=True, use_sum=True
+    )
+
+    top = np.concatenate([audio_1, audio_2, audio_3, audio_4])
+    top, bottom = np.array_split(top, 2)
+    max_len = len(top)
+
     if len(bottom) != max_len:
         pad_width = (0, max_len - len(bottom))
         bottom = np.pad(bottom, pad_width, mode="constant", constant_values=0)
@@ -227,11 +275,12 @@ def test_simple_sum():
         audio_transform=None,
         normalize_audio=False,
         concat_n_samples=None,
-        sum_two_samples=None,
+        sum_n_samples=None,
         sampling_rate=config.sampling_rate,
         train_override_csvs=None,
         num_classes=config.num_labels,
     )
+    dataset.sum_n_samples = 2
 
     sr = 16_000
     audio_1, _ = librosa.load("data/irmas/train/cel/[cel][cla]0001__1.wav", sr=sr)
@@ -244,18 +293,18 @@ def test_simple_sum():
     audios = [audio_1, audio_2]
     labels = [label_1, label_2]
     final_audio, final_labels = dataset.concat_and_sum(
-        audios, labels, use_concat=False, sum_two_samples=True
+        audios, labels, use_concat=False, use_sum=True
     )
 
-    max_len = np.max([len(audio_1), len(audio_2)])
+    audios = np.concatenate(audios)
+    top, bottom = np.array_split(audios, 2)
+    max_len = len(top)
 
-    if len(audio_1) != max_len:
-        pad_width = (0, max_len - len(audio_1))
-        audio_1 = np.pad(audio_1, pad_width, mode="constant", constant_values=0)
-    if len(audio_2) != max_len:
-        pad_width = (0, max_len - len(audio_2))
-        bottom = np.pad(audio_2, pad_width, mode="constant", constant_values=0)
-    test_audio = np.mean([audio_1, audio_2], axis=0)
+    if len(bottom) != max_len:
+        pad_width = (0, max_len - len(bottom))
+        bottom = np.pad(bottom, pad_width, mode="constant", constant_values=0)
+
+    test_audio = np.mean([top, bottom], axis=0)
     test_labels = np.logical_or.reduce(labels).astype(labels[0].dtype)
     assert len(test_audio.shape) == 1
     assert len(final_audio.shape) == 1
@@ -270,12 +319,14 @@ def test_simple_concat():
         audio_transform=None,
         normalize_audio=False,
         concat_n_samples=None,
-        sum_two_samples=None,
+        sum_n_samples=None,
         sampling_rate=config.sampling_rate,
         train_override_csvs=None,
         num_classes=config.num_labels,
     )
     dataset.concat_n_samples = 2
+    dataset.sum_n_samples = None
+
     sr = 16_000
     audio_1, _ = librosa.load("data/irmas/train/cel/[cel][cla]0001__1.wav", sr=sr)
     audio_2, _ = librosa.load("data/irmas/train/cla/[cla][cla]0150__1.wav", sr=sr)
@@ -287,7 +338,7 @@ def test_simple_concat():
     audios = [audio_1, audio_2]
     labels = [label_1, label_2]
     final_audio, final_labels = dataset.concat_and_sum(
-        audios, labels, use_concat=True, sum_two_samples=False
+        audios, labels, use_concat=True, use_sum=False
     )
 
     test_audio = np.concatenate([audio_1, audio_2])
