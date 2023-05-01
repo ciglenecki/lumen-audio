@@ -74,20 +74,31 @@ class TorchvisionModel(ModelBase):
         print("\n")
         print("------------------------------------------")
 
-        last_module_name = [
-            i[0]
-            for i in self.backbone.named_modules()
-            if "." not in i[0] and i[0] != ""
-        ][-1]
-        last_module = getattr(self.backbone, last_module_name)
-        last_dim = (
-            [i for i in last_module if isinstance(i, nn.Linear)][0].in_features
-            if isinstance(last_module, nn.Sequential)
-            else last_module.in_features
-        )
 
-        head = self.create_head(head_input_size=last_dim)
-        setattr(self.backbone, last_module_name, head)
+        if backbone_constructor in {
+            convnext_tiny,
+            convnext_small,
+            convnext_base,
+            convnext_large,
+        }:
+            last_module_name, last_module = list(self.backbone.named_modules())[-1]
+            last_dim = last_module.in_features
+            head = self.create_head(head_input_size=last_dim)
+            self.backbone.classifier[-1] = head
+        else:
+            last_module_name = [
+                i[0]
+                for i in self.backbone.named_modules()
+                if "." not in i[0] and i[0] != ""
+            ][-1]
+            last_module = getattr(self.backbone, last_module_name)
+            last_dim = (
+                [i for i in last_module if isinstance(i, nn.Linear)][0].in_features
+                if isinstance(last_module, nn.Sequential)
+                else last_module.in_features
+            )
+            head = self.create_head(head_input_size=last_dim)
+            setattr(self.backbone, last_module_name, head)
 
         print("\n")
         print("Backbone after changing the classifier:")

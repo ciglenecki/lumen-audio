@@ -16,7 +16,10 @@ def get_head_constructor(head_enum):
 
 class DeepHead(nn.Module):
     def __init__(
-        self, dimensions: list[int], dropout_p=0.3, activation=nn.ReLU()
+        self, 
+        dimensions: list[int], 
+        dropout_p=0.2,
+        activation=nn.ReLU()
     ) -> None:
         """List of input and output features which will create N - 1 fully connected layers.
 
@@ -70,7 +73,7 @@ class AttentionHead(nn.Module):
         self,
         dimensions: list[int],
         activation=nn.ReLU(),
-        dropout_p=0.3,
+        dropout_p=0.2,
     ) -> None:
         super().__init__()
         input_dim = dimensions[0]
