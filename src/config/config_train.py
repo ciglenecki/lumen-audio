@@ -26,7 +26,7 @@ def get_config() -> tuple[ConfigDefault, Namespace]:
     parser = ArgParseWithConfig(
         epilog=get_epipolog(),
     )
-    args, config, pl_args = parser.parse_args()
+    _, config, pl_args = parser.parse_args()
     config.validate_train_args()
 
     # Dynamically set some PyTorch lightning arguments

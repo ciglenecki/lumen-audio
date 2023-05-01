@@ -13,6 +13,8 @@ from src.utils.utils_dataset import get_example_val_sample
 
 
 class ASTModelWrapper(ModelBase):
+    """Audio Spectrogram Transformer model."""
+
     loggers: list[TensorBoardLogger]
 
     def __init__(

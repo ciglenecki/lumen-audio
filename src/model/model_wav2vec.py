@@ -7,6 +7,8 @@ from src.model.model_base import ForwardInput, ForwardOut, ModelBase
 
 
 class Wav2VecWrapper(ModelBase):
+    """Original Wav2Vec2 model."""
+
     loggers: list[TensorBoardLogger]
 
     def __init__(
