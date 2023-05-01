@@ -603,6 +603,22 @@ class ConfigDefault(Serializable):
                 _augmentations_set.add(SupportedAugmentations.SUM_N_SAMPLES)
                 self.augmentations = list(_augmentations_set)
 
+        # Dynamically wav2vec attributes and augmentations
+        if self.model == SupportedModels.WAV2VEC and self.pretrained:
+            if self.augmentations == get_default_value_for_field("augmentations", self):
+                _augmentations_set = set(self.augmentations)
+                _augmentations_set.add(SupportedAugmentations.CONCAT_N_SAMPLES)
+                self.aug_kwargs["concat_n_samples"] = 3
+                self.augmentations = list(_augmentations_set)
+
+        # Dynamically wav2vec attributes and augmentations
+        if self.model == SupportedModels.WAV2VEC_CNN and self.pretrained:
+            if self.augmentations == get_default_value_for_field("augmentations", self):
+                _augmentations_set = set(self.augmentations)
+                _augmentations_set.add(SupportedAugmentations.CONCAT_N_SAMPLES)
+                self.aug_kwargs["concat_n_samples"] = 2
+                self.augmentations = list(_augmentations_set)
+
         # Set typical weight decay for optimizers.
         if self.weight_decay is None and self.optimizer == SupportedOptimizer.ADAM:
             self.weight_decay = 0
