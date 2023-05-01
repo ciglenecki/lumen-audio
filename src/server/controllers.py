@@ -15,10 +15,18 @@ def test_directory() -> str:
         server_store.model,
         server_store.data_loader,
     ):
-        data = []
-        for y_pred in out.y_pred.detach().cpu().numpy():
-            data.append(multihot_to_dict(y_pred))
-        json_encoded = json.dumps(jsonable_encoder(data)).encode("utf-8") + b"\n"
+        entries = {}
+
+        y_pred_file = out.y_pred_file.detach().cpu().numpy()
+        item_indices_unique = out.item_indices_unique.detach().cpu().numpy()
+        for file_index, y_pred_file in zip(item_indices_unique, y_pred_file):
+            audio_path, _ = server_store.datamodule.get_item_from_internal_structure(
+                file_index, split="test"
+            )
+            dict_pred = multihot_to_dict(y_pred_file)
+            entries[str(audio_path.stem)] = dict_pred
+
+        json_encoded = json.dumps(jsonable_encoder(entries)).encode("utf-8") + b"\n"
         yield json_encoded
 
 

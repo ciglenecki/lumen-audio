@@ -117,7 +117,7 @@
 			"request": "launch",
 			"program": "src/server/main.py",
 			"console": "integratedTerminal",
-			"args": "",
+			"args": "--dataset-fraction 0.02",
 			"justMyCode": false
 		},
 	]

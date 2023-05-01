@@ -42,7 +42,7 @@ tags_metadata = [
 ]
 
 app = FastAPI(debug=True, openapi_tags=tags_metadata, description=api_description)
-app.middleware("http")(catch_exceptions_middleware)
+# app.middleware("http")(catch_exceptions_middleware)
 
 
 @app.on_event("shutdown")
@@ -58,7 +58,6 @@ async def docs_redirect():
 app.include_router(router.router)
 
 with open(Path(Path(__file__).parent.resolve(), "openapi_spec.json"), "w+") as file:
-    print(app.openapi())
     file.write(json.dumps(app.openapi()))
     file.close()
 
