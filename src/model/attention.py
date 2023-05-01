@@ -3,7 +3,7 @@ import torch.nn as nn
 
 
 class AttentionLayer(nn.Module):
-    def __init__(self, input_size):
+    def __init__(self, input_size: int):
         """Single attention layer (not mulithead attention).
 
         Args:
@@ -17,7 +17,7 @@ class AttentionLayer(nn.Module):
         self.softmax = nn.Softmax(dim=1)
         self.dk = torch.sqrt(torch.tensor(input_size, dtype=torch.float32))
 
-    def forward(self, hidden_states):
+    def forward(self, hidden_states: torch.Tensor):
         """
         Args:
             hidden_states: torch.Tensor (*,TEMPORAL_DIM, input_size)

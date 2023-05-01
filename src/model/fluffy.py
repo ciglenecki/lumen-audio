@@ -20,9 +20,7 @@ class Fluffy(nn.Module):
     """
     Fluffy model - named after Hagrid's three headed dog.
     This model creates len(instrument_list) decoupled head models
-    where each head is used to find its own instrument in audio.
-    NOTE: This is meant to be used along with LightningFluffy which
-    uses a pretrained feature extraction backbone.
+    where each head is responsible for classifing only one instrument (present/not present).
     """
 
     def __init__(

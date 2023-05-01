@@ -35,7 +35,7 @@ TORCHVISION_CONSTRUCTOR_DICT = {
 
 
 class TorchvisionModel(ModelBase):
-    """Implementation of a torchvision model accessed using a string."""
+    """Vision model which can load Torch Vision pretrained models."""
 
     loggers: list[TensorBoardLogger]
 

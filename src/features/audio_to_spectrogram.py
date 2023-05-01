@@ -43,7 +43,6 @@ class MelSpectrogram(AudioTransformBase):
         self.normalize_audio = normalize_audio
         self.normalize_image = normalize_image
 
-    # @timeit
     def __call__(
         self,
         audio: torch.Tensor | np.ndarray,
