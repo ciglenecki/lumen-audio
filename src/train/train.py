@@ -13,7 +13,7 @@ from pytorch_lightning.callbacks import (
 )
 
 
-from pytorch_lightning.utilities.seed import seed_everything
+#from pytorch_lightning.utilities.seed import seed_everything
 
 from src.config import config_defaults
 from src.config.config_defaults import ConfigDefault
@@ -30,6 +30,7 @@ from src.features.audio_transform import AudioTransformBase, get_audio_transform
 from src.features.augmentations import get_augmentations
 from src.features.chunking import collate_fn_feature
 from src.model.model import get_model
+from src.model.loss_functions import FocalLoss
 from src.train.callbacks import (
     FinetuningCallback,
     GeneralMetricsEpochLogger,
@@ -154,6 +155,22 @@ if __name__ == "__main__":
             "pos_weight": calc_instrument_weight(instrument_count),
         }
         loss_function = torch.nn.BCEWithLogitsLoss(**kwargs, reduction="none")
+    if config.loss_function == SupportedLossFunctions.FOCAL_LOSS:
+        
+        loss_functon = FocalLoss(
+            **config.loss_function_kwargs
+        )
+    if config.loss_funtion == SupportedLossFunctions.FOCAL_LOSS_POS_WEIGHT:
+        instrument_count = dict_with_keys(
+            datamodule.get_train_dataset_stats(), config_defaults.ALL_INSTRUMENTS
+        )
+        kwargs = {
+            **config.loss_function_kwargs,
+            "pos_weight": calc_instrument_weight(instrument_count),
+        }
+        loss_function = FocalLoss(
+            **kwargs
+        )
 
     model = get_model(config, loss_function=loss_function)
     print_params(model)

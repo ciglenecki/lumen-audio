@@ -65,6 +65,8 @@ class SupportedOptimizer(Enum):
 class SupportedLossFunctions(Enum):
     CROSS_ENTROPY = "cross_entropy"
     CROSS_ENTROPY_POS_WEIGHT = "cross_entropy_pos_weight"
+    FOCAL_LOSS = "focal_loss"
+    FOCAL_LOSS_POS_WEIGHT = "focal_loss_pos_weight"
 
 
 class AudioTransforms(Enum):

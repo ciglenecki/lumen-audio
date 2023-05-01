@@ -110,6 +110,46 @@ GENRE_TO_IDX = {
 
 IDX_TO_GENRE = {v: k for k, v in GENRE_TO_IDX.items()}
 
+
+
+class InstrumentFamily(Enum):
+    BRASS = "brass"
+    GUITAR = "gutars"
+    WOODWIND = "woodwind"
+    STRINGS = "strings"
+    VOICE = "voice"
+    PERCUSSION = "percussion"
+
+
+FAMILIY_TO_IDX = {
+    InstrumentFamily.BRASS.value : 0,
+    InstrumentFamily.GUITAR.value : 1,
+    InstrumentFamily.WOODWIND.value : 2,
+    InstrumentFamily.STRINGS.value : 3,
+    InstrumentFamily.VOICE.value : 4,
+    InstrumentFamily.PERCUSSION.value : 5
+}
+
+INSTRUMENT_TO_FAMILY = {
+    InstrumentEnums.CELLO.value: InstrumentFamily.STRINGS.value,
+    InstrumentEnums.CLARINET.value: InstrumentFamily.WOODWIND.value,
+    InstrumentEnums.FLUTE.value: InstrumentFamily.WOODWIND.value,
+    InstrumentEnums.ACOUSTIC_GUITAR.value: InstrumentFamily.GUITAR.value,
+    InstrumentEnums.ELECTRIC_GUITAR.value: InstrumentFamily.GUITAR.value,
+    InstrumentEnums.ORGAN.value: InstrumentFamily.BRASS.value,
+    InstrumentEnums.PIANO.value:InstrumentFamily.PERCUSSION.value,
+    InstrumentEnums.SAXOPHONE.value: InstrumentFamily.BRASS.value,
+    InstrumentEnums.TRUMPET.value: InstrumentFamily.BRASS.value,
+    InstrumentEnums.VIOLIN.value: InstrumentFamily.STRINGS.value,
+    InstrumentEnums.VOICE.value: InstrumentFamily.VOICE.value,
+}
+
+
+IDX_TO_FAMILY = {v: k for k, v in FAMILIY_TO_IDX.items()}
+
+
+
+
 DEFAULT_NUM_LABELS = len(INSTRUMENT_TO_IDX)
 DEFAULT_IRMAS_TRAIN_SIZE = 6705
 DEFAULT_IRMAS_TEST_SIZE = 2874
