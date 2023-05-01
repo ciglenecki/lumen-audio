@@ -29,7 +29,7 @@ class SupportedAugmentations(Enum):
 
     # Dataset
     CONCAT_N_SAMPLES = "concat_n"
-    SUM_TWO_SAMPLES = "sum_two_samples"
+    SUM_N_SAMPLES = "sum_n_samples"
 
     # Softer augmentations
     BACKGROUND_NOISE = "background_noise"
@@ -41,8 +41,6 @@ class SupportedAugmentations(Enum):
     # Harder augmentations
     TIMEINV = "timeinv"
     TIME_MASK = "time_mask"
-    SEVEN_BAND_EQ = "seven_band_eq"
-    CLIPPING = "clipping"
     NORM_AFTER_TIME_AUGS = "norm_after_time_augs"
 
     # SPEC
