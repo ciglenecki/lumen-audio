@@ -204,18 +204,14 @@ class ModelBase(pl.LightningModule, ABC):
         if self.use_fluffy:
             num_of_single_class = 1
             dimensions.append(num_of_single_class)
-            classifer_kwargs = dict(
-                dimensions=dimensions
-            )
+            classifer_kwargs = dict(dimensions=dimensions)
             classifier = Fluffy(
                 head_constructor=self.head_constructor,
                 head_kwargs=classifer_kwargs,
             )
         else:
             dimensions.append(self.num_labels)
-            classifer_kwargs = dict(
-                dimensions=dimensions
-            )
+            classifer_kwargs = dict(dimensions=dimensions)
             classifier = self.head_constructor(**classifer_kwargs)
         return classifier
 
@@ -321,7 +317,7 @@ class ModelBase(pl.LightningModule, ABC):
             y_true_file, _ = scatter_max(y_true, file_indices, dim=0)
             y_pred_file, _ = scatter_max(y_pred, file_indices, dim=0)
             y_pred_prob_file, _ = scatter_max(y_pred_prob, file_indices, dim=0)
-            losses_file, _ = scatter_mean(losses, file_indices, dim=0)
+            losses_file = scatter_mean(losses, file_indices, dim=0)
             item_indices_unique = torch.unique_consecutive(item_indices)
             return_dict.update(
                 dict(
