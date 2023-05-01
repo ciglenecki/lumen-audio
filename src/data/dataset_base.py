@@ -5,6 +5,7 @@ from abc import abstractmethod
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import torch
 import yaml
 from torch.utils.data import Dataset
@@ -12,7 +13,7 @@ from torch.utils.data import Dataset
 import src.config.config_defaults as config_defaults
 from src.features.audio_transform_base import AudioTransformBase
 from src.utils.utils_audio import load_audio_from_file
-from src.utils.utils_dataset import decode_instruments
+from src.utils.utils_dataset import decode_instruments, encode_instruments
 
 DatasetInternalItem = tuple[Path, np.ndarray]
 DatasetGetItem = tuple[torch.Tensor, torch.Tensor, torch.Tensor]
@@ -45,6 +46,8 @@ class DatasetBase(Dataset[DatasetGetItem]):
         self.use_sum = sum_n_samples is not None and sum_n_samples > 1
 
         self.dataset_list: list[tuple[Path, np.ndarray]] = self.create_dataset_list()
+        if self.train_override_csvs:
+            self.override_with_csv()
         self.instrument_idx_list: dict[
             str, list[int]
         ] = self.create_instrument_idx_list()
@@ -62,6 +65,23 @@ class DatasetBase(Dataset[DatasetGetItem]):
 
         e.g. [("file1.wav", [1,0,0,0,0]), ("file2.wav", [0,1,1,0,1])]
         """
+
+    def override_with_csv(self):
+        dfs = [pd.read_csv(csv_path) for csv_path in self.train_override_csvs]
+        df = pd.concat(dfs, ignore_index=True)
+        df.set_index("filename", inplace=True)
+
+        override_dict = {}
+        for path_str, row in df.iterrows():
+            inner_instrument_indices = np.where(row)[0]
+            item_instruments = df.columns[inner_instrument_indices]
+            labels = encode_instruments(item_instruments)
+            override_dict[path_str] = labels
+
+        for path_str, labels in override_dict.items():
+            for i, (original_path, _) in enumerate(self.dataset_list):
+                if str(original_path) == path_str:
+                    self.dataset_list[i] = (original_path, labels)
 
     def create_instrument_idx_list(self) -> dict[str, list[int]]:
         """
