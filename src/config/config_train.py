@@ -5,7 +5,6 @@ To see the list of all arguments call `pyhton3 src/train.py -h`
 
 from __future__ import annotations
 
-import argparse
 from argparse import Namespace
 
 from src.config.argparse_with_config import ArgParseWithConfig

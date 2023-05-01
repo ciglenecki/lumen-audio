@@ -3,13 +3,11 @@ import torch
 
 from src.config.config_defaults import ConfigDefault
 from src.enums.enums import ModelInputDataType, SupportedModels
-from src.model.fluffy import FluffyConfig
 from src.model.heads import get_head_constructor
 from src.model.model_ast import ASTModelWrapper
 from src.model.model_torch import TorchvisionModel
 from src.model.model_wav2vec import Wav2VecWrapper
 from src.model.model_wav2vec_cnn import Wav2VecCnnWrapper
-from src.model.model_conv_lstm import ConvLSTM
 from src.utils.utils_exceptions import UnsupportedModel
 
 
@@ -24,6 +22,11 @@ def get_data_input_type(model_enum: SupportedModels) -> ModelInputDataType:
         SupportedModels.AST: ModelInputDataType.IMAGE,
         SupportedModels.WAV2VEC: ModelInputDataType.WAVEFORM,
         SupportedModels.WAV2VEC_CNN: ModelInputDataType.WAVEFORM,
+        SupportedModels.CONVNEXT_TINY: ModelInputDataType.IMAGE,
+        SupportedModels.CONVNEXT_SMALL: ModelInputDataType.IMAGE,
+        SupportedModels.CONVNEXT_LARGE: ModelInputDataType.IMAGE,
+        SupportedModels.CONVNEXT_BASE: ModelInputDataType.IMAGE,
+        SupportedModels.MOBILENET_V3_LARGE: ModelInputDataType.IMAGE,
         SupportedModels.CONVLSTM : ModelInputDataType.IMAGE
     }
 
@@ -43,8 +46,13 @@ model_constructor_map = {
     SupportedModels.EFFICIENT_NET_V2_L: TorchvisionModel,
     SupportedModels.RESNEXT50_32X4D: TorchvisionModel,
     SupportedModels.RESNEXT101_32X8D: TorchvisionModel,
-    SupportedModels.RESNEXT101_64X4D: TorchvisionModel,
-    SupportedModels.CONVLSTM : ConvLSTM
+    SupportedModels.RESNEXT101_64X4D: TorchvisionModel,        
+    SupportedModels.CONVNEXT_TINY: ModelInputDataType.IMAGE,
+    SupportedModels.CONVNEXT_SMALL: ModelInputDataType.IMAGE,
+    SupportedModels.CONVNEXT_LARGE: ModelInputDataType.IMAGE,
+    SupportedModels.CONVNEXT_BASE: ModelInputDataType.IMAGE,
+    SupportedModels.MOBILENET_V3_LARGE: ModelInputDataType.IMAGE,
+    SupportedModels.CONVLSTM : ModelInputDataType.IMAGE
 }
 
 
@@ -52,10 +60,7 @@ def get_model(
     config: ConfigDefault,
     loss_function: torch.nn.modules.loss,
 ) -> tuple[pl.LightningModule, ModelInputDataType]:
-    fluffy_config = FluffyConfig(
-        use_multiple_optimizers=config.use_multiple_optimizers,
-        classifer_constructor=get_head_constructor(head_enum=config.head),
-    )
+    head_constructor = get_head_constructor(head_enum=config.head)
 
     model_enum = config.model
     model_kwargs = dict(
@@ -81,9 +86,10 @@ def get_model(
         freeze_train_bn=config.freeze_train_bn,
         model_enum=model_enum,
         loss_function=loss_function,
-        fluffy_config=fluffy_config,
+        head_constructor=head_constructor,
         use_fluffy=config.use_fluffy,
         config=config,
+        head_hidden_dim=config.head_hidden_dim,
     )
 
     if model_enum not in model_constructor_map:

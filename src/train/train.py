@@ -15,6 +15,7 @@ from pytorch_lightning.callbacks import (
 
 from pytorch_lightning.utilities.seed import seed_everything
 
+from src.config import config_defaults
 from src.config.config_defaults import ConfigDefault
 from src.config.config_train import get_config
 from src.data.datamodule import OurDataModule
@@ -27,7 +28,7 @@ from src.enums.enums import (
 )
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
 from src.features.augmentations import get_augmentations
-from src.features.chunking import get_collate_fn
+from src.features.chunking import collate_fn_feature
 from src.model.model import get_model
 from src.train.callbacks import (
     FinetuningCallback,
@@ -38,6 +39,7 @@ from src.train.callbacks import (
 from src.utils.utils_dataset import calc_instrument_weight
 from src.utils.utils_functions import (
     add_prefix_to_keys,
+    dict_with_keys,
     get_timestamp,
     random_codeword,
     stdout_to_file,
@@ -111,7 +113,12 @@ if __name__ == "__main__":
         if SupportedAugmentations.CONCAT_N_SAMPLES in config.augmentations
         else None
     )
-    collate_fn = get_collate_fn(config)
+    sum_n_samples = (
+        config.aug_kwargs["sum_n_samples"]
+        if SupportedAugmentations.SUM_N_SAMPLES in config.augmentations
+        else None
+    )
+    collate_fn = collate_fn_feature
 
     datamodule = OurDataModule(
         train_paths=config.train_paths,
@@ -128,20 +135,25 @@ if __name__ == "__main__":
         normalize_image=config.normalize_image,
         train_only_dataset=config.train_only_dataset,
         concat_n_samples=concat_n_samples,
-        sum_two_samples=SupportedAugmentations.SUM_TWO_SAMPLES in config.augmentations,
+        sum_n_samples=sum_n_samples,
         use_weighted_train_sampler=config.use_weighted_train_sampler,
         sampling_rate=config.sampling_rate,
     )
     datamodule.setup_for_train()
 
     if config.loss_function == SupportedLossFunctions.CROSS_ENTROPY:
-        loss_function = torch.nn.BCEWithLogitsLoss(**config.loss_function_kwargs)
+        loss_function = torch.nn.BCEWithLogitsLoss(
+            **config.loss_function_kwargs, reduction="none"
+        )
     if config.loss_function == SupportedLossFunctions.CROSS_ENTROPY_POS_WEIGHT:
+        instrument_count = dict_with_keys(
+            datamodule.get_train_dataset_stats(), config_defaults.ALL_INSTRUMENTS
+        )
         kwargs = {
             **config.loss_function_kwargs,
-            "pos_weight": calc_instrument_weight(datamodule.count_classes()),
+            "pos_weight": calc_instrument_weight(instrument_count),
         }
-        loss_function = torch.nn.BCEWithLogitsLoss(**kwargs)
+        loss_function = torch.nn.BCEWithLogitsLoss(**kwargs, reduction="none")
 
     model = get_model(config, loss_function=loss_function)
     print_params(model)
@@ -150,6 +162,11 @@ if __name__ == "__main__":
     metric_mode_str = MetricMode(config.metric_mode).value
     optimizer_metric_str = OptimizeMetric(config.metric).value
 
+    csv_logger = pl_loggers.CSVLogger(
+        save_dir=str(output_dir),
+        name=experiment_name,
+        version=".",
+    )
     tensorboard_logger = pl_loggers.TensorBoardLogger(
         save_dir=str(output_dir),
         name=experiment_name,
@@ -203,14 +220,14 @@ if __name__ == "__main__":
             FinetuningCallback(finetune_head_epochs=config.finetune_head_epochs)
         )
 
-    callbacks.append(ModelSummary(max_depth=4))
+    callbacks.append(ModelSummary(max_depth=1))
 
     auto_lr_find = config.scheduler == SupportedScheduler.AUTO_LR
 
     # ================= TRAINER ========================
     trainer: pl.Trainer = pl.Trainer.from_argparse_args(
         pl_args,
-        logger=[tensorboard_logger],
+        logger=[tensorboard_logger, csv_logger],
         default_root_dir=output_dir,
         callbacks=callbacks,
     )

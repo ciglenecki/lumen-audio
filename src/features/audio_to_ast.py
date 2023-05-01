@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-from sklearn import feature_extraction
 from transformers import ASTFeatureExtractor
 
 from src.config.argparse_with_config import ArgParseWithConfig
@@ -10,9 +9,12 @@ from src.config.config_defaults import (
     TAG_AST_AUDIOSET,
 )
 from src.features.audio_transform_base import AudioTransformBase
-from src.utils.utils_audio import plot_spectrograms, spec_width_to_num_samples
+from src.utils.utils_audio import (
+    iron_audios,
+    plot_spectrograms,
+    spec_width_to_num_samples,
+)
 from src.utils.utils_dataset import get_example_val_sample
-from src.utils.utils_functions import timeit
 
 
 class AudioTransformAST(AudioTransformBase):
@@ -92,14 +94,10 @@ class AudioTransformAST(AudioTransformBase):
         num_chunks = len(audio)
         last_chunk = audio[-1]
         last_chunk_length = len(last_chunk)
-        if last_chunk_length < min_waveform_length:
-            if num_chunks > 1:
-                audio.pop()
-            elif num_chunks == 1:
-                pad_width = (0, min_waveform_length - last_chunk_length)
-                audio[-1] = np.pad(
-                    last_chunk, pad_width, mode="constant", constant_values=0
-                )
+        if last_chunk_length < min_waveform_length and num_chunks > 1:
+            audio.pop()
+        else:
+            audio = iron_audios(audio, target_width=self.max_audio_length)
 
         spectrogram = self.feature_extractor(
             audio,
@@ -123,6 +121,7 @@ if __name__ == "__main__":
         pretrained_tag=TAG_AST_AUDIOSET,
         sampling_rate=config.sampling_rate,
         hop_length=config.hop_length,
+        n_fft=config.n_fft,
         n_mels=config.n_mels,
         spectrogram_augmentation=None,
         waveform_augmentation=None,

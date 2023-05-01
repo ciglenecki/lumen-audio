@@ -12,6 +12,11 @@ class SupportedModels(Enum):
     RESNEXT101_64X4D = "resnext101_64x4d"
     WAV2VEC = "wav2vec"
     WAV2VEC_CNN = "wav2vec_cnn"
+    CONVNEXT_TINY = "convnext_tiny"
+    CONVNEXT_SMALL = "convnext_small"
+    CONVNEXT_LARGE = "convnext_large"
+    CONVNEXT_BASE = "convnext_base"
+    MOBILENET_V3_LARGE = "mobilenet_v3_large"
     CONVLSTM = "conv_lstm"
 
 
@@ -25,7 +30,7 @@ class SupportedAugmentations(Enum):
 
     # Dataset
     CONCAT_N_SAMPLES = "concat_n"
-    SUM_TWO_SAMPLES = "sum_two_samples"
+    SUM_N_SAMPLES = "sum_n_samples"
 
     # Softer augmentations
     BACKGROUND_NOISE = "background_noise"
@@ -37,8 +42,6 @@ class SupportedAugmentations(Enum):
     # Harder augmentations
     TIMEINV = "timeinv"
     TIME_MASK = "time_mask"
-    SEVEN_BAND_EQ = "seven_band_eq"
-    CLIPPING = "clipping"
     NORM_AFTER_TIME_AUGS = "norm_after_time_augs"
 
     # SPEC
@@ -72,7 +75,6 @@ class AudioTransforms(Enum):
     MULTI_SPECTROGRAM = "multi_spectrogram"
     WAV2VEC = "wav2vec"
     MFCC = "mfcc"
-    WAV2VEC_CNN = "wav2vec_cnn"
 
 
 class SupportedDatasetDirType(Enum):

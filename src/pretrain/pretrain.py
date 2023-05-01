@@ -1,6 +1,5 @@
 import os
 
-import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 from torch.nn.functional import cross_entropy
@@ -9,11 +8,9 @@ from tqdm import tqdm
 from transformers import get_linear_schedule_with_warmup
 
 from src.config.argparse_with_config import ArgParseWithConfig
-from src.config.config_defaults import *
-from src.data.dataset_irmas import *
 from src.data.dataset_irmas import IRMASDatasetPreTrain, IRMASDatasetTest
 from src.features.audio_transform import get_audio_transform
-from src.features.chunking import collate_fn_spectrogram
+from src.features.chunking import collate_fn_feature
 from src.model.model import get_model
 
 
@@ -221,7 +218,7 @@ if __name__ == "__main__":
     validation_dataloader = DataLoader(
         dataset=validation_dataset,
         batch_size=config.batch_size,
-        collate_fn=collate_fn_spectrogram,
+        collate_fn=collate_fn_feature,
     )
 
     device = "cuda" if torch.cuda.is_available() else "cpu"

@@ -23,7 +23,7 @@ from src.config.argparse_with_config import ArgParseWithConfig
 from src.data.datamodule import OurDataModule
 from src.enums.enums import SupportedModels
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
-from src.features.chunking import get_collate_fn
+from src.features.chunking import collate_fn_feature
 from src.model.model import get_model, model_constructor_map
 from src.utils.utils_dataset import instrument_multihot_to_idx
 from src.utils.utils_exceptions import InvalidArgument, UnsupportedModel
@@ -69,20 +69,22 @@ def get_feature_extractor(
 
     if target_model_layer is not None:
         pass
+    elif model_enum in [
+        SupportedModels.EFFICIENT_NET_V2_S,
+        SupportedModels.EFFICIENT_NET_V2_M,
+        SupportedModels.EFFICIENT_NET_V2_L,
+        SupportedModels.RESNEXT50_32X4D,
+        SupportedModels.RESNEXT101_32X8D,
+        SupportedModels.RESNEXT101_64X4D,
+        SupportedModels.CONVNEXT_TINY,
+        SupportedModels.CONVNEXT_SMALL,
+        SupportedModels.CONVNEXT_LARGE,
+        SupportedModels.CONVNEXT_BASE,
+        SupportedModels.MOBILENET_V3_LARGE,
+    ]:
+        target_model_layer = "flatten"
     elif model_enum == SupportedModels.WAV2VEC_CNN:
         target_model_layer = "backbone.conv_layers.6.activation"
-    elif model_enum == SupportedModels.EFFICIENT_NET_V2_S:
-        target_model_layer = "flatten"
-    elif model_enum == SupportedModels.EFFICIENT_NET_V2_M:
-        target_model_layer = "flatten"
-    elif model_enum == SupportedModels.EFFICIENT_NET_V2_L:
-        target_model_layer = "flatten"
-    elif model_enum == SupportedModels.RESNEXT50_32X4D:
-        target_model_layer = "flatten"
-    elif model_enum == SupportedModels.RESNEXT101_32X8D:
-        target_model_layer = "flatten"
-    elif model_enum == SupportedModels.RESNEXT101_64X4D:
-        target_model_layer = "flatten"
     else:
         raise UnsupportedModel(
             f"Please add appropriate target_model_layer for model {model_enum}. You can pass the --target-model-layer instead."
@@ -129,7 +131,7 @@ if __name__ == "__main__":
         waveform_augmentation=None,
     )
 
-    collate_fn = get_collate_fn(config)
+    collate_fn = collate_fn_feature
     datamodule = OurDataModule(
         train_paths=None,
         val_paths=None,
@@ -145,7 +147,7 @@ if __name__ == "__main__":
         normalize_image=config.normalize_image,
         train_only_dataset=False,
         concat_n_samples=None,
-        sum_two_samples=None,
+        sum_n_samples=None,
         use_weighted_train_sampler=False,
         sampling_rate=config.sampling_rate,
     )
@@ -166,15 +168,9 @@ if __name__ == "__main__":
 
     print("Saving embeddings to directory:", embedding_dir)
 
-    for data in tqdm(data_loader, total=len(data_loader)):
-        spectrogram, multihot_labels, file_indices, item_indices = data
-
-        # Transfer to device
-        spectrogram, multihot_labels, file_indices = (
-            spectrogram.to(device),
-            multihot_labels.to(device),
-            file_indices.to(device),
-        )
+    for batch in tqdm(data_loader, total=len(data_loader)):
+        batch = [t.to(device) for t in batch]
+        spectrogram, multihot_labels, file_indices, item_indices = batch
 
         # Get exact label n label number
         indices_list: list[list[int]] = []

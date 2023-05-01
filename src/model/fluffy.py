@@ -10,7 +10,6 @@ from src.model.heads import AttentionHead, DeepHead
 
 @dataclass
 class FluffyConfig:
-    use_multiple_optimizers: bool = True
     classifer_constructor: Callable = DeepHead
 
     def __post_init__(self):

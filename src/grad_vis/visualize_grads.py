@@ -8,29 +8,36 @@ models_quick/04-14-15-25-32_CalmAlan_resnext50_32x4d/checkpoints/04-14-15-25-
 import operator
 
 import cv2
+import librosa
+import librosa.display
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
 
 from src.config import config_defaults
 from src.config.argparse_with_config import ArgParseWithConfig
-from src.config.config_defaults import parse_dataset_paths
 from src.data.datamodule import OurDataModule
 from src.features.audio_transform import get_audio_transform
-from src.features.augmentations import get_augmentations
-from src.features.chunking import get_collate_fn
+from src.features.chunking import collate_fn_feature
 from src.model.model import get_model
+from src.utils.utils_dataset import concat_images
+from src.utils.utils_functions import min_max_scale
 
 
 def parse_args():
-    parser = ArgParseWithConfig()
-
-    parser.add_argument(
-        "--path_to_model",
-        type=str,
-        required=True,
-        help="Path to a trained model.",
+    parser = ArgParseWithConfig(
+        add_lightning_args=False,
+        config_pl_args=[
+            "--batch-size",
+            "--dataset-paths",
+            "--ckpt",
+            "--audio-transform",
+        ],
     )
+
     parser.add_argument(
         "--target_layer",
         type=str,
@@ -50,12 +57,75 @@ def parse_args():
         help="The label to track the gradients for. If None, tracked for all",
     )
 
-    args, config, pl_args = parser.parse_args()
+    parser.add_argument(
+        "--plotsize",
+        type=tuple[int, int],
+        nargs=2,
+        default=(1200, 600),
+        help="Plot size",
+    )
+
+    args, config, _ = parser.parse_args()
+    config.required_ckpt()
     config.required_model()
     config.required_audio_transform()
     config.required_dataset_paths()
 
-    return args, config, pl_args
+    return args, config
+
+
+def image_plot_to_array():
+    """Get current matplotlib figure, create an in memory image and return numpy array image."""
+
+    # Get current figure
+    fig = plt.gcf()
+
+    # Clear axes
+    fig.axes[0].get_xaxis().set_visible(False)
+    fig.axes[0].get_yaxis().set_visible(False)
+
+    # Remove colorbars
+    cb = plt.colorbar()
+    cb.remove()
+
+    # Remove Axes
+    plt.axis("off")
+
+    # Render canvas and create numpy rgb array
+    canvas = FigureCanvas(fig)
+    canvas.draw()
+    w, h = canvas.get_width_height()
+    img_array = np.frombuffer(canvas.tostring_rgb(), dtype="uint8").reshape(h, w, 3)
+    return img_array
+
+
+def generate_spec_figure(image: torch.Tensor, height: int, width: int):
+    """Create a librosa melspectrogram figure in memory with nice colors."""
+    my_dpi = 150
+    plt.figure(figsize=(width / my_dpi, height / my_dpi), dpi=my_dpi)
+    S_db = librosa.power_to_db(image, ref=np.max)
+    librosa.display.specshow(
+        S_db,
+        y_axis="mel",
+        x_axis=None,
+        sr=config.sampling_rate,
+        hop_length=config.hop_length,
+        n_fft=config.n_fft,
+    )
+
+
+def resize_2d_image(image: torch.Tensor, height: int, width: int):
+    """Resize the image to height, width."""
+    return (
+        torch.nn.functional.interpolate(
+            image.unsqueeze(0).unsqueeze(0),
+            size=(height, width),
+            mode="bilinear",
+            align_corners=False,
+        )
+        .squeeze(0)
+        .squeeze(0)
+    )
 
 
 class MultiLabelBinaryClassifierOutputTarget:
@@ -65,11 +135,13 @@ class MultiLabelBinaryClassifierOutputTarget:
     def __call__(self, model_output):
         if len(model_output.shape) == 1:
             model_output = model_output.unsqueeze(0)
-        return -model_output[:, self.output_index]
+        return (-1) * model_output[:, self.output_index]
 
 
 if __name__ == "__main__":
-    args, config, pl_args = parse_args()
+    args, config = parse_args()
+    plot_width, plot_height = args.plotsize
+
     model_type = get_model(config, torch.nn.BCEWithLogitsLoss())
     model = model_type.load_from_checkpoint(args.path_to_model)
     model.eval()
@@ -90,44 +162,55 @@ if __name__ == "__main__":
         drop_last_sample=config.drop_last,
         train_audio_transform=None,
         val_audio_transform=audio_transform,
-        collate_fn=get_collate_fn(config),
+        collate_fn=collate_fn_feature,
         normalize_audio=config.normalize_audio,
         normalize_image=config.normalize_image,
         train_only_dataset=False,
         concat_n_samples=None,
-        sum_two_samples=False,
-        use_weighted_train_sampler=config.use_weighted_train_sampler,
+        sum_n_samples=False,
+        use_weighted_train_sampler=False,
         sampling_rate=config.sampling_rate,
     )
     datamodule.setup_for_inference()
 
     test_dataloader = datamodule.test_dataloader()
-    for inputs, labels, ids, _ in test_dataloader:
+
+    for images, labels, file_indices, _ in test_dataloader:
         instrument_idx = config_defaults.INSTRUMENT_TO_IDX[args.label]
         targets = [MultiLabelBinaryClassifierOutputTarget(instrument_idx)]
-        res = cam(input_tensor=inputs, targets=targets)
+        grads_mask = cam(input_tensor=images, targets=targets)
 
-        unique_ids = torch.unique(ids)
+        if len(grads_mask.shape) == 2:
+            regrads_masks = grads_mask[np.newaxis, ...]
+
+        unique_indices = torch.unique(file_indices)
         grouped_tensors = []
-        for idx in unique_ids:
-            indices = torch.where(ids == idx)
 
-            grouped_example = torch.cat([torch.tensor(i) for i in res[indices]], dim=-1)
+        for file_idx in unique_indices:
+            batch_file_indices = torch.where(file_indices == file_idx)
+            image_grouped = images[batch_file_indices]
+            grads_mask_grouped = grads_mask[batch_file_indices]
 
-            grouped_example_rgb = torch.cat(
-                [torch.tensor(i) for i in inputs[indices]], dim=-1
-            )
+            # Concat images which come from same file
+            grads_mask = concat_images(grads_mask_grouped)
+            image = concat_images(image_grouped)
 
-            grouped_example = (grouped_example - grouped_example.min()) / (
-                grouped_example.max() - grouped_example.min()
-            )
-            grouped_example_rgb = (grouped_example_rgb - grouped_example_rgb.min()) / (
-                grouped_example_rgb.max() - grouped_example_rgb.min()
-            )
+            # Undo MelSpectrogram transformations for clean librosa plot
+            image = audio_transform.undo(image.unsqueeze(dim=0))[0]
 
-            final_img = visualization = show_cam_on_image(
-                grouped_example_rgb.detach().cpu().permute(1, 2, 0).numpy(),
-                grouped_example.detach().cpu().numpy(),
+            # Generate a fake plot and save it to array (get actual RGB values in numpy array)
+            generate_spec_figure(image, height=plot_height, width=plot_width)
+            image = image_plot_to_array() / 255
+
+            # We can resize the gradient image so it fits on the original image
+            grads_mask = resize_2d_image(grads_mask, plot_height, plot_width)
+
+            # Scale gradients to [0, 1]
+            grads_mask = min_max_scale(grads_mask)
+
+            image = cv2.cvtColor(image.astype("float32"), cv2.COLOR_BGR2RGB)
+            final_img = show_cam_on_image(
+                image, grads_mask, use_rgb=True, image_weight=0.5
             )
 
             cv2.imshow("img", final_img)

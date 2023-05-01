@@ -53,12 +53,6 @@ class DeepHead(nn.Module):
                     layer.add_module("dropout", dropout)
 
                 modules.add_module(str(i), layer)
-
-        # initialization, initialization_kwargs = get_linear_init(activation)
-        # linears = filter_modules(modules, nn.Linear)
-        # assert len(linears) != 0, "Why is this empty?"
-        # initialize_weights(linears, initialization, initialization_kwargs)
-
         self.deep_head = modules
 
     def forward(self, x):
@@ -95,3 +89,6 @@ class AttentionHead(nn.Module):
         """
         attention,attention_weights = self.attention_layer(features)
         return self.classifer(attention)
+
+
+HeadTypes = DeepHead | AttentionHead

@@ -1,15 +1,9 @@
-import math
-from typing import Any
-
 import torch
-import torchmetrics
 from pytorch_lightning.loggers import TensorBoardLogger
-from torchmetrics.classification import MultilabelF1Score
 from transformers import Wav2Vec2Config, Wav2Vec2Model
 
 import src.config.config_defaults as config_defaults
-from src.model.heads import DeepHead
-from src.model.model_base import ModelBase
+from src.model.model_base import ForwardInput, ForwardOut, ModelBase
 
 
 class Wav2VecWrapper(ModelBase):
@@ -25,15 +19,10 @@ class Wav2VecWrapper(ModelBase):
 
         self.time_dim_pooling_mode = time_dim_pooling_mode
 
-        self.hamming_distance = torchmetrics.HammingDistance(
-            task="multilabel", num_labels=self.num_labels
-        )
-        self.f1_score = MultilabelF1Score(num_labels=self.num_labels)
-
         config_wav2vec = Wav2Vec2Config(
             pretrained_model_name_or_path=self.pretrained_tag,
             id2label=config_defaults.IDX_TO_INSTRUMENT,
-            label2id=config_defaults.IDX_TO_INSTRUMENT,
+            label2id=config_defaults.INSTRUMENT_TO_IDX,
             num_labels=self.num_labels,
         )
         self.backbone: Wav2Vec2Model = Wav2Vec2Model.from_pretrained(
@@ -41,12 +30,8 @@ class Wav2VecWrapper(ModelBase):
             config=config_wav2vec,
             ignore_mismatched_sizes=True,
         )
-        middle_size = int(
-            math.sqrt(config_wav2vec.hidden_size * self.num_labels) + self.num_labels
-        )
-        self.classifier = DeepHead(
-            [config_wav2vec.hidden_size, middle_size, self.num_labels]
-        )
+
+        self.classifier = self.create_head(config_wav2vec.hidden_size)
 
         self.save_hyperparameters()
 
@@ -77,29 +62,11 @@ class Wav2VecWrapper(ModelBase):
         logits_pred = self.classifier(hidden_states)
         return logits_pred
 
-    def _step(self, batch, batch_idx, type: str, optimizer_idx=0):
-        audio, y, file_indices, item_indices = batch
-
+    def forward_wrapper(self, forward_input: ForwardInput) -> ForwardOut:
+        audio, y_true = forward_input.feature, forward_input.y_true
         logits_pred = self.forward(audio)
-        y_pred_prob = torch.sigmoid(logits_pred)
-        y_pred = y_pred_prob >= 0.5
-        loss = self.loss_function(logits_pred, y)
-
-        return self.log_and_return_loss_step(
-            loss=loss, y_pred=y_pred, y_true=y, type=type
-        )
-
-    def training_step(self, batch, batch_idx):
-        return self._step(batch, batch_idx, type="train")
-
-    def validation_step(self, batch, batch_idx):
-        return self._step(batch, batch_idx, type="val")
-
-    def test_step(self, batch, batch_idx):
-        return self._step(batch, batch_idx, type="test")
-
-    def predict_step(
-        self, batch: torch.Tensor, batch_idx: int, dataloader_idx: int = 0
-    ) -> Any:
-        # TODO:
-        pass
+        if y_true is not None:
+            loss = self.loss_function(logits_pred, y_true)
+        else:
+            loss = None
+        return ForwardOut(logits=logits_pred, loss=loss)
