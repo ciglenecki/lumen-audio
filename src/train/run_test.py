@@ -1,5 +1,7 @@
 from collections.abc import Iterator  # Python >=3.9
+from pathlib import Path
 
+import numpy as np
 import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader
@@ -11,9 +13,43 @@ from src.data.datamodule import OurDataModule
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
 from src.features.chunking import collate_fn_feature
 from src.model.model import SupportedModels, get_model, model_constructor_map
-from src.model.model_base import ModelBase, StepResult
+from src.model.model_base import ModelBase
 from src.train.metrics import get_metrics
 from src.utils.utils_exceptions import InvalidArgument, UnsupportedModel
+
+
+def dict_torch_to_npy(d: dict):
+    return {
+        k: v.detach().cpu().numpy()
+        for k, v in d.items()
+        if isinstance(v, torch.torch.Tensor)
+    }
+
+
+class StepResult:
+    def __init__(self, step_dict: dict):
+        step_dict = {
+            k: v.detach().cpu().numpy()
+            for k, v in step_dict.items()
+            if isinstance(v, torch.torch.Tensor)
+        }
+        self.loss: np.ndarray | None = step_dict.get("loss", None)
+        self.losses: np.ndarray | None = step_dict.get("losses", None)
+        self.y_pred: np.ndarray | None = step_dict.get("y_pred", None)
+        self.y_pred_prob: np.ndarray | None = step_dict.get("y_pred_prob", None)
+        self.y_true: np.ndarray | None = step_dict.get("y_true", None)
+        self.file_indices: np.ndarray | None = step_dict.get("file_indices", None)
+        self.item_indices: np.ndarray | None = step_dict.get("item_indices", None)
+        self.item_indices_unique: np.ndarray | None = step_dict.get(
+            "item_indices_unique", None
+        )
+        self.y_true_file: np.ndarray | None = step_dict.get("y_true_file", None)
+        self.y_pred_file: np.ndarray | None = step_dict.get("y_pred_file", None)
+        self.y_pred_prob_file: np.ndarray | None = step_dict.get(
+            "y_pred_prob_file", None
+        )
+        self.losses_file: np.ndarray | None = step_dict.get("losses_file", None)
+        self.filenames: list[Path] | None = step_dict.get("filenames", None)
 
 
 def get_model_config_transform(
@@ -67,19 +103,27 @@ def testing_generator(
     device: torch.device,
     model: ModelBase,
     data_loader: DataLoader,
-) -> Iterator[StepResult]:
+    datamodule: OurDataModule,
+) -> Iterator[dict]:
     for batch_idx, batch in tqdm(enumerate(data_loader), total=len(data_loader)):
         batch = [e.to(device) for e in batch]
         with torch.no_grad():
-            out: StepResult = model._step(
+            step_dict = model._step(
                 batch,
                 batch_idx,
                 type="test",
                 log_metric_dict=False,
                 only_return_loss=False,
-                return_as_object=True,
             )
-        yield out
+            step_dict = dict_torch_to_npy(step_dict)
+
+            step_dict["filenames"] = []
+            for file_index in step_dict["item_indices_unique"]:
+                audio_path, _ = datamodule.get_item_from_internal_structure(
+                    file_index, split="test"
+                )
+                step_dict["filenames"].append(audio_path)
+        yield step_dict
 
 
 def testing_loop(
@@ -88,40 +132,37 @@ def testing_loop(
     datamodule: OurDataModule,
     data_loader: DataLoader,
 ):
-    losses, y_preds, y_preds_file, y_trues, y_trues_file, filenames = (
-        [],
-        [],
-        [],
-        [],
-        [],
-        [],
-    )
-    for out in testing_generator(device=device, model=model, data_loader=data_loader):
-        losses.extend(out.losses.detach().cpu().numpy())
-        y_preds.extend(out.y_pred.detach().cpu().numpy())
-        y_preds_file.extend(out.y_pred_file.detach().cpu().numpy())
-        y_trues.extend(out.y_true.detach().cpu().numpy())
-        y_trues_file.extend(out.y_true_file.detach().cpu().numpy())
-        for file_index in out.item_indices_unique.detach().cpu().numpy():
-            audio_path, _ = datamodule.get_item_from_internal_structure(
-                file_index, split="test"
-            )
-            filenames.append(audio_path)
+    result_dict = {}
+    for step_dict in testing_generator(
+        device=device, model=model, data_loader=data_loader, datamodule=datamodule
+    ):
+        for k, v in step_dict.items():
+            if k not in result_dict:
+                result_dict[k] = []
+            result_dict[k].append(v)
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
-    y_preds = torch.stack(y_preds)
-    y_preds_file = torch.stack(y_preds_file)
-    y_trues = torch.stack(y_trues)
-    y_trues_file = torch.stack(y_trues_file)
+    result = StepResult(result_dict)
+
+    y_pred = torch.stack(result.y_pred)
+    y_pred_file = torch.stack(result.y_pred_file)
+    y_true = torch.stack(result.y_true)
+    y_true_file = torch.stack(result.y_true_file)
+
     metric_dict = get_metrics(
-        y_pred=y_preds,
-        y_true=y_trues,
+        y_pred=y_pred,
+        y_true=y_true,
         num_labels=config.num_labels,
         return_per_instrument=True,
     )
-    datamodule.get_item_from_internal_structure()
-    return metric_dict
+    metric_dict_file = get_metrics(
+        y_pred=y_pred_file,
+        y_true=y_true_file,
+        num_labels=config.num_labels,
+        return_per_instrument=True,
+    )
+    return metric_dict, metric_dict_file
 
 
 def validate_test_args(config: ConfigDefault):

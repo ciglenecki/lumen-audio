@@ -23,6 +23,24 @@ async def get_models():
 
 
 @router.post(
+    "/predict-directory-stream",
+    tags=["predict"],
+    response_model=List[MultilabelPrediction],
+    description=predict_images_desc,
+)
+async def test_directory(
+    model_checkpoint: Path,
+    dataset_dirs: list[DatasetDirDict],
+):
+    controllers.set_server_store_model(model_checkpoint)
+    controllers.set_predict_directory(dataset_dirs)
+
+    return StreamingResponse(
+        controllers.test_directory(), media_type="application/json"
+    )
+
+
+@router.post(
     "/predict-directory",
     tags=["predict"],
     response_model=List[MultilabelPrediction],
@@ -33,7 +51,7 @@ async def test_directory(
     dataset_dirs: list[DatasetDirDict],
 ):
     controllers.set_server_store_model(model_checkpoint)
-    controllers.set_server_store_directory(dataset_dirs)
+    controllers.set_predict_directory(dataset_dirs)
 
     return StreamingResponse(
         controllers.test_directory(), media_type="application/json"

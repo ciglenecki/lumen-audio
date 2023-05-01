@@ -43,26 +43,6 @@ class ForwardOut:
     loss: torch.Tensor | None
 
 
-class StepResult:
-    def __init__(self, step_dict: dict):
-        self.loss: torch.Tensor | None = step_dict.get("loss", None)
-        self.losses: torch.Tensor | None = step_dict.get("losses", None)
-        self.y_pred: torch.Tensor | None = step_dict.get("y_pred", None)
-        self.y_pred_prob: torch.Tensor | None = step_dict.get("y_pred_prob", None)
-        self.y_true: torch.Tensor | None = step_dict.get("y_true", None)
-        self.file_indices: torch.Tensor | None = step_dict.get("file_indices", None)
-        self.item_indices: torch.Tensor | None = step_dict.get("item_indices", None)
-        self.item_indices_unique: torch.Tensor | None = step_dict.get(
-            "item_indices_unique", None
-        )
-        self.y_true_file: torch.Tensor | None = step_dict.get("y_true_file", None)
-        self.y_pred_file: torch.Tensor | None = step_dict.get("y_pred_file", None)
-        self.y_pred_prob_file: torch.Tensor | None = step_dict.get(
-            "y_pred_prob_file", None
-        )
-        self.losses_file: torch.Tensor | None = step_dict.get("losses_file", None)
-
-
 class ModelBase(pl.LightningModule, ABC):
     """Our ModelBase class.
 
@@ -247,8 +227,7 @@ class ModelBase(pl.LightningModule, ABC):
         type: str,
         log_metric_dict=True,
         only_return_loss=True,
-        return_as_object=False,
-    ) -> dict[str, float | torch.Tensor | None] | StepResult:
+    ) -> dict[str, float | torch.Tensor | None]:
         """Does a standard forward, loss caculation and prediction.
 
         Patches are input to the model's forward. Patch predictions should be grouped based on
@@ -334,8 +313,6 @@ class ModelBase(pl.LightningModule, ABC):
                     losses_file=losses_file,
                 )
             )
-        if return_as_object:
-            return StepResult(return_dict)
         return return_dict
 
     def training_step(self, batch, batch_idx):

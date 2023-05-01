@@ -36,7 +36,7 @@ def set_server_store_model(model_path: str):
     server_store.set_model()
 
 
-def set_server_store_directory(
+def set_predict_directory(
     dataset_dirs: list[DatasetDirDict],
 ):
     dataset_pairs = [(d.dataset_dir_type, d.dataset_dir) for d in dataset_dirs]
