@@ -81,7 +81,7 @@ class TorchvisionModel(ModelBase):
         ][-1]
         last_module = getattr(self.backbone, last_module_name)
         last_dim = (
-            last_module[-1].in_features
+            [i for i in last_module if isinstance(i, nn.Linear)][0].in_features
             if isinstance(last_module, nn.Sequential)
             else last_module.in_features
         )
