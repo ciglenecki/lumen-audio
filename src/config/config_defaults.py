@@ -439,7 +439,7 @@ class ConfigDefault(Serializable):
     loss_function: SupportedLossFunctions = create(SupportedLossFunctions.CROSS_ENTROPY)
     """Loss function"""
 
-    loss_function_kwargs: dict | dict = create({})
+    loss_function_kwargs: list[str] = create({"reduction": "none"})
     """Loss function kwargs"""
 
     lr: float = create(5e-5)

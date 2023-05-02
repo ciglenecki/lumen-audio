@@ -16,7 +16,7 @@ from torchvision.models import (
 )
 
 from src.model.model import SupportedModels
-from src.model.model_base import ForwardInput, ForwardOut, ModelBase
+from src.model.model_base import ModelBase
 from src.utils.utils_exceptions import UnsupportedModel
 
 TORCHVISION_CONSTRUCTOR_DICT = {
@@ -124,12 +124,3 @@ class TorchvisionModel(ModelBase):
     def forward(self, image: torch.Tensor):
         out = self.backbone.forward(image)
         return out
-
-    def forward_wrapper(self, forward_input: ForwardInput) -> ForwardOut:
-        images, y_true = forward_input.feature, forward_input.y_true
-        logits_pred = self.forward(images)
-        if y_true is not None:
-            loss = self.loss_function(logits_pred, y_true)
-        else:
-            loss = None
-        return ForwardOut(logits=logits_pred, loss=loss)
