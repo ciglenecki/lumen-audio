@@ -63,12 +63,3 @@ class Wav2VecWrapper(ModelBase):
 
         logits_pred = self.classifier(hidden_states)
         return logits_pred
-
-    def forward_wrapper(self, forward_input: ForwardInput) -> ForwardOut:
-        audio, y_true = forward_input.feature, forward_input.y_true
-        logits_pred = self.forward(audio)
-        if y_true is not None:
-            loss = self.loss_function(logits_pred, y_true)
-        else:
-            loss = None
-        return ForwardOut(logits=logits_pred, loss=loss)

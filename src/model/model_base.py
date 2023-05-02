@@ -31,18 +31,6 @@ from src.utils.utils_model import (
 )
 
 
-@dataclass
-class ForwardInput:
-    feature: torch.Tensor
-    y_true: torch.Tensor | None
-
-
-@dataclass
-class ForwardOut:
-    logits: torch.Tensor
-    loss: torch.Tensor | None
-
-
 class StepResult:
     def __init__(self, step_dict: dict):
         self.loss: torch.Tensor | None = step_dict.get("loss", None)
@@ -234,11 +222,8 @@ class ModelBase(pl.LightningModule, ABC):
         return out
 
     @abstractmethod
-    def forward_wrapper(self, forward_input: ForwardInput) -> ForwardOut:
-        """Wrapper around forward which every model should implement.
-
-        This function should return logits and loss. Loss can be None if we're in inference mode
-        """
+    def forward(self, forward_input: torch.Tensor) -> torch.Tensor:
+        """Returns logits."""
 
     def _step(
         self,
@@ -273,30 +258,22 @@ class ModelBase(pl.LightningModule, ABC):
             start = num_samples
             end = num_samples + batch_size
 
-            if not is_pred:
-                batch_y = y_true[start:end]
-
-            forward_out = self.forward_wrapper(
-                ForwardInput(feature=batch_feature, y_true=batch_y)
-            )
-
-            batch_logits_pred, individual_losses = (
-                forward_out.logits,
-                forward_out.loss,
-            )
-
-            if individual_losses is not None:
-                if len(individual_losses.shape) != 0:
-                    batch_loss = individual_losses.view(batch_size, -1).mean(dim=1)
-                else:
-                    batch_loss = individual_losses
-                losses[start:end] = batch_loss
+            batch_logits_pred = self.forward(batch_feature)
 
             batch_y_pred_prob = torch.sigmoid(batch_logits_pred)
             batch_y_pred = (batch_y_pred_prob >= 0.5).float()
 
             y_pred_prob[start:end] = batch_y_pred_prob
             y_pred[start:end] = batch_y_pred
+
+            if not is_pred:
+                batch_y = y_true[start:end]
+                individual_losses = self.loss_function(batch_logits_pred, batch_y)
+                if len(individual_losses.shape) != 0:
+                    batch_loss = individual_losses.view(batch_size, -1).mean(dim=1)
+                else:
+                    batch_loss = individual_losses
+                losses[start:end] = batch_loss
 
             num_samples += batch_size
 

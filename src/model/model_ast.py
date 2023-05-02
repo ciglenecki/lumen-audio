@@ -52,15 +52,6 @@ class ASTModelWrapper(ModelBase):
         )
         return out.logits
 
-    def forward_wrapper(self, forward_input: ForwardInput) -> ForwardOut:
-        image, y_true = forward_input.feature, forward_input.y_true
-        logits_pred = self.forward(image)
-        if y_true is not None:
-            loss = self.loss_function(logits_pred, y_true)
-        else:
-            loss = None
-        return ForwardOut(logits=logits_pred, loss=loss)
-
 
 if __name__ == "__main__":
     parser = ArgParseWithConfig()
