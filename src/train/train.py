@@ -154,6 +154,7 @@ if __name__ == "__main__":
         loss_function = torch.nn.BCEWithLogitsLoss(**kwargs)
 
     model = get_model(config, loss_function=loss_function)
+    print_params(model)
 
     # ================= SETUP CALLBACKS (auto checkpoint, tensorboard, early stopping...)========================
     metric_mode_str = MetricMode(config.metric_mode).value
