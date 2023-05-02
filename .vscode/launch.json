@@ -46,7 +46,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--train-paths irmastrain:data/irmas/train csv:data/openmic_r0.8_n_8858.csv --val-paths irmastest:data/irmas/test --backbone-after backbone.features --head-after backbone.classifier --model EFFICIENT_NET_V2_S --audio-transform MEL_SPECTROGRAM --finetune-head-epochs 3 --epochs 10 --batch-size 1 --accumulate_grad_batches 4 --lr 1e-4",
+			"args": "--train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --backbone-after backbone.features --head-after backbone.classifier --model EFFICIENT_NET_V2_S --audio-transform MEL_SPECTROGRAM --finetune-head-epochs 3 --epochs 10 --batch-size 1 --accumulate_grad_batches 4 --lr 1e-4",
 			"justMyCode": false
 		},
 		{
@@ -127,6 +127,15 @@
 			"program": "src/server/main.py",
 			"console": "integratedTerminal",
 			"args": "--dataset-fraction 0.02",
+			"justMyCode": false
+		},
+		{
+			"name": "Spark.py",
+			"type": "python",
+			"request": "launch",
+			"program": "SparK/pretrain/main.py",
+			"console": "integratedTerminal",
+			"args": "--exp_name=debug --data_path=/path/to/imagenet --model=resnet50 --bs=2",
 			"justMyCode": false
 		},
 	]

@@ -190,6 +190,7 @@ def create(arg, **kwargs):
 
 def default_path(path: Path | None, default_value: Path, create_if_none=False):
     """Return default value if object is none."""
+
     if path is not None:  # return explicit path
         return path
 
@@ -242,6 +243,7 @@ def parse_dataset_paths(
 ) -> list[tuple[SupportedDatasetDirType, Path]]:
     # Parse strings to dataset type and path
     try:
+        print(data_dir)
         if isinstance(data_dir, str):
             return [dir_to_enum_and_path(data_dir, allow_raw_path)]
         elif isinstance(data_dir, list):
@@ -644,6 +646,7 @@ class ConfigDefault(Serializable):
             self.train_paths = [
                 f"{SupportedDatasetDirType.IRMAS_TRAIN.value}:{str(self.path_irmas_train)}"
             ]
+        print("\n\nSETTING\n\n", self.train_paths)
         self.train_paths = parse_dataset_paths(self.train_paths)
 
     def set_val_paths(self):
@@ -850,4 +853,9 @@ def get_default_value_for_field(field_str: str, cls=ConfigDefault):
 def get_default_config():
     config = ConfigDefault()
     config.after_init()
+    return config
+
+
+def get_default_config_no_init():
+    config = ConfigDefault()
     return config
