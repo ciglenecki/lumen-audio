@@ -232,8 +232,7 @@ class ModelBase(pl.LightningModule, ABC):
         type: str,
         log_metric_dict=True,
         only_return_loss=True,
-        return_as_object=False,
-    ) -> dict[str, float | torch.Tensor | None] | StepResult:
+    ) -> dict[str, float | torch.Tensor | None]:
         """Does a standard forward, loss caculation and prediction.
 
         Patches are input to the model's forward. Patch predictions should be grouped based on
@@ -311,8 +310,6 @@ class ModelBase(pl.LightningModule, ABC):
                     losses_file=losses_file,
                 )
             )
-        if return_as_object:
-            return StepResult(return_dict)
         return return_dict
 
     def training_step(self, batch, batch_idx):

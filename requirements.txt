@@ -24,13 +24,13 @@ pytorch-lightning==1.9.4
 torchaudio==2.0.1
 torchvision==0.15.1
 torcheval==0.0.6
-torchmetrics==0.11.4
 torch==2.0.0
 tensorboard==2.12.2
 tensorboardX==2.6
 torchmetrics==0.11.4
 torch-scatter==2.1.1+pt20cu117
 grad-cam==1.4.6
+pytorch-metric-learning==2.1.0
 
 # ---------- https -------------#
 fastapi==0.95.1
