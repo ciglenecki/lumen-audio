@@ -190,6 +190,7 @@ def create(arg, **kwargs):
 
 def default_path(path: Path | None, default_value: Path, create_if_none=False):
     """Return default value if object is none."""
+
     if path is not None:  # return explicit path
         return path
 
@@ -850,4 +851,9 @@ def get_default_value_for_field(field_str: str, cls=ConfigDefault):
 def get_default_config():
     config = ConfigDefault()
     config.after_init()
+    return config
+
+
+def get_default_config_no_init():
+    config = ConfigDefault()
     return config
