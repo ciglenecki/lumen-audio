@@ -5,6 +5,7 @@ from src.config.config_defaults import ConfigDefault
 from src.enums.enums import ModelInputDataType, SupportedModels
 from src.model.heads import get_head_constructor
 from src.model.model_ast import ASTModelWrapper
+from src.model.model_base import ModelBase
 from src.model.model_torch import TorchvisionModel
 from src.model.model_wav2vec import Wav2VecWrapper
 from src.model.model_wav2vec_cnn import Wav2VecCnnWrapper
@@ -36,7 +37,7 @@ def get_data_input_type(model_enum: SupportedModels) -> ModelInputDataType:
     return model_data_input_type[model_enum]
 
 
-model_constructor_map = {
+model_constructor_map: dict[SupportedModels, ModelBase] = {
     SupportedModels.AST: ASTModelWrapper,
     SupportedModels.WAV2VEC: Wav2VecWrapper,
     SupportedModels.WAV2VEC_CNN: Wav2VecCnnWrapper,

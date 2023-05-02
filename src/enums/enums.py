@@ -46,6 +46,11 @@ class SupportedAugmentations(Enum):
     RANDOM_ERASE = "random_erase"
     RANDOM_PIXELS = "radnom_pixels"
 
+    # Legacy
+    SEVEN_BAND_EQ = "seven_band_eq"
+    CLIPPING = "clipping"
+    SUM_TWO_SAMPLES = "sum_two_samples"
+
 
 class SupportedScheduler(Enum):
     ONECYCLE = "onecycle"

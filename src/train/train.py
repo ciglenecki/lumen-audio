@@ -142,9 +142,7 @@ if __name__ == "__main__":
     datamodule.setup_for_inference()
 
     if config.loss_function == SupportedLossFunctions.CROSS_ENTROPY:
-        loss_function = torch.nn.BCEWithLogitsLoss(
-            **config.loss_function_kwargs, reduction="none"
-        )
+        loss_function = torch.nn.BCEWithLogitsLoss(**config.loss_function_kwargs)
     if config.loss_function == SupportedLossFunctions.CROSS_ENTROPY_POS_WEIGHT:
         instrument_count = dict_with_keys(
             datamodule.get_train_dataset_stats(), config_defaults.ALL_INSTRUMENTS
@@ -153,7 +151,7 @@ if __name__ == "__main__":
             **config.loss_function_kwargs,
             "pos_weight": calc_instrument_weight(instrument_count),
         }
-        loss_function = torch.nn.BCEWithLogitsLoss(**kwargs, reduction="none")
+        loss_function = torch.nn.BCEWithLogitsLoss(**kwargs)
 
     model = get_model(config, loss_function=loss_function)
 
@@ -191,7 +189,7 @@ if __name__ == "__main__":
         filename="_".join(
             [
                 experiment_name,
-                "val_acc_{val/f1_score_epoch:.4f}",
+                "val_acc_{val/f1_epoch:.4f}",
                 "val_loss_{val/loss_epoch:.4f}",
             ]
         ),
