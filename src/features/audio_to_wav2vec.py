@@ -1,3 +1,5 @@
+from math import ceil
+
 import numpy as np
 import torch
 from transformers import Wav2Vec2FeatureExtractor

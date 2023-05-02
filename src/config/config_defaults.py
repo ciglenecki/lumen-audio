@@ -111,7 +111,6 @@ GENRE_TO_IDX = {
 IDX_TO_GENRE = {v: k for k, v in GENRE_TO_IDX.items()}
 
 
-
 class InstrumentFamily(Enum):
     BRASS = "brass"
     GUITAR = "gutars"
@@ -122,12 +121,12 @@ class InstrumentFamily(Enum):
 
 
 FAMILIY_TO_IDX = {
-    InstrumentFamily.BRASS.value : 0,
-    InstrumentFamily.GUITAR.value : 1,
-    InstrumentFamily.WOODWIND.value : 2,
-    InstrumentFamily.STRINGS.value : 3,
-    InstrumentFamily.VOICE.value : 4,
-    InstrumentFamily.PERCUSSION.value : 5
+    InstrumentFamily.BRASS.value: 0,
+    InstrumentFamily.GUITAR.value: 1,
+    InstrumentFamily.WOODWIND.value: 2,
+    InstrumentFamily.STRINGS.value: 3,
+    InstrumentFamily.VOICE.value: 4,
+    InstrumentFamily.PERCUSSION.value: 5,
 }
 
 INSTRUMENT_TO_FAMILY = {
@@ -137,7 +136,7 @@ INSTRUMENT_TO_FAMILY = {
     InstrumentEnums.ACOUSTIC_GUITAR.value: InstrumentFamily.GUITAR.value,
     InstrumentEnums.ELECTRIC_GUITAR.value: InstrumentFamily.GUITAR.value,
     InstrumentEnums.ORGAN.value: InstrumentFamily.BRASS.value,
-    InstrumentEnums.PIANO.value:InstrumentFamily.PERCUSSION.value,
+    InstrumentEnums.PIANO.value: InstrumentFamily.PERCUSSION.value,
     InstrumentEnums.SAXOPHONE.value: InstrumentFamily.BRASS.value,
     InstrumentEnums.TRUMPET.value: InstrumentFamily.BRASS.value,
     InstrumentEnums.VIOLIN.value: InstrumentFamily.STRINGS.value,
@@ -146,8 +145,6 @@ INSTRUMENT_TO_FAMILY = {
 
 
 IDX_TO_FAMILY = {v: k for k, v in FAMILIY_TO_IDX.items()}
-
-
 
 
 DEFAULT_NUM_LABELS = len(INSTRUMENT_TO_IDX)
@@ -213,7 +210,7 @@ DEFAULT_PRETRAINED_TAG_MAP = {
     SupportedModels.CONVNEXT_LARGE: TAG_IMAGENET1K_V1,
     SupportedModels.CONVNEXT_BASE: TAG_IMAGENET1K_V1,
     SupportedModels.MOBILENET_V3_LARGE: TAG_IMAGENET1K_V1,
-    SupportedModels.CONVLSTM : None
+    SupportedModels.CONVLSTM: None,
 }
 ALL_INSTRUMENTS = [e.value for e in InstrumentEnums]
 ALL_INSTRUMENTS_NAMES = [INSTRUMENT_TO_FULLNAME[ins] for ins in ALL_INSTRUMENTS]
@@ -270,7 +267,7 @@ def dir_to_enum_and_path(
     except ValueError as e:
         raise ValueError(
             f"{str(e)}. Choose one of the following  {[ d.value for d in SupportedDatasetDirType]} (or if you are developing a new dataset, add a new entry into the SupportedDatasetDirType enum)"
-            )
+        )
     dataset_path = Path(dataset_path)
     if not dataset_path.exists():
         raise InvalidArgument(f"Dataset path {dataset_path} doesn't exist.")
@@ -336,7 +333,7 @@ class ConfigDefault(Serializable):
     num_labels: int = create(DEFAULT_NUM_LABELS)
     """Total number of possible lables"""
 
-    train_override_csvs: Path | None = create(None)
+    train_override_csvs: list[Path] | None = create(None)
     """CSV files with columns 'filename, sax, gac, org, ..., cla' where filename is path and each instrument is either 0 or 1"""
 
     # ======================== DPS ===========================
@@ -417,7 +414,7 @@ class ConfigDefault(Serializable):
     weight_decay: float | None = create(None)
     """Maximum lr OneCycle scheduler reaches"""
 
-    freeze_train_bn: bool = create(False)
+    finetune_train_bn: bool = create(True)
     """If true, the batch norm will be trained even if module is frozen."""
 
     quick: bool = create(False)
@@ -480,7 +477,7 @@ class ConfigDefault(Serializable):
     loss_function: SupportedLossFunctions = create(SupportedLossFunctions.CROSS_ENTROPY)
     """Loss function"""
 
-    loss_function_kwargs: dict | dict = create({})
+    loss_function_kwargs: list[str] = create({"reduction": "none"})
     """Loss function kwargs"""
 
     lr: float = create(5e-5)
@@ -613,7 +610,7 @@ class ConfigDefault(Serializable):
                 SupportedModels.CONVNEXT_LARGE: (224, 224),
                 SupportedModels.CONVNEXT_BASE: (224, 224),
                 SupportedModels.MOBILENET_V3_LARGE: (224, 224),
-                SupportedModels.CONVLSTM: None
+                SupportedModels.CONVLSTM: None,
             }
             self.image_size = IMAGE_SIZE_MAP[self.model]
             # Dynamically set pretrained tag
@@ -776,7 +773,7 @@ class ConfigDefault(Serializable):
                 SupportedModels.RESNEXT50_32X4D: None,
                 SupportedModels.RESNEXT101_32X8D: None,
                 SupportedModels.RESNEXT101_64X4D: None,
-                SupportedModels.CONVLSTM: None
+                SupportedModels.CONVLSTM: None,
             }
             self.max_num_width_samples = MAX_NUM_WIDTH_SAMPLE[self.model]
 
@@ -788,6 +785,28 @@ class ConfigDefault(Serializable):
             raise InvalidArgument(
                 "Please set --finetune-heads-epochs int so it's bigger than 0 and less than --epochs int."
             )
+
+        if self.head == SupportedHeads.ATTENTION_HEAD:
+            SUPPORTS_ATTENTION_HEAD = {
+                SupportedModels.AST: True,
+                SupportedModels.WAV2VEC_CNN: True,
+                SupportedModels.WAV2VEC: True,
+                SupportedModels.EFFICIENT_NET_V2_S: False,
+                SupportedModels.EFFICIENT_NET_V2_M: False,
+                SupportedModels.EFFICIENT_NET_V2_L: False,
+                SupportedModels.RESNEXT50_32X4D: False,
+                SupportedModels.RESNEXT101_32X8D: False,
+                SupportedModels.RESNEXT101_64X4D: False,
+                SupportedModels.CONVNEXT_TINY: False,
+                SupportedModels.CONVNEXT_SMALL: False,
+                SupportedModels.CONVNEXT_LARGE: False,
+                SupportedModels.CONVNEXT_BASE: False,
+                SupportedModels.MOBILENET_V3_LARGE: False,
+            }
+            if not SUPPORTS_ATTENTION_HEAD[self.model]:
+                raise InvalidArgument(
+                    f"You can't use ATTENTION_HEAD with {self.model}. Only models {[k.name for k, v in SUPPORTS_ATTENTION_HEAD.items() if v]} support it."
+                )
 
     def isfloat(self, x: str):
         try:

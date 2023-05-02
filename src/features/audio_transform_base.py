@@ -10,10 +10,10 @@ from src.utils.utils_audio import load_audio_from_file
 
 
 class AudioTransformBase(ABC):
-    """Base class for all audio transforms. Ideally, each audio transform class should be self
-    contained and shouldn't depened on the outside context.
+    """Base class for all audio transforms and it bridges the gap between Dataset item and Model's
+    forward.
 
-    Audio transfrom can be model dependent. We can create audio transforms which work only for one
+    Audio transforms can be model dependent. We can create audio transforms which work only for one
     model and that's fine.
     """
 

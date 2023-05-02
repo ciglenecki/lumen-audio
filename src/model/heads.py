@@ -8,7 +8,7 @@ from src.utils.utils_exceptions import UnsupportedHead
 def get_head_constructor(head_enum):
     if SupportedHeads.DEEP_HEAD == head_enum:
         return DeepHead
-    if SupportedHeads.ATTENTION_HEAD == head_enum:
+    elif SupportedHeads.ATTENTION_HEAD == head_enum:
         return AttentionHead
     else:
         raise UnsupportedHead(f"Head {str(head_enum)} not supported")
@@ -16,7 +16,7 @@ def get_head_constructor(head_enum):
 
 class DeepHead(nn.Module):
     def __init__(
-        self, dimensions: list[int], dropout_p=0.3, activation=nn.ReLU()
+        self, dimensions: list[int], dropout_p=0.2, activation=nn.ReLU()
     ) -> None:
         """List of input and output features which will create N - 1 fully connected layers.
 
@@ -70,7 +70,7 @@ class AttentionHead(nn.Module):
         self,
         dimensions: list[int],
         activation=nn.ReLU(),
-        dropout_p=0.3,
+        dropout_p=0.2,
     ) -> None:
         super().__init__()
         input_dim = dimensions[0]
@@ -87,7 +87,7 @@ class AttentionHead(nn.Module):
             features: torch.Tensor (N,T,D): N is batch size, T is the temporal length,
             D is the feature vector dimension
         """
-        attention,attention_weights = self.attention_layer(features)
+        attention, attention_weights = self.attention_layer(features)
         return self.classifer(attention)
 
 

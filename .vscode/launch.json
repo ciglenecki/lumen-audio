@@ -37,7 +37,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--train-paths irmastrain:data/irmas/train csv:data/openmic_r0.8_n_8858.csv --val-paths irmastest:data/irmas/test --backbone-after backbone.features --head-after backbone.classifier --model EFFICIENT_NET_V2_S --audio-transform MEL_SPECTROGRAM --finetune-head-epochs 3 --epochs 10 --batch-size 1 --accumulate_grad_batches 4 --lr 1e-4 --quick",
+			"args": "--train-paths irmastrain:data/irmas/train csv:data/openmic_r0.8_n_8858.csv --val-paths irmastest:data/irmas/test --backbone-after backbone.features --head-after backbone.classifier --model EFFICIENT_NET_V2_S --audio-transform MEL_SPECTROGRAM --finetune-head-epochs 3 --epochs 10 --batch-size 1 --accumulate_grad_batches 4 --lr 1e-4",
 			"justMyCode": false
 		},
 		{
@@ -86,6 +86,15 @@
 			"justMyCode": false
 		},
 		{
+			"name": "Train convnext",
+			"type": "python",
+			"request": "launch",
+			"program": "src/train/train.py",
+			"console": "integratedTerminal",
+			"args": "--train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --backbone-after backbone.features --head-after backbone.classifier --model CONVNEXT_SMALL --audio-transform MEL_SPECTROGRAM --finetune-head-epochs 3 --epochs 10 --batch-size 16 --augmentations --lr 1e-4",
+			"justMyCode": false
+		},
+		{
 			"name": "Python: Current File",
 			"type": "python",
 			"request": "launch",
@@ -97,7 +106,7 @@
 			"name": "Test.py",
 			"type": "python",
 			"request": "launch",
-			"program": "src/train/test.py",
+			"program": "src/train/run_test.py",
 			"console": "integratedTerminal",
 			"args": "--accelerator gpu --devices -1 --test-paths irmastest:data/irmas/test --ckpt models_quick/04-29-17-15-23_SlickDelta_resnext50_32x4d/checkpoints/04-29-17-15-23_SlickDelta_resnext50_32x4d_val_acc_0.0000_val_loss_0.7160.ckpt --batch-size 8 --num-workers 8",
 			"justMyCode": false

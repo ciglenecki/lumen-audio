@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from argparse import Namespace
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional, TypedDict, Union
 
 import numpy as np
 import pytorch_lightning as pl
@@ -11,13 +11,13 @@ from pytorch_lightning.callbacks import BaseFinetuning
 from pytorch_lightning.core.optimizer import LightningOptimizer
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.utilities.types import LRSchedulerPLType
-from torch_scatter import scatter_max
+from torch_scatter import scatter_max, scatter_mean
 
 import src.config.config_defaults as config_defaults
 from src.config.config_defaults import ConfigDefault
 from src.enums.enums import MetricMode, OptimizeMetric, SupportedModels
 from src.model.fluffy import Fluffy, FluffyConfig
-from src.model.heads import DeepHead, HeadTypes
+from src.model.heads import AttentionHead, DeepHead, HeadTypes
 from src.model.optimizers import (
     SupportedOptimizer,
     SupportedScheduler,
@@ -29,18 +29,6 @@ from src.utils.utils_model import (
     get_all_modules_after,
     proper_weight_decay,
 )
-
-
-@dataclass
-class ForwardInput:
-    feature: torch.Tensor
-    y_true: torch.Tensor | None
-
-
-@dataclass
-class ForwardOut:
-    logits: torch.Tensor
-    loss: torch.Tensor | None
 
 
 class StepResult:
@@ -64,6 +52,11 @@ class StepResult:
 
 
 class ModelBase(pl.LightningModule, ABC):
+    """Our ModelBase class.
+
+    Every model inherits this class.
+    """
+
     loggers: list[TensorBoardLogger]
     optimizers_list: list[LightningOptimizer]
     schedulers_list: list[LRSchedulerPLType]
@@ -77,7 +70,7 @@ class ModelBase(pl.LightningModule, ABC):
         epochs: Optional[int],
         finetune_head: bool,
         finetune_head_epochs: Optional[int],
-        freeze_train_bn: bool,
+        finetune_train_bn: bool,
         head_after: str | None,
         backbone_after: str | None,
         loss_function: torch.nn.modules.loss._Loss,
@@ -109,7 +102,7 @@ class ModelBase(pl.LightningModule, ABC):
 
             epochs: number of training epochs. Used only if the LR scheduler depends on epochs size (onecycle, cosine...). Reduce on plateau LR scheduler doesn't get affected by this argument.
 
-            freeze_train_bn: Whether or not to train the batch norm during the frozen stage of the training.
+            finetune_train_bn: Whether or not to train the batch norm during the frozen stage of the training.
 
             head_after: Name of the submodule after which the all submodules are considered as head, e.g. classifier.dense
 
@@ -147,7 +140,7 @@ class ModelBase(pl.LightningModule, ABC):
 
             finetune_head_epochs: at which epoch should the model be unfrozen? warning: unfreezing is not done here. It's done by the finetuning callback.
 
-            weight_decay
+            weight_decay: float
         """
 
         super().__init__(*args, **kwargs)
@@ -156,7 +149,7 @@ class ModelBase(pl.LightningModule, ABC):
         self.batch_size = batch_size
         self.epochs = epochs
         self.fluffy_config = fluffy_config
-        self.freeze_train_bn = freeze_train_bn
+        self.finetune_train_bn = finetune_train_bn
         self.head_after = head_after
         self.head_constructor = head_constructor
         self.head_hidden_dim = head_hidden_dim
@@ -189,7 +182,10 @@ class ModelBase(pl.LightningModule, ABC):
         self.backup_instruments = config_defaults.INSTRUMENT_TO_IDX
         self.save_hyperparameters()
 
-    def create_head(self, head_input_size: int) -> torch.nn.Module:
+    def create_head(self, head_input_size: int) -> DeepHead | AttentionHead | Fluffy:
+        """Creates a head (classifer) based on output feature dimension of a backbone
+        (head_input_size) and uses head_constructor and classifer_kwargs to create instance of the
+        classifier."""
         dimensions = [head_input_size]
         dimensions.extend(self.head_hidden_dim)
 
@@ -208,14 +204,15 @@ class ModelBase(pl.LightningModule, ABC):
         return classifier
 
     def setup(self, stage: str) -> None:
-        """Freezes (turn off require_grads) every submodule except trainable backbone and head."""
+        """Freezes (turn off require_grads) every submodule except trainable backbone and head part
+        of the model."""
         out = super().setup(stage)
         self.num_of_steps_in_epoch = int(
             self.trainer.estimated_stepping_batches / self.trainer.max_epochs
         )
 
         if self.head() is not None and self.trainable_backbone() is not None:
-            BaseFinetuning.freeze(self, train_bn=self.freeze_train_bn)
+            BaseFinetuning.freeze(self, train_bn=self.finetune_train_bn)
             BaseFinetuning.make_trainable(self.trainable_backbone())
             BaseFinetuning.make_trainable(self.head())
 
@@ -225,8 +222,8 @@ class ModelBase(pl.LightningModule, ABC):
         return out
 
     @abstractmethod
-    def forward_wrapper(self, forward_input: ForwardInput) -> ForwardOut:
-        pass
+    def forward(self, forward_input: torch.Tensor) -> torch.Tensor:
+        """Returns logits."""
 
     def _step(
         self,
@@ -237,6 +234,11 @@ class ModelBase(pl.LightningModule, ABC):
         only_return_loss=True,
         return_as_object=False,
     ) -> dict[str, float | torch.Tensor | None] | StepResult:
+        """Does a standard forward, loss caculation and prediction.
+
+        Patches are input to the model's forward. Patch predictions should be grouped based on
+        patch's original audio file. Each patch knows it's original file index (file_indices)
+        """
         features, y_true, file_indices, item_indices = batch
 
         is_pred = type == "pred"
@@ -256,30 +258,22 @@ class ModelBase(pl.LightningModule, ABC):
             start = num_samples
             end = num_samples + batch_size
 
-            if not is_pred:
-                batch_y = y_true[start:end]
-
-            forward_out = self.forward_wrapper(
-                ForwardInput(feature=batch_feature, y_true=batch_y)
-            )
-
-            batch_logits_pred, individual_losses = (
-                forward_out.logits,
-                forward_out.loss,
-            )
-
-            if individual_losses is not None:
-                if len(individual_losses.shape) != 0:
-                    batch_loss = individual_losses.view(batch_size, -1).mean(dim=1)
-                else:
-                    batch_loss = individual_losses
-                losses[start:end] = batch_loss
+            batch_logits_pred = self.forward(batch_feature)
 
             batch_y_pred_prob = torch.sigmoid(batch_logits_pred)
             batch_y_pred = (batch_y_pred_prob >= 0.5).float()
 
             y_pred_prob[start:end] = batch_y_pred_prob
             y_pred[start:end] = batch_y_pred
+
+            if not is_pred:
+                batch_y = y_true[start:end]
+                individual_losses = self.loss_function(batch_logits_pred, batch_y)
+                if len(individual_losses.shape) != 0:
+                    batch_loss = individual_losses.view(batch_size, -1).mean(dim=1)
+                else:
+                    batch_loss = individual_losses
+                losses[start:end] = batch_loss
 
             num_samples += batch_size
 
@@ -300,7 +294,7 @@ class ModelBase(pl.LightningModule, ABC):
             y_true_file, _ = scatter_max(y_true, file_indices, dim=0)
             y_pred_file, _ = scatter_max(y_pred, file_indices, dim=0)
             y_pred_prob_file, _ = scatter_max(y_pred_prob, file_indices, dim=0)
-            losses_file, _ = scatter_max(losses, file_indices, dim=0)
+            losses_file = scatter_mean(losses, file_indices, dim=0)
             item_indices_unique = torch.unique_consecutive(item_indices)
             return_dict.update(
                 dict(
@@ -341,11 +335,10 @@ class ModelBase(pl.LightningModule, ABC):
             batch, batch_idx, type="pred", log_metric_dict=False, only_return_loss=False
         )
 
-    def get_metric_dict(self, loss, y_pred, y_true, type):
-        """Has to return dictionary with 'loss'.
-
-        Lightning uses loss variable to perform backwards
-
+    def get_metric_dict(
+        self, loss: torch.Tensor, y_pred: torch.Tensor, y_true: torch.Tensor, type: str
+    ):
+        """
         metric_dict = {
             "train/loss": ...,
             "train/f1": ...,
@@ -498,6 +491,11 @@ class ModelBase(pl.LightningModule, ABC):
         )
 
     def configure_optimizers(self):
+        """Sets optiimzers and lr schedulers.
+
+        Caculates appropriate number of epochs for lr scheduler based on number of epochs in
+        finetuning phase.
+        """
         if self.finetune_head:
             scheduler_epochs = self.epochs - self.finetune_head_epochs
             total_lr_sch_steps = self.num_of_steps_in_epoch * scheduler_epochs

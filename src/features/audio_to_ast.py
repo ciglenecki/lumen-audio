@@ -18,13 +18,6 @@ from src.utils.utils_dataset import get_example_val_sample
 
 
 class AudioTransformAST(AudioTransformBase):
-
-    """Resamples audio, converts it to mono, does AST feature extraction which extracts spectrogram
-    (mel filter banks) from audio.
-
-    Warning: resampling should be done here. AST does the job.
-    """
-
     def __init__(
         self,
         pretrained_tag,
