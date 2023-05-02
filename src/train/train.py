@@ -189,13 +189,29 @@ if __name__ == "__main__":
         filename="_".join(
             [
                 experiment_name,
-                "val_acc_{val/f1_score_epoch:.4f}",
+                "val_acc_{val/f1_epoch:.4f}",
                 "val_loss_{val/loss_epoch:.4f}",
             ]
         ),
         auto_insert_metric_name=False,
         save_on_train_epoch_end=config.save_on_train_epoch_end,
         verbose=True,
+    )
+
+    callback_checkpoint_weights_only = ModelCheckpoint(
+        monitor=optimizer_metric_str,
+        mode=metric_mode_str,
+        filename="_".join(
+            [
+                experiment_name,
+                "val_acc_{val/f1_epoch:.4f}",
+                "val_loss_{val/loss_epoch:.4f}_weights",
+            ]
+        ),
+        auto_insert_metric_name=False,
+        save_on_train_epoch_end=config.save_on_train_epoch_end,
+        verbose=True,
+        save_weights_only=True,
     )
 
     log_dictionary = {
@@ -205,6 +221,7 @@ if __name__ == "__main__":
 
     callbacks = [
         callback_checkpoint,
+        callback_checkpoint_weights_only,
         callback_early_stopping,
         TQDMProgressBar(refresh_rate=bar_refresh_rate),
         TensorBoardHparamFixer(config_dict=log_dictionary),

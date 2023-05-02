@@ -16,7 +16,7 @@ from torchvision.models import (
 )
 
 from src.model.model import SupportedModels
-from src.model.model_base import ForwardInput, ForwardOut, ModelBase
+from src.model.model_base import ModelBase
 from src.utils.utils_exceptions import UnsupportedModel
 
 TORCHVISION_CONSTRUCTOR_DICT = {

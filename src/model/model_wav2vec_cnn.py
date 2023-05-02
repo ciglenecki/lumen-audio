@@ -4,7 +4,7 @@ from transformers import Wav2Vec2Config, Wav2Vec2Model
 
 import src.config.config_defaults as config_defaults
 from src.model.heads import AttentionHead
-from src.model.model_base import ForwardInput, ForwardOut, ModelBase
+from src.model.model_base import ModelBase
 
 
 class Wav2VecCnnWrapper(ModelBase):

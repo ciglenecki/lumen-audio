@@ -3,7 +3,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from transformers import Wav2Vec2Config, Wav2Vec2Model
 
 import src.config.config_defaults as config_defaults
-from src.model.model_base import ForwardInput, ForwardOut, ModelBase
+from src.model.model_base import ModelBase
 
 
 class Wav2VecWrapper(ModelBase):
