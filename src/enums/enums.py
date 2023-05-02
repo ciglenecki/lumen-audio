@@ -77,6 +77,7 @@ class AudioTransforms(Enum):
     MULTI_SPECTROGRAM = "multi_spectrogram"
     WAV2VEC = "wav2vec"
     MFCC = "mfcc"
+    WAVELET = "wavelet"
 
 
 class SupportedDatasetDirType(Enum):
