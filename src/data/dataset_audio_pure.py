@@ -3,14 +3,10 @@ from pathlib import Path
 
 import librosa
 import numpy as np
-import pandas as pd
 import torch
-from tqdm import tqdm
 
-from config import config_defaults
 from src.data.dataset_base import DatasetBase, DatasetGetItem
 from src.features.audio_transform_base import AudioTransformBase
-from src.utils.utils_exceptions import InvalidDataException
 
 
 class PureAudioDataset(DatasetBase):
@@ -71,5 +67,6 @@ class PureAudioDataset(DatasetBase):
 
     def __getitem__(self, index: int) -> DatasetGetItem:
         audio, labels, _ = self.load_sample(index)
+        labels = torch.tensor(labels).float()
         features = self.audio_transform(audio)
         return features, labels, index
