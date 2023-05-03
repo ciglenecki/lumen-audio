@@ -6,25 +6,25 @@ from typing import Literal
 import numpy as np
 import soundfile as sf
 import torch
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import UploadFile
 from fastapi.encoders import jsonable_encoder
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from data.dataset_audio_pure import PureAudioDataset
-from features.chunking import collate_fn_feature
+from src.data.dataset_audio_pure import PureAudioDataset
+from src.features.chunking import collate_fn_feature
+from src.model.model_base import ModelBase
 from src.server.interface import DatasetDirDict
 from src.server.server_store import server_store
 from src.train.inference_utils import (
     StepResult,
     aggregate_inference_loops,
+    aggregate_step_dicts,
     inference_loop,
     json_pred_from_step_result,
 )
 from src.train.metrics import get_metrics_npy
-from src.train.run_test import get_inference_datamodule
-from src.utils.utils_dataset import multihot_to_dict
-from src.utils.utils_functions import dict_npy_to_list
+from src.utils.utils_functions import dict_npy_to_list, dict_torch_to_npy
 
 
 def get_test_json_dict(step_result: StepResult) -> dict:
@@ -82,20 +82,41 @@ def predict_directory() -> dict:
         data_loader=server_store.data_loader,
         step_type="pred",
     )
-    return_dict = json_pred_from_step_result(step_result)
-    return return_dict
+    json_dict = json_pred_from_step_result(step_result)
+    return json_dict
 
 
 def predict_files() -> dict:
-    step_result = aggregate_inference_loops(
-        device=server_store.device,
-        model=server_store.model,
-        datamodule=server_store.datamodule,
-        data_loader=server_store.data_loader,
-        step_type="pred",
-    )
-    return_dict = json_pred_from_step_result(step_result)
-    return return_dict
+    device = server_store.device
+    model: ModelBase = server_store.model
+    data_loader = server_store.data_loader
+    step_dicts = []
+
+    for batch_idx, batch in tqdm(enumerate(data_loader), total=len(data_loader)):
+        batch = [e.to(device) for e in batch]
+        with torch.no_grad():
+            step_dict = model._step(
+                batch,
+                batch_idx,
+                type="pred",
+                log_metric_dict=False,
+                only_return_loss=False,
+            )
+            step_dict = dict_torch_to_npy(step_dict)
+
+            step_dict["filenames"] = []
+            for file_index in step_dict["item_indices_unique"]:
+                audio_path, _ = data_loader.dataset.dataset_list[file_index]
+                step_dict["filenames"].append(audio_path)
+
+            step_dicts.append(step_dict)
+
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+
+    step_result = aggregate_step_dicts(step_dicts)
+    json_dict = json_pred_from_step_result(step_result)
+    return json_dict
 
 
 def set_server_store_model(model_path: str):
@@ -118,7 +139,8 @@ def set_io_dataloader(audio_files: list[UploadFile]):
     audio_sr_names: dict[str, tuple[np.ndarray, int]] = {}
     for audio_file in audio_files:
         audio, sr = sf.read(io.BytesIO(audio_file.file.read()))
-        filename = audio_file.filename
+        audio = audio.transpose()
+        filename = Path(audio_file.filename)
         audio_sr_names[filename] = audio, sr
 
     dataset = PureAudioDataset(
@@ -139,25 +161,3 @@ def set_io_dataloader(audio_files: list[UploadFile]):
     )
 
     server_store.data_loader = data_loader
-    device = server_store.device
-    model = server_store.model
-
-    for batch_idx, batch in tqdm(enumerate(data_loader), total=len(data_loader)):
-        batch = [e.to(device) for e in batch]
-        with torch.no_grad():
-            step_dict = model._step(
-                batch,
-                batch_idx,
-                type="pred",
-                log_metric_dict=False,
-                only_return_loss=False,
-            )
-            step_dict = dict_torch_to_npy(step_dict)
-
-            step_dict["filenames"] = []
-            for file_index in dataset.dataset_list:
-                audio_path, _ = datamodule.get_item_from_internal_structure(
-                    file_index, split="test"
-                )
-                step_dict["filenames"].append(audio_path)
-        yield step_dict
