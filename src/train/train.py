@@ -254,3 +254,6 @@ if __name__ == "__main__":
 
     trainer.fit(model, datamodule=datamodule, ckpt_path=config.ckpt)
     trainer.test(model, datamodule)
+
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
