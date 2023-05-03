@@ -41,6 +41,7 @@ def get_config() -> tuple[ConfigDefault, Namespace]:
         config.dataset_fraction = 0.01
         config.batch_size = 2
         config.output_dir = config.path_models_quick
+        config.finetune_head_epochs = 2
 
     if config.epochs:
         pl_args.epochs = config.epochs

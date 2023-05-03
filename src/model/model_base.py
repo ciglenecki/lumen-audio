@@ -143,7 +143,7 @@ class ModelBase(pl.LightningModule, ABC):
             weight_decay: float
         """
 
-        super().__init__(*args, **kwargs)
+        super().__init__()
 
         self.backbone_after = backbone_after
         self.batch_size = batch_size
@@ -232,7 +232,7 @@ class ModelBase(pl.LightningModule, ABC):
         type: str,
         log_metric_dict=True,
         only_return_loss=True,
-    ) -> dict[str, float | torch.Tensor | None] | StepResult:
+    ) -> dict[str, float | torch.Tensor | None]:
         """Does a standard forward, loss caculation and prediction.
 
         Patches are input to the model's forward. Patch predictions should be grouped based on
@@ -289,24 +289,33 @@ class ModelBase(pl.LightningModule, ABC):
             )
             return_dict.update(metric_dict)
 
+        # Train, Val, Test, Pred
         if not only_return_loss:
-            y_true_file, _ = scatter_max(y_true, file_indices, dim=0)
+            # Dataset Item idx because of datamodule internal get
+            item_indices_unique = torch.unique_consecutive(item_indices)
             y_pred_file, _ = scatter_max(y_pred, file_indices, dim=0)
             y_pred_prob_file, _ = scatter_max(y_pred_prob, file_indices, dim=0)
+            return_dict.update(
+                dict(
+                    y_pred=y_pred,
+                    y_pred_prob=y_pred_prob,
+                    item_indices=item_indices,
+                    file_indices=file_indices,
+                    item_indices_unique=item_indices_unique,
+                    y_pred_file=y_pred_file,
+                    y_pred_prob_file=y_pred_prob_file,
+                )
+            )
+
+        # Train, Val, Test
+        if not only_return_loss and not is_pred:
+            y_true_file, _ = scatter_max(y_true, file_indices, dim=0)
             losses_file = scatter_mean(losses, file_indices, dim=0)
-            item_indices_unique = torch.unique_consecutive(item_indices)
             return_dict.update(
                 dict(
                     losses=losses,
-                    y_pred=y_pred,
-                    y_pred_prob=y_pred_prob,
                     y_true=y_true,
-                    file_indices=file_indices,
-                    item_indices_unique=item_indices_unique,
-                    item_indices=item_indices,
                     y_true_file=y_true_file,
-                    y_pred_file=y_pred_file,
-                    y_pred_prob_file=y_pred_prob_file,
                     losses_file=losses_file,
                 )
             )

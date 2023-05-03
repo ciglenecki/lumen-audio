@@ -228,6 +228,7 @@ def create(arg, **kwargs):
 
 def default_path(path: Path | None, default_value: Path, create_if_none=False):
     """Return default value if object is none."""
+
     if path is not None:  # return explicit path
         return path
 
@@ -286,7 +287,7 @@ def parse_dataset_paths(
             return [dir_to_enum_and_path(d, allow_raw_path) for d in data_dir]
     except InvalidArgument as e:
         msg = USAGE_TEXT_PATHS
-        raise InvalidArgument(f"{str(e)}\n{msg}")
+        raise InvalidArgument(f"\n\n{str(e)}\n\n{msg}")
 
 
 @dataclass
@@ -729,6 +730,13 @@ class ConfigDefault(Serializable):
                 f"--audio-transform is required {list(AudioTransforms)}"
             )
 
+    def set_model_enum_from_ckpt(self) -> SupportedModels:
+        for e in list(SupportedModels):
+            if e.value in str(self.ckpt.stem):
+                self.model = e
+                break
+        return self.model
+
     def validate_train_args(self):
         """This function validates arguments before training."""
         self.required_train_paths()
@@ -873,4 +881,9 @@ def get_default_value_for_field(field_str: str, cls=ConfigDefault):
 def get_default_config():
     config = ConfigDefault()
     config.after_init()
+    return config
+
+
+def get_default_config_no_init():
+    config = ConfigDefault()
     return config

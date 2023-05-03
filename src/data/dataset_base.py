@@ -4,6 +4,7 @@ import random
 from abc import abstractmethod
 from pathlib import Path
 
+import librosa
 import numpy as np
 import pandas as pd
 import torch
@@ -59,9 +60,16 @@ class DatasetBase(Dataset[DatasetGetItem]):
                 default_flow_style=False,
             )
         )
+
+        self.set_need_to_sample()
+
         assert (
             self.dataset_list
         ), "Property `dataset_list` (type: list[tuple[Path, np.ndarray]]) should be set in create_dataset_list() function."
+
+    def set_need_to_sample(self):
+        example_sr = librosa.get_samplerate(self.dataset_list[0][0])
+        self.need_to_resample: bool = example_sr != self.sampling_rate
 
     @abstractmethod
     def create_dataset_list(self) -> list[tuple[Path, np.ndarray]]:
@@ -138,7 +146,7 @@ class DatasetBase(Dataset[DatasetGetItem]):
         audio_path, labels = self.dataset_list[item_idx]
         audio, _ = load_audio_from_file(
             audio_path,
-            target_sr=self.sampling_rate,
+            target_sr=self.sampling_rate if self.need_to_resample else None,
             method="librosa",
             normalize=self.normalize_audio,
         )
@@ -315,7 +323,6 @@ class DatasetBase(Dataset[DatasetGetItem]):
         # )
         # while True:
         #     play_audio(audio, sampling_rate=self.sampling_rate)
-
         return features, labels, index
 
 

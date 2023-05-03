@@ -72,6 +72,17 @@ def get_dirs_only(path: Path):
     ]
 
 
+def dict_torch_to_npy(d: dict):
+    return {
+        k: v.detach().cpu().numpy() if isinstance(v, torch.Tensor) else v
+        for k, v in d.items()
+    }
+
+
+def dict_npy_to_list(d: dict):
+    return {k: v.tolist() if isinstance(v, np.ndarray) else v for k, v in d.items()}
+
+
 def tensor_sum_of_elements_to_one(tensor: torch.Tensor, dim):
     """Scales elements of the tensor so that the sum is 1."""
     return tensor / torch.sum(tensor, dim=dim, keepdim=True)

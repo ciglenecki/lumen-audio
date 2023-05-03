@@ -278,7 +278,6 @@ class OurDataModule(pl.LightningDataModule):
                     f"{str(dataset_enum)}. Please add dataset enum in this if/elif part."
                 )
             datasets.append(dataset)
-        print()
         if len(datasets) == 0:
             return None
 
@@ -435,9 +434,8 @@ class OurDataModule(pl.LightningDataModule):
     def _log_indices(self):
         if self.train_sampler is not None:
             train_indices = self.train_sampler.indices
-            print()
             print(
-                "Train size",
+                "\nTrain size",
                 self.train_size,
                 "indices:",
                 train_indices[0:5],
@@ -461,8 +459,8 @@ class OurDataModule(pl.LightningDataModule):
                 "indices:",
                 test_indices[0:5],
                 test_indices[-5:],
+                "\n",
             )
-            print()
 
     def get_train_dataset_stats(self):
         if self._train_stats is not None:
