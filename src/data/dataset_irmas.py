@@ -117,6 +117,7 @@ class IRMASDatasetTest(DatasetBase):
         glob_generators = [
             self.dataset_path.rglob(glob_exp) for glob_exp in glob_expressions
         ]
+
         for audio_file in tqdm(chain(*glob_generators)):
             path_without_ext = os.path.splitext(audio_file)[0]
             txt_path = Path(path_without_ext + ".txt")
