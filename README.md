@@ -35,7 +35,7 @@ Low priority tasks:
 - [ ] pretraning: SparK https://github.com/keyu-tian/SparK
 - [x] Add ArcFace module in codebase
 - [ ] create new arcface branch and apply arcface to all models
-  
+
 ### Parallel Mobilenets
 - ##################
 - create 4 Mobilenets which cover 11 instruments
@@ -78,7 +78,7 @@ Low priority tasks:
   - [ ] wav2vec
   - [ ] maybe CRNN ?
 - [x] Add Focal Loss, InstrumentFamilyLoss to `src/model/loss_functions.py` and add SupportedLosses
-- [x] create attention function vizualization with pretrained AST 
+- [x] create attention function vizualization with pretrained AST
   - [ ] make sure you get actual image of attention weights for some melespectrogram
 - ![](img/attention_weights.png)
 
