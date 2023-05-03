@@ -83,9 +83,9 @@ def parse_args():
         raise InvalidDataException(
             f"{args.openmic_csv} is not a file. Please run python3 data/convert_openmic_guitras_to_csv.py to generate a OpenMIC guitars only csv."
         )
-    if len(os.listdir(args.openmic)) == 0:
+    if len(os.listdir(args.openmic_emb_dir)) == 0:
         raise InvalidDataException(
-            f"{args.openmic} is emptyPlease generate IRMAS train embeddings which will be used to train a SVM for guitars. Run python3 --model AST --audio-transform AST --pretrained-tag MIT/ast-finetuned-audioset-10-10-0.4593 --dataset-paths inference:data/openmic/guitars_only_n_1144_relevance_0.8.csv --batch-size 1 --num-workers 1"
+            f"{args.openmic_emb_dir} is emptyPlease generate IRMAS train embeddings which will be used to train a SVM for guitars. Run python3 --model AST --audio-transform AST --pretrained-tag MIT/ast-finetuned-audioset-10-10-0.4593 --dataset-paths inference:data/openmic/guitars_only_n_1144_relevance_0.8.csv --batch-size 1 --num-workers 1"
         )
     if len(os.listdir(args.irmas_emb_dir)) == 0:
         raise InvalidDataException(
@@ -209,6 +209,9 @@ def main():
 
     # Drop low OpenMIC relevance data
     df = df.loc[df["relevance"] > args.relevance, :]
+
+    # Drop dups
+    df = df.drop_duplicates(subset=["file"])
 
     # One hot encoding
     df = df.loc[:, df.columns.isin(["file", "instrument"])]
