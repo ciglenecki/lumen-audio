@@ -9,19 +9,13 @@ from tqdm import tqdm
 
 from src.config.argparse_with_config import ArgParseWithConfig
 from src.config.config_defaults import ConfigDefault
-from src.data.datamodule import OurDataModule
-from src.features.audio_transform import AudioTransformBase, get_audio_transform
-from src.features.chunking import collate_fn_feature
-from src.model.model import SupportedModels, get_model, model_constructor_map
-from src.model.model_base import ModelBase
 from src.train.inference_utils import (
-    StepResult,
     aggregate_inference_loops,
     get_inference_datamodule,
     get_inference_model_objs,
     validate_inference_args,
 )
-from src.utils.utils_exceptions import InvalidArgument, UnsupportedModel
+from src.train.metrics import get_metrics
 
 
 def main(args, config: ConfigDefault):
@@ -33,6 +27,25 @@ def main(args, config: ConfigDefault):
     datamodule = get_inference_datamodule(config, audio_transform, model_config)
     data_loader = datamodule.train_dataloader()
     result = aggregate_inference_loops(device, model, datamodule, data_loader)
+
+    y_pred = torch.stack(result.y_pred)
+    y_pred_file = torch.stack(result.y_pred_file)
+    y_true = torch.stack(result.y_true)
+    y_true_file = torch.stack(result.y_true_file)
+
+    metric_dict = get_metrics(
+        y_pred=y_pred,
+        y_true=y_true,
+        num_labels=config.num_labels,
+        return_per_instrument=True,
+    )
+    metric_dict_file = get_metrics(
+        y_pred=y_pred_file,
+        y_true=y_true_file,
+        num_labels=config.num_labels,
+        return_per_instrument=True,
+    )
+    return metric_dict, metric_dict_file, y_pred, y_pred_file
 
 
 if __name__ == "__main__":
