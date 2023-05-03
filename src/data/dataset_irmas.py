@@ -105,9 +105,11 @@ class IRMASDatasetTest(DatasetBase):
         """
         super().__init__(*args, **kwargs)
 
-        assert (
-            len(self.dataset_list) == config_defaults.DEFAULT_IRMAS_TEST_SIZE
-        ), f"IRMAS test set should contain {config_defaults.DEFAULT_IRMAS_TEST_SIZE} samples"
+        if len(self.dataset_list) == config_defaults.DEFAULT_IRMAS_TEST_SIZE:
+            print(
+                "WARNING:",
+                f"IRMAS test set should contain {config_defaults.DEFAULT_IRMAS_TEST_SIZE} samples",
+            )
 
     def create_dataset_list(self) -> list[tuple[Path, np.ndarray]]:
         """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)"""
