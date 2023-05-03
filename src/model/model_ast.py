@@ -7,12 +7,14 @@ from transformers.modeling_outputs import SequenceClassifierOutput
 
 import src.config.config_defaults as config_defaults
 from src.config.argparse_with_config import ArgParseWithConfig
-from src.model.model_base import ForwardInput, ForwardOut, ModelBase
+from src.model.model_base import ModelBase
 from src.utils.utils_audio import load_audio_from_file, play_audio
 from src.utils.utils_dataset import get_example_val_sample
 
 
 class ASTModelWrapper(ModelBase):
+    """Audio Spectrogram Transformer model."""
+
     loggers: list[TensorBoardLogger]
 
     def __init__(
@@ -49,15 +51,6 @@ class ASTModelWrapper(ModelBase):
             return_dict=True,
         )
         return out.logits
-
-    def forward_wrapper(self, forward_input: ForwardInput) -> ForwardOut:
-        image, y_true = forward_input.feature, forward_input.y_true
-        logits_pred = self.forward(image)
-        if y_true is not None:
-            loss = self.loss_function(logits_pred, y_true)
-        else:
-            loss = None
-        return ForwardOut(logits=logits_pred, loss=loss)
 
 
 if __name__ == "__main__":

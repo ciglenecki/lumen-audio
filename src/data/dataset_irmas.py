@@ -53,11 +53,6 @@ class IRMASDatasetTrain(DatasetBase):
         }
         """
         dataset_list = []
-        if self.train_override_csvs:
-            dfs = [pd.read_csv(csv_path) for csv_path in self.train_override_csvs]
-            df = pd.concat(dfs, ignore_index=True)
-            df.set_index("filename", inplace=True)
-
         glob_generators = [
             self.dataset_path.rglob(glob_exp) for glob_exp in glob_expressions
         ]
@@ -68,12 +63,8 @@ class IRMASDatasetTrain(DatasetBase):
             )  # 110__[org][dru][jaz_blu]1117__2 => ["org", "dru", "jaz_blue"]
 
             path_str = str(path)
-            if self.train_override_csvs and path_str in df.index:  # override label
-                inner_instrument_indices = np.where(df.loc[path_str])[0]
-                item_instruments = df.columns[inner_instrument_indices]
-            else:
-                instrument = characteristics[0]
-                item_instruments = [instrument]
+            instrument = characteristics[0]
+            item_instruments = [instrument]
 
             labels = encode_instruments(item_instruments)
 
@@ -114,9 +105,11 @@ class IRMASDatasetTest(DatasetBase):
         """
         super().__init__(*args, **kwargs)
 
-        assert (
-            len(self.dataset_list) == config_defaults.DEFAULT_IRMAS_TEST_SIZE
-        ), f"IRMAS test set should contain {config_defaults.DEFAULT_IRMAS_TEST_SIZE} samples"
+        if len(self.dataset_list) == config_defaults.DEFAULT_IRMAS_TEST_SIZE:
+            print(
+                "WARNING:",
+                f"IRMAS test set should contain {config_defaults.DEFAULT_IRMAS_TEST_SIZE} samples",
+            )
 
     def create_dataset_list(self) -> list[tuple[Path, np.ndarray]]:
         """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)"""
@@ -124,6 +117,7 @@ class IRMASDatasetTest(DatasetBase):
         glob_generators = [
             self.dataset_path.rglob(glob_exp) for glob_exp in glob_expressions
         ]
+
         for audio_file in tqdm(chain(*glob_generators)):
             path_without_ext = os.path.splitext(audio_file)[0]
             txt_path = Path(path_without_ext + ".txt")

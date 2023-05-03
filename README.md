@@ -36,6 +36,10 @@ Low priority tasks:
 ## Matej:
 - [ ] create eval script which will caculate ALL metrics for the whole dataset
   1. konfuzijska matrica
+  A. largest prediction miss
+  B. best prediction
+  C. distribution of predictions (hamming, f1)
+  D. Plots for per instrument f1
   2. sve metrike, po instruemtima
   3. roc curve
   4. distrubicija dataseta

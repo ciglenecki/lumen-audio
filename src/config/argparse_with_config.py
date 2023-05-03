@@ -16,7 +16,7 @@ class ArgParseWithConfig(simple_parsing.ArgumentParser):
     """
 
     config_dest_str = "Config arguments"
-    args_dest_group = "Script arguments"
+    script_dest_group = "Script arguments"
     pl_group_title = "pl.Trainer"
     config_group_title = f"ConfigDefault ['{config_dest_str}']"
 
@@ -42,7 +42,7 @@ class ArgParseWithConfig(simple_parsing.ArgumentParser):
             dest=ArgParseWithConfig.config_dest_str,
         )
         self.additional_args_group = self.add_argument_group(
-            ArgParseWithConfig.args_dest_group
+            ArgParseWithConfig.script_dest_group
         )
 
         # Add PyTorch Lightning arguments
@@ -82,7 +82,7 @@ class ArgParseWithConfig(simple_parsing.ArgumentParser):
             if group.title:
                 args_dict[group.title] = argparse.Namespace(**group_dict)
 
-        args = args_dict[ArgParseWithConfig.args_dest_group]
+        args = args_dict[ArgParseWithConfig.script_dest_group]
         pl_args = (
             args_dict[ArgParseWithConfig.pl_group_title]
             if self.add_lightning_args
@@ -91,16 +91,19 @@ class ArgParseWithConfig(simple_parsing.ArgumentParser):
         return args, config, pl_args
 
     def sort_action_groups(self):
-        user_idx = None
+        """Reposition script args so it's at the bottom of --help."""
+        script_idx = None
         for idx, action_group in enumerate(self._action_groups):
-            if action_group.title == ArgParseWithConfig.args_dest_group:
-                user_idx = idx
+            if action_group.title == ArgParseWithConfig.script_dest_group:
+                script_idx = idx
                 break
-        assert user_idx is not None
-        action_group = self._action_groups.pop(user_idx)
+        assert script_idx is not None
+        action_group = self._action_groups.pop(script_idx)
         self._action_groups.append(action_group)
 
     def format_help(self):
+        """Filters --help so it only shows Config and PyTorch lightning arguments specified in
+        self.config_pl_args."""
         self.sort_action_groups()
         formatter = self._get_formatter()
         # Filter actions based on self.config_pl_args
@@ -132,7 +135,7 @@ class ArgParseWithConfig(simple_parsing.ArgumentParser):
         # Add description
         formatter.add_text(self.description)
 
-        # positionals, optionals and user-defined groups
+        # positionals, optionals and script-defined groups
         for action_group in self._action_groups:
             # Filter actions from the current group by using the existing set
             if self.config_pl_args is not None:
@@ -158,7 +161,7 @@ class ArgParseWithConfig(simple_parsing.ArgumentParser):
 class SortingHelpFormatter(
     simple_parsing.SimpleHelpFormatter, argparse.RawTextHelpFormatter
 ):
-    """Alphabetically sort -h."""
+    """Alphabetically sort --help."""
 
     def add_arguments(self, actions):
         actions = sorted(actions, key=attrgetter("option_strings"))

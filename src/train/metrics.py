@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from torchmetrics.functional.classification import (
     multilabel_accuracy,
@@ -9,6 +10,7 @@ from torchmetrics.functional.classification import (
 
 import src.config.config_defaults as config_defaults
 from src.config.config_defaults import INSTRUMENT_TO_FULLNAME, INSTRUMENT_TO_IDX
+from src.utils.utils_functions import dict_torch_to_npy
 
 
 def get_metrics(
@@ -51,3 +53,19 @@ def get_metrics(
             metrics[f"instruments/{fullname}_{metric_name}"] = metric_value[idx]
 
     return metrics
+
+
+def get_metrics_npy(
+    y_pred: np.ndarray,
+    y_true: np.ndarray,
+    num_labels=config_defaults.DEFAULT_NUM_LABELS,
+    return_per_instrument=False,
+):
+    return dict_torch_to_npy(
+        get_metrics(
+            torch.tensor(y_pred),
+            torch.tensor(y_true),
+            num_labels,
+            return_per_instrument,
+        )
+    )

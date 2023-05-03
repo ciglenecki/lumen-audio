@@ -12,9 +12,6 @@ from pytorch_lightning.callbacks import (
     TQDMProgressBar,
 )
 
-
-#from pytorch_lightning.utilities.seed import seed_everything
-
 from src.config import config_defaults
 from src.config.config_defaults import ConfigDefault
 from src.config.config_train import get_config
@@ -29,8 +26,8 @@ from src.enums.enums import (
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
 from src.features.augmentations import get_augmentations
 from src.features.chunking import collate_fn_feature
-from src.model.model import get_model
 from src.model.loss_functions import FocalLoss
+from src.model.model import get_model
 from src.train.callbacks import (
     FinetuningCallback,
     GeneralMetricsEpochLogger,
@@ -47,6 +44,8 @@ from src.utils.utils_functions import (
     to_yaml,
 )
 from src.utils.utils_model import print_params
+
+# from pytorch_lightning.utilities.seed import seed_everything
 
 
 def experiment_setup(config: ConfigDefault, pl_args: Namespace):
@@ -85,7 +84,7 @@ def experiment_setup(config: ConfigDefault, pl_args: Namespace):
 
 
 if __name__ == "__main__":
-    seed_everything(42)
+    # seed_everything(42)
 
     config, pl_args = get_config()
 
@@ -139,14 +138,14 @@ if __name__ == "__main__":
         sum_n_samples=sum_n_samples,
         use_weighted_train_sampler=config.use_weighted_train_sampler,
         sampling_rate=config.sampling_rate,
+        train_override_csvs=config.train_override_csvs,
     )
     datamodule.setup_for_train()
+    datamodule.setup_for_inference()
 
     if config.loss_function == SupportedLossFunctions.CROSS_ENTROPY:
-        loss_function = torch.nn.BCEWithLogitsLoss(
-            **config.loss_function_kwargs, reduction="none"
-        )
-    if config.loss_function == SupportedLossFunctions.CROSS_ENTROPY_POS_WEIGHT:
+        loss_function = torch.nn.BCEWithLogitsLoss(**config.loss_function_kwargs)
+    elif config.loss_function == SupportedLossFunctions.CROSS_ENTROPY_POS_WEIGHT:
         instrument_count = dict_with_keys(
             datamodule.get_train_dataset_stats(), config_defaults.ALL_INSTRUMENTS
         )
@@ -155,12 +154,9 @@ if __name__ == "__main__":
             "pos_weight": calc_instrument_weight(instrument_count),
         }
         loss_function = torch.nn.BCEWithLogitsLoss(**kwargs, reduction="none")
-    if config.loss_function == SupportedLossFunctions.FOCAL_LOSS:
-        
-        loss_functon = FocalLoss(
-            **config.loss_function_kwargs
-        )
-    if config.loss_funtion == SupportedLossFunctions.FOCAL_LOSS_POS_WEIGHT:
+    elif config.loss_function == SupportedLossFunctions.FOCAL_LOSS:
+        loss_functon = FocalLoss(**config.loss_function_kwargs)
+    elif config.loss_funtion == SupportedLossFunctions.FOCAL_LOSS_POS_WEIGHT:
         instrument_count = dict_with_keys(
             datamodule.get_train_dataset_stats(), config_defaults.ALL_INSTRUMENTS
         )
@@ -168,9 +164,7 @@ if __name__ == "__main__":
             **config.loss_function_kwargs,
             "pos_weight": calc_instrument_weight(instrument_count),
         }
-        loss_function = FocalLoss(
-            **kwargs
-        )
+        loss_function = FocalLoss(**kwargs)
 
     model = get_model(config, loss_function=loss_function)
     print_params(model)
@@ -209,7 +203,7 @@ if __name__ == "__main__":
         filename="_".join(
             [
                 experiment_name,
-                "val_acc_{val/f1_score_epoch:.4f}",
+                "val_acc_{val/f1_epoch:.4f}",
                 "val_loss_{val/loss_epoch:.4f}",
             ]
         ),
@@ -234,7 +228,10 @@ if __name__ == "__main__":
 
     if config.finetune_head:
         callbacks.append(
-            FinetuningCallback(finetune_head_epochs=config.finetune_head_epochs)
+            FinetuningCallback(
+                finetune_head_epochs=config.finetune_head_epochs,
+                train_bn=config.finetune_train_bn,
+            )
         )
 
     callbacks.append(ModelSummary(max_depth=1))
@@ -270,3 +267,6 @@ if __name__ == "__main__":
 
     trainer.fit(model, datamodule=datamodule, ckpt_path=config.ckpt)
     trainer.test(model, datamodule)
+
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()

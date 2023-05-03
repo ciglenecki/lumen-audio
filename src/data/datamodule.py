@@ -40,11 +40,7 @@ class OurDataModule(pl.LightningDataModule):
     class_count_dict: dict[str, int]
 
     """
-    OurDataModule is responsible for efficiently creating datasets creating a
-    indexing strategy (SubsetRandomSampler) for each dataset.
-    Any preprocessing which requires aggregation of data,
-    such as caculating the mean and standard deviation of the dataset
-    should be performed here.
+    OurDataModule is responsible for creating datasets and indexing strategy (SubsetRandomSampler) for each dataset.
     """
 
     def __init__(
@@ -67,6 +63,7 @@ class OurDataModule(pl.LightningDataModule):
         use_weighted_train_sampler,
         sampling_rate: int,
         num_classes: int = config_defaults.DEFAULT_NUM_LABELS,
+        train_override_csvs: list[Path] | None = None,
     ):
         super().__init__()
         self.batch_size = batch_size
@@ -91,6 +88,7 @@ class OurDataModule(pl.LightningDataModule):
         self.train_dataset = None
         self.val_dataset = None
         self.test_dataset = None
+        self.train_override_csvs = train_override_csvs
 
         self._train_stats: dict | None = None
         self._val_stats: dict | None = None
@@ -170,14 +168,15 @@ class OurDataModule(pl.LightningDataModule):
                 )
             ),
         )
+        self._log_indices()
 
     def setup_for_inference(self):
-        """Create dataset, indices and statictis for testing/inference."""
+        """Create test dataset, indices and statictis for testing/inference."""
         self.test_dataset = self.concat_datasets_from_tuples(
             self.test_paths, self.val_audio_transform
         )
 
-        # Simply reuse val dataset as train if train is not provided.
+        # Reuse val dataset as test if test is not provided.
         if self.test_dataset is None and self.val_dataset is not None:
             self.test_dataset = self.val_dataset
             test_indices = np.arange(len(self.val_dataset))
@@ -205,27 +204,32 @@ class OurDataModule(pl.LightningDataModule):
                 )
             ),
         )
+        self._log_indices()
 
     def setup(self, stage=None):
         super().setup(stage)
-        if stage in ["fit"]:  # train + validate
-            self.setup_for_train()
-        elif stage in ["predict", "test"]:
-            self.setup_for_inference()
-        self._log_indices()
+        return
+        # if stage in ["fit"]:  # train + validate
+        #     self.setup_for_train()
+        # elif stage in ["predict", "test"]:
+        #     self.setup_for_inference()
+        # self._log_indices()
 
     def concat_datasets_from_tuples(
         self,
         dataset_paths: list[tuple[SupportedDatasetDirType, Path]] | None,
         transform: AudioTransformBase,
     ) -> None | ConcatDataset:
+        """Creates one dataset (ConcatDataset) from mutliple datasets specified in
+        dataset_paths."""
+
         if dataset_paths is None:
             return None
 
         datasets: list[Dataset] = []
         for dataset_enum, dataset_path in dataset_paths:
             print(
-                f"Creating dataset {dataset_enum.value.upper()} from {str(dataset_path)}"
+                f"================== Creating dataset {dataset_enum.value.upper()} from {str(dataset_path)} ==================\n"
             )
             if dataset_enum == SupportedDatasetDirType.IRMAS_TRAIN:
                 dataset = IRMASDatasetTrain(
@@ -235,7 +239,7 @@ class OurDataModule(pl.LightningDataModule):
                     concat_n_samples=self.concat_n_samples,
                     sum_n_samples=self.sum_n_samples,
                     sampling_rate=self.sampling_rate,
-                    train_override_csvs=None,
+                    train_override_csvs=self.train_override_csvs,
                     num_classes=self.num_classes,
                 )
             elif dataset_enum == SupportedDatasetDirType.IRMAS_TEST:
@@ -246,7 +250,7 @@ class OurDataModule(pl.LightningDataModule):
                     concat_n_samples=False,
                     sum_n_samples=False,
                     sampling_rate=self.sampling_rate,
-                    train_override_csvs=None,
+                    train_override_csvs=self.train_override_csvs,
                     num_classes=self.num_classes,
                 )
             elif dataset_enum == SupportedDatasetDirType.OPENMIC:
@@ -259,7 +263,7 @@ class OurDataModule(pl.LightningDataModule):
                     concat_n_samples=self.concat_n_samples,
                     sum_n_samples=self.sum_n_samples,
                     sampling_rate=self.sampling_rate,
-                    train_override_csvs=None,
+                    train_override_csvs=self.train_override_csvs,
                     num_classes=self.num_classes,
                 )
             elif dataset_enum == SupportedDatasetDirType.INFERENCE:
@@ -274,7 +278,6 @@ class OurDataModule(pl.LightningDataModule):
                     f"{str(dataset_enum)}. Please add dataset enum in this if/elif part."
                 )
             datasets.append(dataset)
-        print()
         if len(datasets) == 0:
             return None
 
@@ -298,7 +301,7 @@ class OurDataModule(pl.LightningDataModule):
     def train_dataloader(self) -> DataLoader[ConcatDataset[DatasetGetItem]]:
         assert (
             self.train_dataset is not None
-        ), 'To access the train dataloader please call datamodule.setup("fit") after creating datamodule.'
+        ), "To access the train dataloader please call setup_for_train() after creating datamodule."
         return DataLoader(
             self.train_dataset,
             batch_size=self.batch_size,
@@ -312,7 +315,7 @@ class OurDataModule(pl.LightningDataModule):
     def val_dataloader(self) -> DataLoader[ConcatDataset[DatasetGetItem]]:
         assert (
             self.val_dataset is not None
-        ), 'To access the val dataloader please call datamodule.setup("fit") after creating datamodule.'
+        ), "To access the val dataloader please call datamodule.setup_for_train() after creating datamodule."
         return DataLoader(
             self.val_dataset,
             batch_size=self.batch_size,
@@ -326,7 +329,7 @@ class OurDataModule(pl.LightningDataModule):
     def test_dataloader(self) -> DataLoader[ConcatDataset[DatasetGetItem]]:
         assert (
             self.test_dataset is not None
-        ), 'To access the test dataloader please call datamodule.setup("test") after creating datamodule.'
+        ), "To access the test dataloader please call datamodule.setup_for_inference() after creating datamodule."
         return DataLoader(
             self.test_dataset,
             batch_size=self.batch_size,
@@ -340,7 +343,7 @@ class OurDataModule(pl.LightningDataModule):
     def predict_dataloader(self) -> DataLoader[ConcatDataset[DatasetGetItem]]:
         assert (
             self.test_dataset is not None
-        ), "Can't use predict_dataloader without test dataset"
+        ), "To access the predict dataloader please call datamodule.setup_for_inference() after creating datamodule."
         return DataLoader(
             self.test_dataset,
             batch_size=self.batch_size,
@@ -431,9 +434,8 @@ class OurDataModule(pl.LightningDataModule):
     def _log_indices(self):
         if self.train_sampler is not None:
             train_indices = self.train_sampler.indices
-            print()
             print(
-                "Train size",
+                "\nTrain size",
                 self.train_size,
                 "indices:",
                 train_indices[0:5],
@@ -457,8 +459,8 @@ class OurDataModule(pl.LightningDataModule):
                 "indices:",
                 test_indices[0:5],
                 test_indices[-5:],
+                "\n",
             )
-            print()
 
     def get_train_dataset_stats(self):
         if self._train_stats is not None:

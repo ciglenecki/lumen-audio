@@ -26,7 +26,7 @@ def get_config() -> tuple[ConfigDefault, Namespace]:
     parser = ArgParseWithConfig(
         epilog=get_epipolog(),
     )
-    args, config, pl_args = parser.parse_args()
+    _, config, pl_args = parser.parse_args()
     config.validate_train_args()
 
     # Dynamically set some PyTorch lightning arguments
@@ -41,6 +41,7 @@ def get_config() -> tuple[ConfigDefault, Namespace]:
         config.dataset_fraction = 0.01
         config.batch_size = 2
         config.output_dir = config.path_models_quick
+        config.finetune_head_epochs = 2
 
     if config.epochs:
         pl_args.epochs = config.epochs
