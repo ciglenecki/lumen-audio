@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Literal
 
 import torch
 
@@ -29,19 +30,15 @@ class ServerStore:
         self.model_config = model_config
         self.audio_transform = audio_transform
 
-    def set_dataset(
-        self,
-        audio_transform=None,
-        model_config=None,
-    ):
-        if audio_transform:
-            self.audio_transform = audio_transform
-
-        if model_config is not None:
-            self.model_config = model_config
-
-        self.datamodule, self.data_loader = get_inference_datamodule(
+    def set_dataset(self, type=Literal["test", "pred"]):
+        self.datamodule = get_inference_datamodule(
             self.config, self.audio_transform, self.model_config
+        )
+
+        self.data_loader = (
+            self.datamodule.test_dataloader()
+            if type == "test"
+            else self.datamodule.predict_dataloader()
         )
 
     def get_available_models(self) -> list[Path]:
