@@ -23,6 +23,8 @@ from src.model.optimizers import (
     SupportedScheduler,
     our_configure_optimizers,
 )
+from src.model.loss_functions import InstrumentFamilyLoss
+
 from src.train.metrics import get_metrics
 from src.utils.utils_model import (
     count_module_params,
@@ -95,7 +97,8 @@ class ModelBase(pl.LightningModule, ABC):
         use_fluffy: bool,
         weight_decay: float,
         log_per_instrument_metrics,
-        pretrained_tag: str,
+        pretrained_tag: str,       
+        add_instrument_loss:float | None = None,
         fluffy_config: FluffyConfig | None = None,
         config: None | ConfigDefault = None,
         head_constructor: Callable[[Any], HeadTypes] = DeepHead,
@@ -185,6 +188,10 @@ class ModelBase(pl.LightningModule, ABC):
             self.lr = self.lr_warmup
         else:
             self.lr = lr
+        self.add_instrument_loss = add_instrument_loss
+        if add_instrument_loss is not None:
+            self.instrument_family_loss = InstrumentFamilyLoss()
+        
         # save in case indices change with config changes
         self.backup_instruments = config_defaults.INSTRUMENT_TO_IDX
         self.save_hyperparameters()
@@ -257,8 +264,7 @@ class ModelBase(pl.LightningModule, ABC):
             end = num_samples + batch_size
 
             if not is_pred:
-                batch_y = y_true[start:end]
-
+                batch_y = y_true[start:end] * self.instrument_family_loss(batch_y_pred, batch_y))
             forward_out = self.forward_wrapper(
                 ForwardInput(feature=batch_feature, y_true=batch_y)
             )
@@ -268,6 +274,8 @@ class ModelBase(pl.LightningModule, ABC):
                 forward_out.loss,
             )
 
+            if self.instrument_family_loss:
+                individual_losses += (self.add_instrument_loss*self.instrument_family_loss(batch_logits_pred, batch_y))
             if individual_losses is not None:
                 if len(individual_losses.shape) != 0:
                     batch_loss = individual_losses.view(batch_size, -1).mean(dim=1)

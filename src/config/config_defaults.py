@@ -482,6 +482,9 @@ class ConfigDefault(Serializable):
 
     loss_function_kwargs: dict | dict = create({})
     """Loss function kwargs"""
+    
+    add_instrument_loss: float = create(None)
+    """Instrument Family Loss factor"""
 
     lr: float = create(5e-5)
     """Learning rate"""

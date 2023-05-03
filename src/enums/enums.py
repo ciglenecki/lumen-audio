@@ -67,6 +67,7 @@ class SupportedLossFunctions(Enum):
     CROSS_ENTROPY_POS_WEIGHT = "cross_entropy_pos_weight"
     FOCAL_LOSS = "focal_loss"
     FOCAL_LOSS_POS_WEIGHT = "focal_loss_pos_weight"
+    INSTRUMENT_FAMILY_LOSS = "instrument_family_loss"
 
 
 class AudioTransforms(Enum):
@@ -78,6 +79,7 @@ class AudioTransforms(Enum):
     WAV2VEC = "wav2vec"
     MFCC = "mfcc"
     WAVELET = "wavelet"
+    MELCHROWAV = "melchrowav"
 
 
 class SupportedDatasetDirType(Enum):

@@ -46,7 +46,7 @@ class ConvLSTM(ModelBase):
         )
         self.attn = AttentionLayer(input_size=hidden_dim)
         self.linear = nn.Linear(hidden_dim,num_classes)
-
+        self.save_hyperparameters()
 
     def load_convolution_from_pretrained(self,conv_state_dict):
         self.convolution.load_state_dict(conv_state_dict)
