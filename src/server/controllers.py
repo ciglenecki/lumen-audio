@@ -14,7 +14,7 @@ from tqdm import tqdm
 from src.data.dataset_audio_pure import PureAudioDataset
 from src.features.chunking import collate_fn_feature
 from src.model.model_base import ModelBase
-from src.server.interface import DatasetDirDict
+from src.server.interface import TypeDatasetDict
 from src.server.server_store import server_store
 from src.train.inference_utils import (
     StepResult,
@@ -127,9 +127,9 @@ def set_server_store_model(model_path: str):
 
 
 def set_inference_datamodule(
-    dataset_dirs: list[DatasetDirDict], type=Literal["test", "pred"]
+    dataset_dirs: list[TypeDatasetDict], type=Literal["test", "pred"]
 ):
-    dataset_pairs = [(d.dataset_dir_type, d.dataset_dir) for d in dataset_dirs]
+    dataset_pairs = [(d.dataset_type, d.dataset_path) for d in dataset_dirs]
     if dataset_pairs != server_store.config.test_paths:
         server_store.config.test_paths = dataset_pairs
         server_store.set_dataset(type=type)

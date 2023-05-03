@@ -4,20 +4,23 @@ from pathlib import Path
 import torch
 
 from src.config.argparse_with_config import ArgParseWithConfig
-from src.config.config_defaults import get_default_config
 
 
 @functools.cache
 def get_server_args():
-    config_pl_args = ["--batch-size"]
-    default_config = get_default_config()
+    config_pl_args = ["--batch-size", "--log-per-instrument-metrics"]
 
     parser = ArgParseWithConfig(add_lightning_args=True, config_pl_args=config_pl_args)
     parser.add_argument(
         "--model-dir",
         type=Path,
-        default=default_config.path_models,
-        help="Path to model checkpoints.",
+        help="Directory which to model checkpoints (.ckpt files)",
+    )
+    parser.add_argument(
+        "--add-instrument-metrics",
+        action="store_true",
+        help="Add instrument metrics to the response. This will increase number of items in API response size by (instrument count * number of metrics)",
+        default=False,
     )
     parser.add_argument("--host", type=str, default="localhost", help="Server host.")
     parser.add_argument("--port", type=int, default=8090, help="Server port.")
@@ -33,5 +36,12 @@ def get_server_args():
         default="cuda:0" if torch.cuda.is_available() else "cpu",
         help="The device to be used eg. cuda:0.",
     )
+
     args, config, pl_args = parser.parse_args()
+
+    if args.add_instrument_metrics:
+        config.log_per_instrument_metrics = True
+    else:
+        config.log_per_instrument_metrics = False
+
     return args, config, pl_args
