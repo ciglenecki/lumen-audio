@@ -481,7 +481,7 @@ class ConfigDefault(Serializable):
     loss_function_kwargs: list[str] = create({"reduction": "none"})
     """Loss function kwargs"""
 
-    add_instrument_loss: float = create(None)
+    add_instrument_loss: float | None = create(None)
     """Instrument Family Loss factor"""
 
     lr: float = create(5e-5)
