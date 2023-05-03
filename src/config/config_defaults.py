@@ -249,7 +249,7 @@ def parse_dataset_paths(
             return [dir_to_enum_and_path(d, allow_raw_path) for d in data_dir]
     except InvalidArgument as e:
         msg = USAGE_TEXT_PATHS
-        raise InvalidArgument(f"{str(e)}\n{msg}")
+        raise InvalidArgument(f"\n\n{str(e)}\n\n{msg}")
 
 
 @dataclass
