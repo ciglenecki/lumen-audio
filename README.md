@@ -34,16 +34,12 @@ Low priority tasks:
   - [ ] best recall = all ones
 - [ ] pretraning: SparK https://github.com/keyu-tian/SparK
 - [x] Add ArcFace module in codebase
-<<<<<<< HEAD
-- [ ] create new arcface branch and apply arcface to all models
-=======
   - [ ] CREATE NEW BRACNH!
   - [ ] **ArcFace**: Run CNN IRMAS only no aug with ArcFace module
 - [ ] create new arcface branch and apply arcface to all models
 - [ ] **attention head** on CNN model instead of deep classifier
 
 
->>>>>>> dev
 
 ### Parallel Mobilenets
 - ##################
