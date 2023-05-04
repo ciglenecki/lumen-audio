@@ -104,6 +104,24 @@
 			"justMyCode": false
 		},
 		{
+			"name": "Focal loss",
+			"type": "python",
+			"request": "launch",
+			"program": "src/train/train.py",
+			"console": "integratedTerminal",
+			"args": "--train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --backbone-after backbone.features --head-after backbone.classifier --loss-function FOCAL_LOSS --loss-function-kwargs gamma=0.5 --model CONVNEXT_SMALL --audio-transform MEL_SPECTROGRAM --finetune-head-epochs 3 --epochs 10 --batch-size 16 --augmentations --lr 1e-4",
+			"justMyCode": false
+		},
+		{
+			"name": "Debug pos weight",
+			"type": "python",
+			"request": "launch",
+			"program": "src/train/train.py",
+			"console": "integratedTerminal",
+			"args": "--train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --backbone-after backbone.features --head-after backbone.classifier --model CONVNEXT_SMALL --lr 1e-4 --audio-transform MEL_SPECTROGRAM --finetune-head-epochs 3 --epochs 10 --batch-size 16 --loss-function CROSS_ENTROPY_POS_WEIGHT --augmentations",
+			"justMyCode": false
+		},
+		{
 			"name": "Python: Current File",
 			"type": "python",
 			"request": "launch",
