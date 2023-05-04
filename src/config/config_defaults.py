@@ -316,7 +316,7 @@ class ConfigDefault(Serializable):
     n_mfcc: int = create(20)
     """Number of Mel-frequency cepstrum (MFCC) coefficients"""
 
-    image_size: tuple[int, int] = create((384, 384))
+    image_size: tuple[int, int] | None = create(None)
     """The dimension to resize the image to."""
 
     normalize_audio: bool = create(True)

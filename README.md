@@ -34,7 +34,12 @@ Low priority tasks:
   - [ ] best recall = all ones
 - [ ] pretraning: SparK https://github.com/keyu-tian/SparK
 - [x] Add ArcFace module in codebase
+  - [ ] CREATE NEW BRACNH!
+  - [ ] **ArcFace**: Run CNN IRMAS only no aug with ArcFace module
 - [ ] create new arcface branch and apply arcface to all models
+- [ ] **attention head** on CNN model instead of deep classifier
+
+
 
 ### Parallel Mobilenets
 - ##################
@@ -86,26 +91,29 @@ Low priority tasks:
 ## Rep:
 - [ ] ❗ check whatsup with pretrained weights (crop and resize)
 - [ ] **Inference analysis**: run inference on single audio with multiple different durations (0.1 sec, 1 sec, 5 sec, 10 sec, 1 minute, 5 minutes, 30 minutes, 60 minutes)
+  - [ ] np.rand(1, self.sampling_rate * num_of_seconds)
   - [ ] ⚠️ create csv file for loading 7 audios (look at `openmic_r0.8_n_8858.csv` structure)
 - [ ] **gradcam plots** create gradcam plots for trained model
   - [ ] 🖊️ report your findings in Google Docs
-- [ ] **train with relabeled data (cleanlab):** (@matej has to provide csv) Include train override csv. No augmentations. Compare both models metrics.
-  - [ ] 🖊️ report your findings in Google Docs
-- [ ] **rand init cnn**: train CNN with random initializations (use pretraning_tag=None or something, WARNING: pretraining_tag="DEFAULT" is pretrained model!)
 - [ ] **Rep vs IRMAS:** perform validation on Rep's corected dataset to check how many labels are correctly marked in the original dataset
   - check if all instruments are correct
   - check if at least one instrument is correct
   - hamming distance between Rep's and original
   - how dirty is the training set in terms of including non-predominant instruments
   - [ ] 🖊️ report your findings in Google Docs
+- [ ] **train with relabeled data (cleanlab):** (@matej has to provide csv) Include train override csv. No augmentations. Compare both models metrics.
+  - [ ] 🖊️ report your findings in Google Docs
+
+## Rep Experiments
+- [ ] **Train rand init cnn**: train CNN with random initializations (use pretraning_tag=None or something, WARNING: pretraining_tag="DEFAULT" is pretrained model!)
 - [x] **Train Wav2Vec2 CNN**: IRMAS only no aug
   - [ ] 🖊️ report your findings in Google Docs
 - [ ] **Train Wav2Vec2 Transformer**: IRMAS only no aug "m3hrdadfi/wav2vec2-base-100k-gtzan-music-genres"
-  - [ ] nothing better than simple CNN?
+  - [ ] --backbone-after layer.6
+  - [ ] --backbone-after layers.11.final_layer_norm.weight
 - [x] **Fluffy**: Directly compare Fluffy Deep head CNN to standard Deep head  CNN
   - [ ] 🖊️ report your findings in Google Docs
-- [ ] **ArcFace**: Run CNN IRMAS only no aug with ArcFace module
-- [ ] **attention head** on CNN model instead of deep classifier
+
 
 ## Vinko:
 - Add explained variance percentage in PCA
