@@ -599,6 +599,7 @@ class ConfigDefault(Serializable):
                 SupportedModels.CONVNEXT_LARGE: True,
                 SupportedModels.CONVNEXT_BASE: True,
                 SupportedModels.MOBILENET_V3_LARGE: True,
+                SupportedModels.CONVLSTM: False,
             }
             self.use_rgb = USE_RGB[self.model]
 
