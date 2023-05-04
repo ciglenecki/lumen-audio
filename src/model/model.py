@@ -6,6 +6,7 @@ from src.enums.enums import ModelInputDataType, SupportedModels
 from src.model.heads import get_head_constructor
 from src.model.model_ast import ASTModelWrapper
 from src.model.model_base import ModelBase
+from src.model.model_conv_lstm import ConvLSTM
 from src.model.model_torch import TorchvisionModel
 from src.model.model_wav2vec import Wav2VecWrapper
 from src.model.model_wav2vec_cnn import Wav2VecCnnWrapper
@@ -48,12 +49,12 @@ model_constructor_map: dict[SupportedModels, ModelBase] = {
     SupportedModels.RESNEXT50_32X4D: TorchvisionModel,
     SupportedModels.RESNEXT101_32X8D: TorchvisionModel,
     SupportedModels.RESNEXT101_64X4D: TorchvisionModel,
-    SupportedModels.CONVNEXT_TINY: ModelInputDataType.IMAGE,
-    SupportedModels.CONVNEXT_SMALL: ModelInputDataType.IMAGE,
-    SupportedModels.CONVNEXT_LARGE: ModelInputDataType.IMAGE,
-    SupportedModels.CONVNEXT_BASE: ModelInputDataType.IMAGE,
-    SupportedModels.MOBILENET_V3_LARGE: ModelInputDataType.IMAGE,
-    SupportedModels.CONVLSTM: ModelInputDataType.IMAGE,
+    SupportedModels.CONVNEXT_TINY: TorchvisionModel,
+    SupportedModels.CONVNEXT_SMALL: TorchvisionModel,
+    SupportedModels.CONVNEXT_LARGE: TorchvisionModel,
+    SupportedModels.CONVNEXT_BASE: TorchvisionModel,
+    SupportedModels.MOBILENET_V3_LARGE: TorchvisionModel,
+    SupportedModels.CONVLSTM: ConvLSTM,
 }
 
 

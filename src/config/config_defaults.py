@@ -786,6 +786,11 @@ class ConfigDefault(Serializable):
                 SupportedModels.RESNEXT50_32X4D: None,
                 SupportedModels.RESNEXT101_32X8D: None,
                 SupportedModels.RESNEXT101_64X4D: None,
+                SupportedModels.CONVNEXT_TINY: None,
+                SupportedModels.CONVNEXT_SMALL: None,
+                SupportedModels.CONVNEXT_LARGE: None,
+                SupportedModels.CONVNEXT_BASE: None,
+                SupportedModels.MOBILENET_V3_LARGE: None,
                 SupportedModels.CONVLSTM: None,
             }
             self.max_num_width_samples = MAX_NUM_WIDTH_SAMPLE[self.model]
