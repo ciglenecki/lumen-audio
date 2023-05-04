@@ -10,17 +10,20 @@ from tqdm import tqdm
 
 import src.config.config_defaults as config_defaults
 from src.config.config_defaults import get_default_config
+from utils.utils_dataset import decode_instruments
 
 
 def main():
     config = get_default_config()
 
-    EMBEDDINGS_DIR = config.path_irmas_train_features
+    EMBEDDINGS_DIR = (
+        "embeddings/data-irmas-train_ast_MIT-ast-finetuned-audioset-10-10-0.4593"
+    )
     TRAIN_DATASET_PATH = config.path_irmas_train
-
     embeddings = []
     labels = []
     file_paths = []
+    one_hot_label = []
     for i, json_path in tqdm(
         enumerate(Path(EMBEDDINGS_DIR, "embeddings").glob("*.json"))
     ):
@@ -28,6 +31,7 @@ def main():
         file_path = item["sample_path"]
         idx = item["label"]
         embedding = item["embedding"]
+        one_hot_label.append(decode_instruments(item["instruments"]))
         embeddings.append(embedding)
         labels.append(idx)
         file_paths.append(file_path)
@@ -59,10 +63,15 @@ def main():
     )
 
     # Print bad files
+    # TODO: finish writing bad files to a csv
+    bad_files = {}
     for i in label_issues_indices:
         instrument = config_defaults.IDX_TO_INSTRUMENT[labels[i]]
-        full_path = Path(TRAIN_DATASET_PATH, instrument, file_paths[i])
-        print()
+        full_path = str(Path(TRAIN_DATASET_PATH, instrument, file_paths[i]))
+        bad_files.add(full_path)
+
+    labels = []
+    file_paths = []
 
 
 if __name__ == "__main__":
