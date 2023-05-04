@@ -11,6 +11,7 @@ from pytorch_lightning.callbacks import (
     ModelSummary,
     TQDMProgressBar,
 )
+from pytorch_lightning.utilities.seed import seed_everything
 
 from src.config import config_defaults
 from src.config.config_defaults import ConfigDefault
@@ -44,8 +45,6 @@ from src.utils.utils_functions import (
     to_yaml,
 )
 from src.utils.utils_model import print_params
-
-# from pytorch_lightning.utilities.seed import seed_everything
 
 
 def experiment_setup(config: ConfigDefault, pl_args: Namespace):
@@ -84,7 +83,7 @@ def experiment_setup(config: ConfigDefault, pl_args: Namespace):
 
 
 if __name__ == "__main__":
-    # seed_everything(42)
+    seed_everything(42)
 
     config, pl_args = get_config()
 
