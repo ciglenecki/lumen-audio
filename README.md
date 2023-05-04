@@ -89,7 +89,6 @@ Low priority tasks:
 
 
 ## Rep:
-- [ ] ❗ check whatsup with pretrained weights (crop and resize)
 - [ ] **Inference analysis**: run inference on single audio with multiple different durations (0.1 sec, 1 sec, 5 sec, 10 sec, 1 minute, 5 minutes, 30 minutes, 60 minutes)
   - [ ] np.rand(1, self.sampling_rate * num_of_seconds)
   - [ ] ⚠️ create csv file for loading 7 audios (look at `openmic_r0.8_n_8858.csv` structure)
@@ -508,6 +507,9 @@ https://github.com/janmyler/web-audio-editor
 ## Done tasks
 
 Tasks:
+- [x] ❗ check whatsup with pretrained weights (crop and resize) -> everything is fine
+  - turns out that the models use average pooling over the height and width which means that the final representation only has dimension (B, C)
+  - the model silently fails instead of breaking, so keep an eye out in case something doesn't work
 - [x] **train with relabeled data (rep):** Include Ivan's relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
   - [x] 🖊️ report your findings in Google Docs
 - [x] Train efficenet irmas only no aug with small `batch size=4`
