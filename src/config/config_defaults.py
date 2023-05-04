@@ -594,6 +594,11 @@ class ConfigDefault(Serializable):
                 SupportedModels.RESNEXT50_32X4D: True,
                 SupportedModels.RESNEXT101_32X8D: True,
                 SupportedModels.RESNEXT101_64X4D: True,
+                SupportedModels.CONVNEXT_TINY: True,
+                SupportedModels.CONVNEXT_SMALL: True,
+                SupportedModels.CONVNEXT_LARGE: True,
+                SupportedModels.CONVNEXT_BASE: True,
+                SupportedModels.MOBILENET_V3_LARGE: True,
             }
             self.use_rgb = USE_RGB[self.model]
 
