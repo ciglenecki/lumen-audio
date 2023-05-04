@@ -6,6 +6,7 @@ from src.enums.enums import ModelInputDataType, SupportedModels
 from src.model.heads import get_head_constructor
 from src.model.model_ast import ASTModelWrapper
 from src.model.model_base import ModelBase
+from src.model.model_conv_lstm import ConvLSTM
 from src.model.model_torch import TorchvisionModel
 from src.model.model_wav2vec import Wav2VecWrapper
 from src.model.model_wav2vec_cnn import Wav2VecCnnWrapper
@@ -28,6 +29,7 @@ def get_data_input_type(model_enum: SupportedModels) -> ModelInputDataType:
         SupportedModels.CONVNEXT_LARGE: ModelInputDataType.IMAGE,
         SupportedModels.CONVNEXT_BASE: ModelInputDataType.IMAGE,
         SupportedModels.MOBILENET_V3_LARGE: ModelInputDataType.IMAGE,
+        SupportedModels.CONVLSTM: ModelInputDataType.IMAGE,
     }
 
     if model_enum not in model_data_input_type:
@@ -52,6 +54,7 @@ model_constructor_map: dict[SupportedModels, ModelBase] = {
     SupportedModels.CONVNEXT_LARGE: TorchvisionModel,
     SupportedModels.CONVNEXT_BASE: TorchvisionModel,
     SupportedModels.MOBILENET_V3_LARGE: TorchvisionModel,
+    SupportedModels.CONVLSTM: ConvLSTM,
 }
 
 
@@ -89,6 +92,7 @@ def get_model(
         use_fluffy=config.use_fluffy,
         config=config,
         head_hidden_dim=config.head_hidden_dim,
+        add_instrument_loss=config.add_instrument_loss,
     )
 
     if model_enum not in model_constructor_map:

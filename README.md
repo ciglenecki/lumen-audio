@@ -32,30 +32,49 @@ Low priority tasks:
   - [ ] best accuracy = all zeros
   - [ ] best f1 = randomly mark 2-4 instruments as True
   - [ ] best recall = all ones
+- [ ] pretraning: SparK https://github.com/keyu-tian/SparK
+- [x] Add ArcFace module in codebase
+  - [ ] CREATE NEW BRACNH!
+  - [ ] **ArcFace**: Run CNN IRMAS only no aug with ArcFace module
+- [ ] create new arcface branch and apply arcface to all models
+- [ ] **attention head** on CNN model instead of deep classifier
+
+
+
+### Parallel Mobilenets
+- ##################
+- create 4 Mobilenets which cover 11 instruments
+- forward pass to get features
+- create 4 FC (each FC has 3 instruments)
+- concat predictions
+- #######################3
+- create 4 Mobilenets which cover 11 instruments
+- forward pass to get features
+- concat all features
 
 ## Matej:
 - [ ] create eval script which will caculate ALL metrics for the whole dataset
-  1. konfuzijska matrica
-  A. largest prediction miss
-  B. best prediction
-  C. distribution of predictions (hamming, f1)
-  D. Plots for per instrument f1
-  2. sve metrike, po instruemtima
-  3. roc curve
-  4. distrubicija dataseta
-  5. distrubicija broja instruemnta
-  6. vizualziacija gradijenata
-  7. embedding visualization
+- y_true, y_pred
+    1. konfuzijska matrica (plot ???) https://scikit-learn.org/stable/modules/generated/sklearn.metrics.multilabel_confusion_matrix.html
+    A. largest prediction miss, 10 worst samples and their filenames/incides
+    B. best prediction
+    C. distribution of predictions (hamming, f1, acc...)
+    D. Plots for per instrument f1
+    2. roc curve
+  1. distrubicija dataseta
+  2. distrubicija broja instruemnta
+  3. vizualziacija gradijenata
+  4. embedding visualization
 - [ ] ❗create backend API/inference
-  - [ ] load model in inference, caculate metrics the whole test irmas dataset (analitics)
-    - [ ] should reuse the train.py script, just use different modes?
-  - [ ] http server with some loaded model which returns responses
+  - [x] load model in inference, caculate metrics the whole test irmas dataset (analitics)
+    - [x] should reuse the train.py script, just use different modes?
+  - [x] http server with some loaded model which returns responses
 - [ ] Change ArcFace module so that it repeats embeddings 11 times
 - [ ] ❗create technical documentation
 - [ ] ❗create docker container
 - [ ] **visualize embedded features**: for each model with tensorboard embedder https://projector.tensorflow.org/
 - [ ] 🖊️ **OpenMIC guitars** - document what you did
-- [ ] pretraning: SparK https://github.com/keyu-tian/SparK
+- [ ] Merge CRNN to our codebase (SupportedModels enum everywhere)
 
 ## Mirko:
 - [ ] 🖊️ create model graveyard section in project documentation and populate it
@@ -63,23 +82,17 @@ Low priority tasks:
   - [ ] fluffy??
   - [ ] wav2vec
   - [ ] maybe CRNN ?
-- [ ] Add CRNN to our codebase (SupportedModels enum everywhere)
-- [ ] Add Focal Loss, InstrumentFamilyLoss to `src/model/loss_functions.py` and add SupportedLosses
-- [ ] Add ArcFace module in codebase
-- [ ] **arcface**: add arcface loss (`src/model/loss_function.py`) in our codebase and RUN the train.py. Don't use pure arcface!. Run experiment with and without arcface.
-- [x] create attention function vizualization
+- [x] Add Focal Loss, InstrumentFamilyLoss to `src/model/loss_functions.py` and add SupportedLosses
+- [x] create attention function vizualization with pretrained AST
   - [ ] make sure you get actual image of attention weights for some melespectrogram
 - ![](img/attention_weights.png)
-- [ ] **Fluffy**: Directly compare Fluffy to non. Fluffy (include metrics)
-  - [ ] 🖊️ report your findings in Google Docs
+
 
 ## Rep:
-- [ ] ❗ check whatsup with pretrained weights (crop and resize)
+- [ ] **Inference analysis**: run inference on single audio with multiple different durations (0.1 sec, 1 sec, 5 sec, 10 sec, 1 minute, 5 minutes, 30 minutes, 60 minutes)
+  - [ ] np.rand(1, self.sampling_rate * num_of_seconds)
+  - [ ] ⚠️ create csv file for loading 7 audios (look at `openmic_r0.8_n_8858.csv` structure)
 - [ ] **gradcam plots** create gradcam plots for trained model
-  - [ ] 🖊️ report your findings in Google Docs
-- [ ] **train with relabeled data (rep):** Include Ivan's relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
-  - [ ] 🖊️ report your findings in Google Docs
-- [ ] **train with relabeled data (cleanlab):** Include train override csv. No augmentations. Compare both models metrics.
   - [ ] 🖊️ report your findings in Google Docs
 - [ ] **Rep vs IRMAS:** perform validation on Rep's corected dataset to check how many labels are correctly marked in the original dataset
   - check if all instruments are correct
@@ -87,18 +100,28 @@ Low priority tasks:
   - hamming distance between Rep's and original
   - how dirty is the training set in terms of including non-predominant instruments
   - [ ] 🖊️ report your findings in Google Docs
-- [ ] **attention head** on CNN model instead of deep classifier
-- [ ] **fluffy**: run training with Fluffy head on CNN backbone which was already trained before. Use IRMAS only + no augmentations. Don't use mulitple optimizers!
-- [ ] **Train Wav2Vec2 CNN**: IRMAS only no aug
+- [ ] **train with relabeled data (cleanlab):** (@matej has to provide csv) Include train override csv. No augmentations. Compare both models metrics.
+  - [ ] 🖊️ report your findings in Google Docs
+
+## Rep Experiments
+- [ ] **Train rand init cnn**: train CNN with random initializations (use pretraning_tag=None or something, WARNING: pretraining_tag="DEFAULT" is pretrained model!)
+- [x] **Train Wav2Vec2 CNN**: IRMAS only no aug
+  - [ ] 🖊️ report your findings in Google Docs
 - [ ] **Train Wav2Vec2 Transformer**: IRMAS only no aug "m3hrdadfi/wav2vec2-base-100k-gtzan-music-genres"
-  - [ ] nothing better than simple CNN?
-- [ ] **Inference analysis**: run inference on single audio with multiple different durations (0.1 sec, 1 sec, 5 sec, 10 sec, 1 minute, 5 minutes, 30 minutes, 60 minutes)
-  - [ ] ⚠️ create csv file for loading 7 audios (look at `openmic_r0.8_n_8858.csv` structure)
-- [ ] **ArcFace**: Run CNN IRMAS only no aug with ArcFace module
+  - [ ] --backbone-after layer.6
+  - [ ] --backbone-after layers.11.final_layer_norm.weight
+- [x] **Fluffy**: Directly compare Fluffy Deep head CNN to standard Deep head  CNN
+  - [ ] 🖊️ report your findings in Google Docs
 
 
 ## Vinko:
-- [ ] ⚠️ check the assumption that label instrument is present thought the whole audio (check n=20 samples and check how many occourances) VALIDATION
+- Add explained variance percentage in PCA
+  - [ ] 🖊️ report your findings in Google Docs
+- Write augmetntations, check src/notebooks/show_augmentations.ipynb, install packages first! (discord commands)
+  - [ ] 🖊️ report your findings in Google Docs
+- Write melspectrogram docs
+  - [ ] 🖊️ report your findings in Google Docs
+- [x] ⚠️ check the assumption that label instrument is present thought the whole audio (check n=20 samples and check how many occourances) VALIDATION
   - holds up for most cases?
   - [ ] 🖊️ report your findings in Google Docs
 - [x] use the `get_metrics` functions from `src/train/metrics.py` to caculate metrics for each sample. The function returns mean metrics and metrics per instrument (make sure to use =True argument)
@@ -116,13 +139,14 @@ Low priority tasks:
     - [ ] pick top 5 featrues (highest variance)
       - [ ] spectral_center, spectral_rolloff and 3 more
     - itterate whole dataset again
-      - guitar_spectral_center
-      - guitar_spectral_rolloff
+      - guitar_spectral_center (mean of all spectral_center for guitars)
+      - guitar_spectral_rolloff (mean of all spectral_rolloff for guitars)
       - flute_spectral_center
       - flute_spectral_rolloff
       - ...
-  - create F corr matrix (F is number of features) from these features ^
+  - create F plots, F corr matrix (F is number of features) from these features ^
     - one corr matrix is 11 x 11 called spectral_center
+  - [ ] 🖊️ add plots to the documentation
 - [ ] add white in the middle of colorscale heatmap
   - [ ] 🖊️ document which features make most sense to use.
 
@@ -483,6 +507,11 @@ https://github.com/janmyler/web-audio-editor
 ## Done tasks
 
 Tasks:
+- [x] ❗ check whatsup with pretrained weights (crop and resize) -> everything is fine
+  - turns out that the models use average pooling over the height and width which means that the final representation only has dimension (B, C)
+  - the model silently fails instead of breaking, so keep an eye out in case something doesn't work
+- [x] **train with relabeled data (rep):** Include Ivan's relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
+  - [x] 🖊️ report your findings in Google Docs
 - [x] Train efficenet irmas only no aug with small `batch size=4`
 - [x] train  ResNeXt 50_32x4d on MelSpectrogram
   - [x] Compare how augmentations affect the final metrics:

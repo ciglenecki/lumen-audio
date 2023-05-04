@@ -110,6 +110,43 @@ GENRE_TO_IDX = {
 
 IDX_TO_GENRE = {v: k for k, v in GENRE_TO_IDX.items()}
 
+
+class InstrumentFamily(Enum):
+    BRASS = "brass"
+    GUITAR = "gutars"
+    WOODWIND = "woodwind"
+    STRINGS = "strings"
+    VOICE = "voice"
+    PERCUSSION = "percussion"
+
+
+FAMILIY_TO_IDX = {
+    InstrumentFamily.BRASS.value: 0,
+    InstrumentFamily.GUITAR.value: 1,
+    InstrumentFamily.WOODWIND.value: 2,
+    InstrumentFamily.STRINGS.value: 3,
+    InstrumentFamily.VOICE.value: 4,
+    InstrumentFamily.PERCUSSION.value: 5,
+}
+
+INSTRUMENT_TO_FAMILY = {
+    InstrumentEnums.CELLO.value: InstrumentFamily.STRINGS.value,
+    InstrumentEnums.CLARINET.value: InstrumentFamily.WOODWIND.value,
+    InstrumentEnums.FLUTE.value: InstrumentFamily.WOODWIND.value,
+    InstrumentEnums.ACOUSTIC_GUITAR.value: InstrumentFamily.GUITAR.value,
+    InstrumentEnums.ELECTRIC_GUITAR.value: InstrumentFamily.GUITAR.value,
+    InstrumentEnums.ORGAN.value: InstrumentFamily.BRASS.value,
+    InstrumentEnums.PIANO.value: InstrumentFamily.PERCUSSION.value,
+    InstrumentEnums.SAXOPHONE.value: InstrumentFamily.BRASS.value,
+    InstrumentEnums.TRUMPET.value: InstrumentFamily.BRASS.value,
+    InstrumentEnums.VIOLIN.value: InstrumentFamily.STRINGS.value,
+    InstrumentEnums.VOICE.value: InstrumentFamily.VOICE.value,
+}
+
+
+IDX_TO_FAMILY = {v: k for k, v in FAMILIY_TO_IDX.items()}
+
+
 DEFAULT_NUM_LABELS = len(INSTRUMENT_TO_IDX)
 DEFAULT_IRMAS_TRAIN_SIZE = 6705
 DEFAULT_IRMAS_TEST_SIZE = 2874
@@ -173,6 +210,7 @@ DEFAULT_PRETRAINED_TAG_MAP = {
     SupportedModels.CONVNEXT_LARGE: TAG_IMAGENET1K_V1,
     SupportedModels.CONVNEXT_BASE: TAG_IMAGENET1K_V1,
     SupportedModels.MOBILENET_V3_LARGE: TAG_IMAGENET1K_V1,
+    SupportedModels.CONVLSTM: None,
 }
 ALL_INSTRUMENTS = [e.value for e in InstrumentEnums]
 ALL_INSTRUMENTS_NAMES = [INSTRUMENT_TO_FULLNAME[ins] for ins in ALL_INSTRUMENTS]
@@ -249,7 +287,7 @@ def parse_dataset_paths(
             return [dir_to_enum_and_path(d, allow_raw_path) for d in data_dir]
     except InvalidArgument as e:
         msg = USAGE_TEXT_PATHS
-        raise InvalidArgument(f"{str(e)}\n{msg}")
+        raise InvalidArgument(f"\n\n{str(e)}\n\n{msg}")
 
 
 @dataclass
@@ -316,7 +354,7 @@ class ConfigDefault(Serializable):
     n_mfcc: int = create(20)
     """Number of Mel-frequency cepstrum (MFCC) coefficients"""
 
-    image_size: tuple[int, int] = create((384, 384))
+    image_size: tuple[int, int] | None = create(None)
     """The dimension to resize the image to."""
 
     normalize_audio: bool = create(True)
@@ -443,6 +481,9 @@ class ConfigDefault(Serializable):
     loss_function_kwargs: list[str] = create({"reduction": "none"})
     """Loss function kwargs"""
 
+    add_instrument_loss: float | None = create(None)
+    """Instrument Family Loss factor"""
+
     lr: float = create(5e-5)
     """Learning rate"""
 
@@ -558,6 +599,7 @@ class ConfigDefault(Serializable):
                 SupportedModels.CONVNEXT_LARGE: True,
                 SupportedModels.CONVNEXT_BASE: True,
                 SupportedModels.MOBILENET_V3_LARGE: True,
+                SupportedModels.CONVLSTM: False,
             }
             self.use_rgb = USE_RGB[self.model]
 
@@ -578,6 +620,7 @@ class ConfigDefault(Serializable):
                 SupportedModels.CONVNEXT_LARGE: (224, 224),
                 SupportedModels.CONVNEXT_BASE: (224, 224),
                 SupportedModels.MOBILENET_V3_LARGE: (224, 224),
+                SupportedModels.CONVLSTM: None,
             }
             self.image_size = IMAGE_SIZE_MAP[self.model]
             # Dynamically set pretrained tag
@@ -714,7 +757,9 @@ class ConfigDefault(Serializable):
             raise InvalidArgument("Can't pass --metric without passing --metric-mode")
 
         # loss_function_kwargs can be either a dictionary or a string which will be parsed as kwargs dict
-        if isinstance(self.loss_function_kwargs, str):
+        if self.loss_function_kwargs is not None and not isinstance(
+            self.loss_function_kwargs, dict
+        ):
             try:
                 override_kwargs = self.parse_kwargs(self.loss_function_kwargs)
             except Exception as e:
@@ -752,6 +797,7 @@ class ConfigDefault(Serializable):
                 SupportedModels.CONVNEXT_LARGE: None,
                 SupportedModels.CONVNEXT_BASE: None,
                 SupportedModels.MOBILENET_V3_LARGE: None,
+                SupportedModels.CONVLSTM: None,
             }
             self.max_num_width_samples = MAX_NUM_WIDTH_SAMPLE[self.model]
 

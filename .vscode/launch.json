@@ -46,7 +46,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --backbone-after backbone.features --head-after backbone.classifier --model EFFICIENT_NET_V2_S --audio-transform MEL_SPECTROGRAM --finetune-head-epochs 3 --epochs 10 --batch-size 1 --accumulate_grad_batches 4 --lr 1e-4",
+			"args": "--train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test3 --backbone-after backbone.features --head-after backbone.classifier --model EFFICIENT_NET_V2_S --audio-transform MEL_SPECTROGRAM --finetune-head-epochs 3 --epochs 10 --batch-size 1 --accumulate_grad_batches 4 --lr 1e-4 --quick",
 			"justMyCode": false
 		},
 		{
@@ -55,7 +55,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --audio-transform WAV2VEC --model WAV2VEC_CNN --use-fluffy --head ATTENTION_HEAD --loss-function CROSS_ENTROPY_POS_WEIGHT --backbone-after classifier.heads --head-after classifier.heads --quick --quick",
+			"args": "--accelerator gpu --devices -1 --train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --audio-transform WAV2VEC --model WAV2VEC_CNN --use-fluffy --head ATTENTION_HEAD --loss-function CROSS_ENTROPY_POS_WEIGHT --backbone-after classifier.heads --head-after classifier.heads --quick",
 			"justMyCode": false
 		},
 		{
@@ -130,12 +130,12 @@
 			"justMyCode": false
 		},
 		{
-			"name": "Spark.py",
+			"name": "Testing",
 			"type": "python",
 			"request": "launch",
-			"program": "SparK/pretrain/main.py",
+			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--exp_name=debug --data_path=/path/to/imagenet --model=resnet50 --bs=2",
+			"args": "--backbone-after backbone.features.7.2 --head-after backbone.classifier --model EFFICIENT_NET_V2_S --audio-transform MEL_SPECTROGRAM --finetune-head-epochs 1 --batch-size 3 --accumulate_grad_batches 4 --quick --epochs 4 --loss-function FOCAL_LOSS --add-instrument-loss 0.3 --verify-config",
 			"justMyCode": false
 		},
 	]
