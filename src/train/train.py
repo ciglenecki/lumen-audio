@@ -155,8 +155,8 @@ if __name__ == "__main__":
         }
         loss_function = torch.nn.BCEWithLogitsLoss(**kwargs, reduction="none")
     elif config.loss_function == SupportedLossFunctions.FOCAL_LOSS:
-        loss_functon = FocalLoss(**config.loss_function_kwargs)
-    elif config.loss_funtion == SupportedLossFunctions.FOCAL_LOSS_POS_WEIGHT:
+        loss_function = FocalLoss(**config.loss_function_kwargs)
+    elif config.loss_function == SupportedLossFunctions.FOCAL_LOSS_POS_WEIGHT:
         instrument_count = dict_with_keys(
             datamodule.get_train_dataset_stats(), config_defaults.ALL_INSTRUMENTS
         )

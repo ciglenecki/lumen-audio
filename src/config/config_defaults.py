@@ -751,7 +751,9 @@ class ConfigDefault(Serializable):
             raise InvalidArgument("Can't pass --metric without passing --metric-mode")
 
         # loss_function_kwargs can be either a dictionary or a string which will be parsed as kwargs dict
-        if isinstance(self.loss_function_kwargs, str):
+        if self.loss_function_kwargs is not None and not isinstance(
+            self.loss_function_kwargs, dict
+        ):
             try:
                 override_kwargs = self.parse_kwargs(self.loss_function_kwargs)
             except Exception as e:

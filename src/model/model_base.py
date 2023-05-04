@@ -275,7 +275,7 @@ class ModelBase(pl.LightningModule, ABC):
             if not is_pred:
                 batch_y = y_true[start:end]
                 individual_losses = self.loss_function(batch_logits_pred, batch_y)
-                if self.instrument_family_loss:
+                if self.add_instrument_loss:
                     individual_losses += (
                         self.add_instrument_loss
                         * self.instrument_family_loss(batch_logits_pred, batch_y)

@@ -91,6 +91,7 @@ def get_model(
         use_fluffy=config.use_fluffy,
         config=config,
         head_hidden_dim=config.head_hidden_dim,
+        add_instrument_loss=config.add_instrument_loss,
     )
 
     if model_enum not in model_constructor_map:

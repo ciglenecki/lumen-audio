@@ -40,6 +40,7 @@ class InstrumentFamilyLoss(nn.Module):
         prediction_family = self.instrument_to_family(prediction_logits)
         target_family = self.instrument_to_family(targets)
         fam_loss = self.family_loss(prediction_family, target_family)
+        fam_loss = fam_loss.mean(-1, keepdim=True)  # mean over batch
         return fam_loss
 
     def instrument_to_family(self, instrument_labels):
