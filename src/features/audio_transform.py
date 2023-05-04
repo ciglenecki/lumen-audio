@@ -6,9 +6,6 @@ from src.features.audio_to_multispec import MultiSpectrogram
 from src.features.audio_to_spectrogram import MelSpectrogram
 from src.features.audio_to_wav2vec import AudioToWav2Vec2
 from src.features.audio_transform_base import AudioTransformBase
-from src.features.audio_to_melchromawavelet import MelChroWavelet
-from src.features.audio_to_scalogram import WaveletTransform
-
 from src.features.augmentations import SpectrogramAugmentation, WaveformAugmentation
 from src.utils.utils_exceptions import UnsupportedAudioTransforms
 
@@ -61,15 +58,5 @@ def get_audio_transform(
             n_mfcc=config.n_mfcc,
             **image_kwargs,
             **base_kwargs,
-        )
-    elif audio_transform_enum is AudioTransforms.MELCHROWAV:
-        return MelChroWavelet(
-            **image_kwargs,
-            **base_kwargs
-        )
-    elif audio_transform_enum is AudioTransforms.WAVELET:
-        return WaveletTransform(
-            **image_kwargs,
-            **base_kwargs
         )
     raise UnsupportedAudioTransforms(f"Unsupported transform {audio_transform_enum}")

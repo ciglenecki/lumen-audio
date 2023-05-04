@@ -1,7 +1,7 @@
 import numpy as np
 import torch
-from src.features.wavelet import WaveletConv
 
+from _unused.audio_to_wavelet import WaveletConv
 from src.features.audio_transform_base import AudioTransformBase
 
 
@@ -31,11 +31,8 @@ class WaveletTransform(AudioTransformBase):
         self.normalize_image = normalize_image
         self.wavelet = WaveletConv()
 
-
-
     def __call__(self, audio: torch.Tensor | np.ndarray) -> tuple[torch.Tensor]:
-        if isinstance(audio,np.ndarray):
-            audio=torch.tesor(audio)
+        if isinstance(audio, np.ndarray):
+            audio = torch.tesor(audio)
         audio = audio.unsqueeze(1)
         return self.wavelet(audio).squeeze(1)
-   

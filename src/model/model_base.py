@@ -180,6 +180,7 @@ class ModelBase(pl.LightningModule, ABC):
             self.lr = self.lr_warmup
         else:
             self.lr = lr
+
         self.add_instrument_loss = add_instrument_loss
         if add_instrument_loss is not None:
             self.instrument_family_loss = InstrumentFamilyLoss()
