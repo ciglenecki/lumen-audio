@@ -55,7 +55,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --audio-transform WAV2VEC --model WAV2VEC_CNN --use-fluffy --head ATTENTION_HEAD --loss-function CROSS_ENTROPY_POS_WEIGHT --backbone-after classifier.heads --head-after classifier.heads --quick --quick",
+			"args": "--accelerator gpu --devices -1 --train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --audio-transform WAV2VEC --model WAV2VEC_CNN --use-fluffy --head ATTENTION_HEAD --loss-function CROSS_ENTROPY_POS_WEIGHT --backbone-after classifier.heads --head-after classifier.heads --quick",
 			"justMyCode": false
 		},
 		{
@@ -135,7 +135,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--train-paths irmastrain:data/irmas/train csv:irmas_train_from_test_n_1544.csv csv:data/openmic_r0.8_n_8858.csv --val-paths irmastest:data/irmas/test_sum3 csv:openmic_r0.8_n_8858_testn_1771.csv csv:irmas_test_from_test_n_1330.csv --backbone-after backbone --head-after backbone.classifier --model EFFICIENT_NET_V2_S --audio-transform MEL_SPECTROGRAM --finetune-head-epochs 3  --batch-size 16 --lr 1e-4 --finetune-head-epochs 1 --epochs 5 --aug-kwargs sum_n_samples=3 --experiment-suffix augs-sum3-ultimIrOp --quick",
+			"args": "--backbone-after backbone.features.7.2 --head-after backbone.classifier --model EFFICIENT_NET_V2_S --audio-transform MEL_SPECTROGRAM --finetune-head-epochs 1 --batch-size 3 --accumulate_grad_batches 4 --quick --epochs 4 --loss-function FOCAL_LOSS --add-instrument-loss 0.3 --verify-config",
 			"justMyCode": false
 		},
 	]

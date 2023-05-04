@@ -17,6 +17,7 @@ class SupportedModels(Enum):
     CONVNEXT_LARGE = "convnext_large"
     CONVNEXT_BASE = "convnext_base"
     MOBILENET_V3_LARGE = "mobilenet_v3_large"
+    CONVLSTM = "conv_lstm"
 
 
 class SupportedHeads(Enum):
@@ -67,6 +68,9 @@ class SupportedOptimizer(Enum):
 class SupportedLossFunctions(Enum):
     CROSS_ENTROPY = "cross_entropy"
     CROSS_ENTROPY_POS_WEIGHT = "cross_entropy_pos_weight"
+    FOCAL_LOSS = "focal_loss"
+    FOCAL_LOSS_POS_WEIGHT = "focal_loss_pos_weight"
+    INSTRUMENT_FAMILY_LOSS = "instrument_family_loss"
 
 
 class AudioTransforms(Enum):
@@ -77,6 +81,10 @@ class AudioTransforms(Enum):
     MULTI_SPECTROGRAM = "multi_spectrogram"
     WAV2VEC = "wav2vec"
     MFCC = "mfcc"
+
+    # Legacy
+    WAVELET = "wavelet"
+    MELCHROWAV = "melchrowav"
 
 
 class SupportedDatasetDirType(Enum):

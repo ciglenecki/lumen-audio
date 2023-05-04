@@ -27,6 +27,7 @@ from src.enums.enums import (
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
 from src.features.augmentations import get_augmentations
 from src.features.chunking import collate_fn_feature
+from src.model.loss_functions import FocalLoss
 from src.model.model import get_model
 from src.train.callbacks import (
     FinetuningCallback,
@@ -143,7 +144,7 @@ if __name__ == "__main__":
 
     if config.loss_function == SupportedLossFunctions.CROSS_ENTROPY:
         loss_function = torch.nn.BCEWithLogitsLoss(**config.loss_function_kwargs)
-    if config.loss_function == SupportedLossFunctions.CROSS_ENTROPY_POS_WEIGHT:
+    elif config.loss_function == SupportedLossFunctions.CROSS_ENTROPY_POS_WEIGHT:
         instrument_count = dict_with_keys(
             datamodule.get_train_dataset_stats(), config_defaults.ALL_INSTRUMENTS
         )
@@ -151,7 +152,18 @@ if __name__ == "__main__":
             **config.loss_function_kwargs,
             "pos_weight": calc_instrument_weight(instrument_count),
         }
-        loss_function = torch.nn.BCEWithLogitsLoss(**kwargs)
+        loss_function = torch.nn.BCEWithLogitsLoss(**kwargs, reduction="none")
+    elif config.loss_function == SupportedLossFunctions.FOCAL_LOSS:
+        loss_function = FocalLoss(**config.loss_function_kwargs)
+    elif config.loss_function == SupportedLossFunctions.FOCAL_LOSS_POS_WEIGHT:
+        instrument_count = dict_with_keys(
+            datamodule.get_train_dataset_stats(), config_defaults.ALL_INSTRUMENTS
+        )
+        kwargs = {
+            **config.loss_function_kwargs,
+            "pos_weight": calc_instrument_weight(instrument_count),
+        }
+        loss_function = FocalLoss(**kwargs)
 
     model = get_model(config, loss_function=loss_function)
     print_params(model)
