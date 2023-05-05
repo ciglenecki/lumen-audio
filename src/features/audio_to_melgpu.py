@@ -61,8 +61,8 @@ class MelspecGPU(AudioTransformBase):
         audio: torch.Tensor | np.ndarray,
     ) -> tuple[torch.Tensor]:
         # This is already on GPU at this point
-        # if audio.ndim == 2:
-        #     audio = audio.unsqueeze(0)
+        if audio.ndim == 2:
+            audio = audio.unsqueeze(0)
 
         if self.waveform_augmentation is not None:
             audio = self.waveform_augmentation(audio)
@@ -74,6 +74,8 @@ class MelspecGPU(AudioTransformBase):
 
         spectrogram = spectrogram.abs()
 
+        spectrogram = repeat_self_to_length(spectrogram, self.image_size[-1])
+
         interpolation = (
             torchvision.transforms.functional.InterpolationMode.NEAREST_EXACT
         )
@@ -83,8 +85,6 @@ class MelspecGPU(AudioTransformBase):
             interpolation=interpolation,
             antialias=False,
         )
-
-        spectrogram = repeat_self_to_length(spectrogram, self.image_size[1])
 
         if self.normalize_image:
             spectrogram = self.normalize_spectrogram(spectrogram)

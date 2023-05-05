@@ -299,20 +299,14 @@ class DatasetBase(Dataset[DatasetGetItem]):
 
         return audio, labels
 
-    # @timeit
     def __getitem__(self, index: int) -> DatasetGetItem:
         audio, labels, _ = self.load_sample(index)
 
         if self.use_concat or self.use_sum:
             audio, labels = self.concat_and_sum_random_negative_samples(audio, labels)
 
-        # if self.audio_transform is None:
-        #     return audio, labels, index
-
         labels = torch.tensor(labels).float()
         features = torch.tensor(audio).float()
-
-        # features = self.audio_transform(audio)
 
         # Uncomment for playing audio
         # print(

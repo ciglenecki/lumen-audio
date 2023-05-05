@@ -101,16 +101,18 @@ class OurDataModule(pl.LightningDataModule):
     def transfer_batch_to_device(
         self, batch: torch.Tensor, device: torch.device, dataloader_idx: int = 0
     ) -> torch.Tensor:
-        if self.train_audio_transform is not None:
-            self.train_audio_transform = self.train_audio_transform.to(device)
-        if self.val_audio_transform is not None:
-            self.val_audio_transform = self.val_audio_transform.to(device)
-
+        # This is a hack to make sure that the transforms are on the same device as the data.
+        transforms = [self.train_audio_transform, self.val_audio_transform]
+        for i, transform in enumerate(transforms):
+            dummy_param = next(self.val_audio_transform.parameters(), None)
+            if dummy_param is None or dummy_param.device != device:
+                transforms[i] = transform.to(device)
         return super().transfer_batch_to_device(batch, device, dataloader_idx)
 
     def on_after_batch_transfer(self, batch: torch.Tensor, dataloader_idx: int):
         features = batch[0]
-        if dataloader_idx == 0:
+
+        if self.trainer.training:
             batch[0] = self.train_audio_transform(features)
         else:
             batch[0] = self.val_audio_transform(features)

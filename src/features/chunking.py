@@ -228,36 +228,32 @@ def collate_fn_inner(
     features: list[torch.Tensor] = [e[0] for e in examples]
 
     # Pad audios to same len?
-    max_audio_width = max([len(f) for f in features])
-    # All audios are same legnth
-    features = [repeat_self_to_length(f, max_audio_width) for f in features]
-    # Chunk them to limit
-    features: list[list[torch.Tensor]] = [
-        torch.split(f, limit, dim=0) for f in features
-    ]
-    features = [repeat_first_chunk(f, limit) for f in features]
+    max_audio_width = max(len(f) for f in features)
 
-    # Count total number of features (sum of all chunks)
     num_features = 0
-    for e in examples:
-        feature_chunks = e[0]
-        num_features += feature_chunks.shape[0]
+    feature_chunks_list = []
+    for feature in features:
+        feature = repeat_self_to_length(feature, max_audio_width)
+        feature_chunk = list(torch.split(feature, limit, dim=0))
+        feature_chunk = torch.stack(repeat_first_chunk(feature_chunk, limit))
+        feature_chunks_list.append(feature_chunk)
+        num_features += len(feature_chunk)
 
     example_item = examples[0]
-    example_feature = example_item[0]
     example_label = example_item[1]
-    feature_shape = tuple(example_feature.shape[1:])
 
     # Create empty matrices
-    features = torch.empty((num_features, *feature_shape))
+    features = torch.empty((num_features, limit))
     labels = torch.empty((num_features, example_label.shape[-1]))
     file_indices = torch.empty(num_features, dtype=torch.int64)
     item_indices = torch.empty(num_features, dtype=torch.int64)
 
     features_passed = 0
     for unique_file_idx, item in enumerate(examples):
-        feature_chunks, label, dataset_index = item
-        num_chunks = feature_chunks.shape[0]
+        _, label, dataset_index = item
+
+        feature_chunks = feature_chunks_list[unique_file_idx]
+        num_chunks = len(feature_chunks)
 
         start = features_passed
         end = features_passed + num_chunks
@@ -269,6 +265,7 @@ def collate_fn_inner(
 
         features_passed += num_chunks
 
+    features = features.unsqueeze(1)
     return features, labels, file_indices, item_indices
 
 

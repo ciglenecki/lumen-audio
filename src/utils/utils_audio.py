@@ -78,8 +78,7 @@ def iron_audios(audios: list[np.ndarray], target_width: int):
 
 
 def repeat_self_to_length(features: torch.Tensor, new_width: int):
-    """
-    Resizes the width of a batch of features to a new width.
+    """Resizes the width of a batch of features to a new width.
 
     Args:
         features (torch.Tensor): Batch of features with shape (B, C, H, W).

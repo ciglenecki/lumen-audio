@@ -46,7 +46,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --backbone-after backbone.features --head-after backbone.classifier --model EFFICIENT_NET_V2_S --audio-transform MEL_GPU --finetune-head-epochs 3 --epochs 10 --batch-size 1 --accumulate_grad_batches 4 --lr 1e-4 --quick",
+			"args": "--train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --backbone-after backbone.features --head-after backbone.classifier --model EFFICIENT_NET_V2_S --audio-transform MEL_GPU --finetune-head-epochs 3 --epochs 10 --batch-size 2 --accumulate_grad_batches 4 --lr 1e-4 --quick",
 			"justMyCode": false
 		},
 		{
