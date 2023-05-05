@@ -9,7 +9,7 @@ from src.features.augmentations import SpectrogramAugmentation, WaveformAugmenta
 from src.utils.utils_audio import load_audio_from_file
 
 
-class AudioTransformBase(ABC):
+class AudioTransformBase(ABC, torch.nn.Module):
     """Base class for all audio transforms and it bridges the gap between Dataset item and Model's
     forward.
 

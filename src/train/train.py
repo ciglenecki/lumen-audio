@@ -1,4 +1,5 @@
 from argparse import Namespace
+from functools import partial
 from pathlib import Path
 
 import pytorch_lightning as pl
@@ -26,7 +27,7 @@ from src.enums.enums import (
 )
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
 from src.features.augmentations import get_augmentations
-from src.features.chunking import collate_fn_feature
+from src.features.chunking import collate_fn_feature, collate_fn_inner
 from src.model.loss_functions import FocalLoss
 from src.model.model import get_model
 from src.train.callbacks import (
@@ -45,6 +46,7 @@ from src.utils.utils_functions import (
     to_yaml,
 )
 from src.utils.utils_model import print_params
+from utils.utils_audio import spec_width_to_num_samples
 
 
 def experiment_setup(config: ConfigDefault, pl_args: Namespace):
@@ -117,7 +119,13 @@ if __name__ == "__main__":
         if SupportedAugmentations.SUM_N_SAMPLES in config.augmentations
         else None
     )
-    collate_fn = collate_fn_feature
+    # collate_fn = collate_fn_feature
+    if config.max_num_width_samples is None:
+        config.max_num_width_samples = spec_width_to_num_samples(
+            config.image_size[-1], config.hop_length
+        )
+
+    collate_fn = partial(collate_fn_inner, limit=config.max_num_width_samples)
 
     datamodule = OurDataModule(
         train_paths=config.train_paths,

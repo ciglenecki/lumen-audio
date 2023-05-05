@@ -10,7 +10,9 @@ from src.utils.utils_exceptions import InvalidDataException
 
 def create_and_repeat_channel(images: torch.Tensor, num_repeat: int):
     # Create new dimension then repeat along it.
-    if len(images.shape) == 3:
+    if images.ndim == 4:
+        return images.repeat(1, num_repeat, 1, 1)
+    if images.ndim == 3:
         return images.unsqueeze(dim=1).repeat(1, num_repeat, 1, 1)
     return images.unsqueeze(dim=0).repeat(num_repeat, 1, 1)
 

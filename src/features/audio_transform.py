@@ -1,6 +1,7 @@
 from src.config.config_defaults import ConfigDefault
 from src.enums.enums import AudioTransforms
 from src.features.audio_to_ast import AudioTransformAST
+from src.features.audio_to_melgpu import MelspecGPU
 from src.features.audio_to_mfcc import MFCC
 from src.features.audio_to_multispec import MultiSpectrogram
 from src.features.audio_to_spectrogram import MelSpectrogram
@@ -56,6 +57,11 @@ def get_audio_transform(
     elif audio_transform_enum is AudioTransforms.MFCC:
         return MFCC(
             n_mfcc=config.n_mfcc,
+            **image_kwargs,
+            **base_kwargs,
+        )
+    elif audio_transform_enum is AudioTransforms.MEL_GPU:
+        return MelspecGPU(
             **image_kwargs,
             **base_kwargs,
         )

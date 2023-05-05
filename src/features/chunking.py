@@ -5,6 +5,27 @@ import torch.nn.functional
 import torchvision.transforms.functional
 
 from src.config.config_defaults import NUM_RGB_CHANNELS
+from src.utils.utils_audio import iron_audios, repeat_self_to_length
+
+
+def repeat_first_chunk(chunks: list[torch.Tensor], target_width: int):
+    last_chunk = chunks[-1]  # [Batch]
+    last_chunk_width = last_chunk.shape[-1]
+    diff = target_width - last_chunk_width
+    # Take the first chunk, glue it to the last (which is shorter).
+    # If first chunk is last chunk then repeat it until the size is large enough.
+    # diff = 384 - 50 = 334
+    first_chunk: torch.Tensor = chunks[0]  # [384, 50] if first chunk == first chunk
+    first_chunk_width = first_chunk.shape[-1]  # 50
+    num_first_chunk_repeats = max(1, ceil(diff / first_chunk_width))  # 8
+    repeated_first_chunk = torch.cat(
+        [first_chunk] * num_first_chunk_repeats, dim=-1
+    )  # [384, 334]
+
+    # Remove remove excess width caused by repeating
+    repeated_first_chunk = repeated_first_chunk[..., :diff]  # [384, 334]
+    chunks[-1] = torch.cat((chunks[-1], repeated_first_chunk), dim=-1)  # [384, 384]
+    return chunks
 
 
 def chunk_image_by_width(
@@ -83,19 +104,20 @@ def chunk_image_by_width(
 
     # Add batch dimension
     # [Batch, height, width] = [1, 128, 1024]
-    image = image.unsqueeze(0)
+    if image.ndim == 2:
+        image = image.unsqueeze(0)
 
     # Scale only the height (freqs) and don't touch the width (time) because the `time` will get chunked.
     full_width = image.shape[-1]
     pre_resize_height = image_height  # change the height!
-    pre_resize_width = full_width  # don't change the width!
+    pre_repeat_self_to_length = full_width  # don't change the width!
 
     # [1, 384, 2048]
     # [Batch, height, width]
     interpolation = torchvision.transforms.functional.InterpolationMode.NEAREST_EXACT
     image = torchvision.transforms.functional.resize(
         image,
-        size=(pre_resize_height, pre_resize_width),
+        size=(pre_resize_height, pre_repeat_self_to_length),
         interpolation=interpolation,
         antialias=False,
     )
@@ -196,6 +218,54 @@ def collate_fn_feature(
 
         features_passed += num_chunks
 
+    return features, labels, file_indices, item_indices
+
+
+def collate_fn_inner(
+    examples: list[torch.Tensor, torch.Tensor, torch.Tensor],
+    limit: int,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    features: list[torch.Tensor] = [e[0] for e in examples]
+
+    # Pad audios to same len?
+    max_audio_width = max(len(f) for f in features)
+
+    num_features = 0
+    feature_chunks_list = []
+    for feature in features:
+        feature = repeat_self_to_length(feature, max_audio_width)
+        feature_chunk = list(torch.split(feature, limit, dim=0))
+        feature_chunk = torch.stack(repeat_first_chunk(feature_chunk, limit))
+        feature_chunks_list.append(feature_chunk)
+        num_features += len(feature_chunk)
+
+    example_item = examples[0]
+    example_label = example_item[1]
+
+    # Create empty matrices
+    features = torch.empty((num_features, limit))
+    labels = torch.empty((num_features, example_label.shape[-1]))
+    file_indices = torch.empty(num_features, dtype=torch.int64)
+    item_indices = torch.empty(num_features, dtype=torch.int64)
+
+    features_passed = 0
+    for unique_file_idx, item in enumerate(examples):
+        _, label, dataset_index = item
+
+        feature_chunks = feature_chunks_list[unique_file_idx]
+        num_chunks = len(feature_chunks)
+
+        start = features_passed
+        end = features_passed + num_chunks
+
+        features[start:end] = feature_chunks
+        labels[start:end] = label
+        file_indices[start:end] = torch.full((num_chunks,), unique_file_idx)
+        item_indices[start:end] = torch.full((num_chunks,), int(dataset_index))
+
+        features_passed += num_chunks
+
+    features = features.unsqueeze(1)
     return features, labels, file_indices, item_indices
 
 
