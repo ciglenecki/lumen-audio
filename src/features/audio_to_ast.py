@@ -12,6 +12,7 @@ from src.features.audio_transform_base import AudioTransformBase
 from src.utils.utils_audio import (
     iron_audios,
     plot_spectrograms,
+    repeat_self_to_length,
     spec_width_to_num_samples,
 )
 from src.utils.utils_dataset import get_example_val_sample
@@ -69,7 +70,8 @@ class AudioTransformAST(AudioTransformBase):
         self, audio: torch.Tensor | np.ndarray
     ) -> tuple[torch.Tensor, torch.Tensor]:
         if self.waveform_augmentation is not None:
-            audio = self.waveform_augmentation(audio)
+            audio = self.waveform_augmentation(torch.tensor(audio).view(1, 1, -1))
+            audio = audio.view(-1)
 
         # Split waveform because feature extraction because transformer has a limit (trunc/padding). It creates fixed sized spectrogram. If audio is too long the spectrogram won't contain all of the audio.
         if len(audio) > self.max_audio_length:
@@ -99,8 +101,10 @@ class AudioTransformAST(AudioTransformBase):
         )["input_values"]
         if self.spectrogram_augmentation is not None:
             spectrogram = self.spectrogram_augmentation(
-                spectrogram
-            )  # [Batch, 1024, 128]
+                spectrogram.permute(0, 2, 1)
+            ).unsqueeze(0)
+            spectrogram = repeat_self_to_length(spectrogram, self.image_size[-1])
+            spectrogram.permute(0, 2, 1)  # [Batch, 1024, 128]
 
         assert len(spectrogram.shape) == 3, "Spectrogram chunks are 2D images"
         return spectrogram

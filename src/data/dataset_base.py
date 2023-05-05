@@ -35,6 +35,7 @@ class DatasetBase(Dataset[DatasetGetItem]):
         sum_n_samples: int | None,
         concat_n_samples: int | None,
         train_override_csvs: list[Path] | None,
+        aug_gpu: bool = False,
     ):
         self.dataset_path = dataset_path
         self.audio_transform = audio_transform
@@ -46,6 +47,7 @@ class DatasetBase(Dataset[DatasetGetItem]):
         self.train_override_csvs = train_override_csvs
         self.use_concat = concat_n_samples is not None and concat_n_samples > 1
         self.use_sum = sum_n_samples is not None and sum_n_samples > 1
+        self.aug_gpu = aug_gpu
 
         self.dataset_list: list[tuple[Path, np.ndarray]] = self.create_dataset_list()
         if self.train_override_csvs:
@@ -306,8 +308,11 @@ class DatasetBase(Dataset[DatasetGetItem]):
             audio, labels = self.concat_and_sum_random_negative_samples(audio, labels)
 
         labels = torch.tensor(labels).float()
-        features = torch.tensor(audio).float()
 
+        if not self.aug_gpu and self.audio_transform is not None:
+            features = self.audio_transform(audio).float()
+        else:
+            features = torch.tensor(audio).float()
         # Uncomment for playing audio
         # print(
         #     [

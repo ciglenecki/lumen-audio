@@ -13,7 +13,11 @@ from src.config.config_defaults import (
 )
 from src.features.audio_transform_base import AudioTransformBase
 from src.features.augmentations import get_augmentations
-from src.features.chunking import chunk_image_by_width, undo_image_chunking
+from src.features.chunking import (
+    chunk_image_by_width,
+    set_image_height,
+    undo_image_chunking,
+)
 from src.features.torch_melspec import MelSpectrogramTorchFix
 from src.utils.utils_audio import repeat_self_to_length
 from src.utils.utils_dataset import (
@@ -61,6 +65,7 @@ class MelspecGPU(AudioTransformBase):
         audio: torch.Tensor | np.ndarray,
     ) -> tuple[torch.Tensor]:
         # This is already on GPU at this point
+        # after collate function
         if audio.ndim == 2:
             audio = audio.unsqueeze(0)
 
@@ -73,18 +78,8 @@ class MelspecGPU(AudioTransformBase):
             spectrogram = self.spectrogram_augmentation(spectrogram)
 
         spectrogram = spectrogram.abs()
-
         spectrogram = repeat_self_to_length(spectrogram, self.image_size[-1])
-
-        interpolation = (
-            torchvision.transforms.functional.InterpolationMode.NEAREST_EXACT
-        )
-        spectrogram = torchvision.transforms.functional.resize(
-            spectrogram,
-            size=(self.image_size[1], spectrogram.shape[-1]),
-            interpolation=interpolation,
-            antialias=False,
-        )
+        spectrogram = set_image_height(spectrogram, self.image_size[1])
 
         if self.normalize_image:
             spectrogram = self.normalize_spectrogram(spectrogram)

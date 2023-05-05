@@ -435,6 +435,8 @@ class ConfigDefault(Serializable):
 
     experiment_suffix: str = create("")
 
+    aug_gpu: bool | None = create(None)
+
     # ======================== MODEL ===========================
 
     model: SupportedModels | None = create(None)
@@ -831,6 +833,7 @@ class ConfigDefault(Serializable):
                 raise InvalidArgument(
                     f"You can't use ATTENTION_HEAD with {self.model}. Only models {[k.name for k, v in SUPPORTS_ATTENTION_HEAD.items() if v]} support it."
                 )
+        self.aug_gpu = self.audio_transform in {AudioTransforms.MEL_GPU}
 
     def isfloat(self, x: str):
         try:

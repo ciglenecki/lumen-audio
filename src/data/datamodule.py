@@ -64,6 +64,7 @@ class OurDataModule(pl.LightningDataModule):
         sampling_rate: int,
         num_classes: int = config_defaults.DEFAULT_NUM_LABELS,
         train_override_csvs: list[Path] | None = None,
+        aug_gpu=False,
     ):
         super().__init__()
         self.batch_size = batch_size
@@ -89,6 +90,7 @@ class OurDataModule(pl.LightningDataModule):
         self.val_dataset = None
         self.test_dataset = None
         self.train_override_csvs = train_override_csvs
+        self.aug_gpu = aug_gpu
 
         self._train_stats: dict | None = None
         self._val_stats: dict | None = None
@@ -102,6 +104,8 @@ class OurDataModule(pl.LightningDataModule):
         self, batch: torch.Tensor, device: torch.device, dataloader_idx: int = 0
     ) -> torch.Tensor:
         # This is a hack to make sure that the transforms are on the same device as the data.
+        if not self.aug_gpu:
+            return super().transfer_batch_to_device(batch, device, dataloader_idx)
         transforms = [self.train_audio_transform, self.val_audio_transform]
         for i, transform in enumerate(transforms):
             dummy_param = next(self.val_audio_transform.parameters(), None)
@@ -110,6 +114,8 @@ class OurDataModule(pl.LightningDataModule):
         return super().transfer_batch_to_device(batch, device, dataloader_idx)
 
     def on_after_batch_transfer(self, batch: torch.Tensor, dataloader_idx: int):
+        if not self.aug_gpu:
+            return batch
         features = batch[0]
 
         if self.trainer.training:
@@ -261,6 +267,7 @@ class OurDataModule(pl.LightningDataModule):
                     sampling_rate=self.sampling_rate,
                     train_override_csvs=self.train_override_csvs,
                     num_classes=self.num_classes,
+                    aug_gpu=self.aug_gpu,
                 )
             elif dataset_enum == SupportedDatasetDirType.IRMAS_TEST:
                 dataset = IRMASDatasetTest(
@@ -272,6 +279,7 @@ class OurDataModule(pl.LightningDataModule):
                     sampling_rate=self.sampling_rate,
                     train_override_csvs=self.train_override_csvs,
                     num_classes=self.num_classes,
+                    aug_gpu=self.aug_gpu,
                 )
             elif dataset_enum == SupportedDatasetDirType.OPENMIC:
                 pass
@@ -285,6 +293,7 @@ class OurDataModule(pl.LightningDataModule):
                     sampling_rate=self.sampling_rate,
                     train_override_csvs=self.train_override_csvs,
                     num_classes=self.num_classes,
+                    aug_gpu=self.aug_gpu,
                 )
             elif dataset_enum == SupportedDatasetDirType.INFERENCE:
                 dataset = InferenceDataset(

@@ -54,7 +54,7 @@ class MFCC(AudioTransformBase):
             mfcc = self.normalize_mfcc(mfcc)
 
         if self.spectrogram_augmentation is not None:
-            mfcc = self.spectrogram_augmentation(mfcc)
+            mfcc = self.spectrogram_augmentation(mfcc).unsqueeze(0)
         else:
             mfcc = torch.tensor(mfcc)
 

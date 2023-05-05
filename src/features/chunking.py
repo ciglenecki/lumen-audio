@@ -8,6 +8,16 @@ from src.config.config_defaults import NUM_RGB_CHANNELS
 from src.utils.utils_audio import iron_audios, repeat_self_to_length
 
 
+def set_image_height(image: torch.Tensor, height: int):
+    interpolation = torchvision.transforms.functional.InterpolationMode.NEAREST_EXACT
+    return torchvision.transforms.functional.resize(
+        image,
+        size=(height, image.shape[-1]),
+        interpolation=interpolation,
+        antialias=False,
+    )
+
+
 def repeat_first_chunk(chunks: list[torch.Tensor], target_width: int):
     last_chunk = chunks[-1]  # [Batch]
     last_chunk_width = last_chunk.shape[-1]

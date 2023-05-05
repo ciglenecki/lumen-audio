@@ -85,9 +85,14 @@ class WaveformAugmentation(torch.nn.Module):
     def to_torch(self, audio: np.ndarray) -> torch.Tensor:
         return torch.tensor(audio).unsqueeze(0).unsqueeze(0)
 
-    def __call__(self, audio: np.ndarray) -> np.ndarray:
+    def __call__(self, audio: torch.Tensor | np.ndarray) -> torch.Tensor | np.ndarray:
         if len(self.augmentations) == 0:
             return audio
+        if isinstance(audio, np.ndarray):
+            audio = torch.tensor(self.to_torch(audio))
+
+        if audio.ndim != 3:
+            audio = audio.view(1, 1, -1)
 
         if (
             SupportedAugmentations.BACKGROUND_NOISE in self.augmentations
@@ -117,7 +122,6 @@ class WaveformAugmentation(torch.nn.Module):
             percentage = np.random.uniform(0, self.time_mask_max_percentage)
             audio = time_mask_audio(audio, percentage)
 
-        # audio = self.to_type(audio, np.array)
         return audio
 
 
@@ -156,12 +160,11 @@ class SpectrogramAugmentation(torch.nn.Module):
         if len(self.augmentations) == 0:
             return spectrogram
 
-        original_width = spectrogram.shape[-1]
-        return_batch_dim = True
-
-        if len(spectrogram.shape) == 2:
-            return_batch_dim = False
-            spectrogram = spectrogram.unsqueeze(0)
+        original_shape = spectrogram.shape
+        if spectrogram.ndim != 4:
+            spectrogram = spectrogram.view(
+                1, 1, spectrogram.shape[-2], spectrogram.shape[-1]
+            )
 
         if SupportedAugmentations.RANDOM_PIXELS in self.augmentations:
             hide_random_pixels_p = np.random.uniform(0, 0.3)
@@ -175,18 +178,13 @@ class SpectrogramAugmentation(torch.nn.Module):
         if SupportedAugmentations.TIME_STRETCH in self.augmentations:
             random_rate = np.random.uniform(*self.stretch_factors)
             spectrogram = self.time_stretch(spectrogram, random_rate)
+            spectrogram = spectrogram[: original_shape[-2]]
 
         if SupportedAugmentations.FREQ_MASK in self.augmentations:
             spectrogram = self.freq_mask(spectrogram.abs())
 
         if SupportedAugmentations.RANDOM_ERASE in self.augmentations:
             spectrogram = self.random_erase(spectrogram)
-
-        if spectrogram.shape[-1] == original_width:
-            pass
-
-        if not return_batch_dim:
-            return spectrogram.squeeze(0)
 
         return spectrogram
 

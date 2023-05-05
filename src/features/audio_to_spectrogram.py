@@ -10,7 +10,11 @@ from src.config.config_defaults import (
     get_default_config,
 )
 from src.features.audio_transform_base import AudioTransformBase
-from src.features.chunking import chunk_image_by_width, undo_image_chunking
+from src.features.chunking import (
+    chunk_image_by_width,
+    set_image_height,
+    undo_image_chunking,
+)
 from src.utils.utils_dataset import (
     add_rgb_channel,
     get_example_val_sample,
@@ -50,6 +54,9 @@ class MelSpectrogram(AudioTransformBase):
         if self.waveform_augmentation is not None:
             audio = self.waveform_augmentation(audio)
 
+        if isinstance(audio, torch.Tensor):
+            audio = audio.numpy()
+
         spectrogram = librosa.feature.melspectrogram(
             y=audio,
             sr=self.sampling_rate,
@@ -59,7 +66,7 @@ class MelSpectrogram(AudioTransformBase):
         )
 
         if self.spectrogram_augmentation is not None:
-            spectrogram = self.spectrogram_augmentation(spectrogram)
+            spectrogram = self.spectrogram_augmentation(spectrogram).unsqueeze(0)
         else:
             spectrogram = torch.tensor(spectrogram)
 

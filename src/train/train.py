@@ -36,6 +36,7 @@ from src.train.callbacks import (
     OverrideEpochMetricCallback,
     TensorBoardHparamFixer,
 )
+from src.utils.utils_audio import spec_width_to_num_samples
 from src.utils.utils_dataset import calc_instrument_weight
 from src.utils.utils_functions import (
     add_prefix_to_keys,
@@ -46,7 +47,6 @@ from src.utils.utils_functions import (
     to_yaml,
 )
 from src.utils.utils_model import print_params
-from utils.utils_audio import spec_width_to_num_samples
 
 
 def experiment_setup(config: ConfigDefault, pl_args: Namespace):
@@ -125,7 +125,11 @@ if __name__ == "__main__":
             config.image_size[-1], config.hop_length
         )
 
-    collate_fn = partial(collate_fn_inner, limit=config.max_num_width_samples)
+    collate_fn = (
+        partial(collate_fn_inner, limit=config.max_num_width_samples)
+        if config.aug_gpu
+        else collate_fn_feature
+    )
 
     datamodule = OurDataModule(
         train_paths=config.train_paths,
@@ -146,6 +150,7 @@ if __name__ == "__main__":
         use_weighted_train_sampler=config.use_weighted_train_sampler,
         sampling_rate=config.sampling_rate,
         train_override_csvs=config.train_override_csvs,
+        aug_gpu=config.aug_gpu,
     )
     datamodule.setup_for_train()
     datamodule.setup_for_inference()
