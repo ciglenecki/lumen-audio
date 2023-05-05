@@ -77,7 +77,44 @@ def iron_audios(audios: list[np.ndarray], target_width: int):
     return audios
 
 
-def time_mask_audio(audio: np.ndarray, percentage: float, fill_value: float = 0):
+def repeat_self_to_length(features: torch.Tensor, new_width: int):
+    """
+    Resizes the width of a batch of features to a new width.
+
+    Args:
+        features (torch.Tensor): Batch of features with shape (B, C, H, W).
+        new_width (int): Desired new width of features.
+
+    Returns:
+        torch.Tensor: Batch of resized features with shape (B, C, H, new_width).
+    """
+    # Get the current width of the features
+
+    current_width = features.shape[-1]
+
+    if current_width == new_width:
+        return features
+
+    num_other_dims = features.ndim - 1
+
+    # If the new width is larger, repeat the first part of the feature to fill the width
+    if new_width > current_width:
+        diff = new_width - current_width
+        num_repeats = max(1, ceil(diff / current_width))
+        ones = [1] * num_other_dims
+        repeated_features = features.repeat(*ones, num_repeats)[..., :diff]
+        resized_features = torch.cat([features, repeated_features], dim=-1)
+
+    # If the new width is smaller, cut the width
+    elif new_width < current_width:
+        resized_features = features[..., :new_width]
+
+    return resized_features
+
+
+def time_mask_audio(
+    audio: np.ndarray | torch.Tensor, percentage: float, fill_value: float = 0
+):
     """Sets random percentage of audio to zeros but zeros are consecutive.
 
     Args:
@@ -87,11 +124,12 @@ def time_mask_audio(audio: np.ndarray, percentage: float, fill_value: float = 0)
     Returns:
         _type_: _description_
     """
-    num_zero = int(len(audio) * percentage)
+    audio_len = audio.shape[-1]
+    num_zero = int(audio_len * percentage)
     # Choose a random starting index for the sequence of zeros
-    start_index = np.random.randint(len(audio) - num_zero)
+    start_index = np.random.randint(audio_len - num_zero)
     # Set the selected indices to zero
-    audio[start_index : start_index + num_zero] = fill_value
+    audio[..., start_index : start_index + num_zero] = fill_value
     return audio
 
 
@@ -143,7 +181,7 @@ def load_audio_from_file(
     elif method == "torch":
         # default normalize for torch is True
         waveform, original_sr = torchaudio.load(audio_path, normalize=normalize)
-        torch.mean(waveform, dim=0, keepdim=False)
+        waveform = torch.mean(waveform, dim=0, keepdim=False)
         if target_sr is not None:
             torchaudio.functional.resample(
                 waveform, orig_freq=original_sr, new_freq=target_sr

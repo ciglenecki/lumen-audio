@@ -98,6 +98,24 @@ class OurDataModule(pl.LightningDataModule):
         self.val_sampler: SequentialSampler | None = None
         self.test_sampler: SequentialSampler | None = None
 
+    def transfer_batch_to_device(
+        self, batch: torch.Tensor, device: torch.device, dataloader_idx: int = 0
+    ) -> torch.Tensor:
+        if self.train_audio_transform is not None:
+            self.train_audio_transform = self.train_audio_transform.to(device)
+        if self.val_audio_transform is not None:
+            self.val_audio_transform = self.val_audio_transform.to(device)
+
+        return super().transfer_batch_to_device(batch, device, dataloader_idx)
+
+    def on_after_batch_transfer(self, batch: torch.Tensor, dataloader_idx: int):
+        features = batch[0]
+        if dataloader_idx == 0:
+            batch[0] = self.train_audio_transform(features)
+        else:
+            batch[0] = self.val_audio_transform(features)
+        return batch
+
     def prepare_data(self) -> None:
         """Has to be implemented to avoid object has no attribute 'prepare_data_per_node' error."""
 

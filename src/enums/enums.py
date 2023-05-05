@@ -82,6 +82,8 @@ class AudioTransforms(Enum):
     WAV2VEC = "wav2vec"
     MFCC = "mfcc"
 
+    MEL_GPU = "mel_gpu"
+
     # Legacy
     WAVELET = "wavelet"
     MELCHROWAV = "melchrowav"

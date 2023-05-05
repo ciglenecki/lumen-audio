@@ -306,11 +306,13 @@ class DatasetBase(Dataset[DatasetGetItem]):
         if self.use_concat or self.use_sum:
             audio, labels = self.concat_and_sum_random_negative_samples(audio, labels)
 
-        if self.audio_transform is None:
-            return audio, labels, index
+        # if self.audio_transform is None:
+        #     return audio, labels, index
 
         labels = torch.tensor(labels).float()
-        features = self.audio_transform(audio)
+        features = torch.tensor(audio).float()
+
+        # features = self.audio_transform(audio)
 
         # Uncomment for playing audio
         # print(
@@ -323,6 +325,7 @@ class DatasetBase(Dataset[DatasetGetItem]):
         # )
         # while True:
         #     play_audio(audio, sampling_rate=self.sampling_rate)
+
         return features, labels, index
 
 
