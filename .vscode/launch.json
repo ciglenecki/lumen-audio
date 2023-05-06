@@ -151,9 +151,9 @@
 			"name": "Testing",
 			"type": "python",
 			"request": "launch",
-			"program": "src/train/train.py",
+			"program": "src/scripts/cleanlab_find.py",
 			"console": "integratedTerminal",
-			"args": "--backbone-after backbone.features.7.2 --head-after backbone.classifier --model EFFICIENT_NET_V2_S --audio-transform MEL_SPECTROGRAM --finetune-head-epochs 1 --batch-size 3 --accumulate_grad_batches 4 --quick --epochs 4 --loss-function FOCAL_LOSS --add-instrument-loss 0.3 --verify-config",
+			"args": "",
 			"justMyCode": false
 		},
 	]

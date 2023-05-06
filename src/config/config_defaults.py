@@ -468,6 +468,7 @@ class ConfigDefault(Serializable):
     """Use multiple optimizers for Fluffy."""
 
     use_rgb: bool | None = create(None)
+
     # ======================== OPTIM ===========================
 
     optimizer: str = create(SupportedOptimizer.ADAMW)
