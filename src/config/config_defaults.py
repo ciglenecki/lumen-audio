@@ -373,7 +373,7 @@ class ConfigDefault(Serializable):
         dict(
             stretch_factors=[0.8, 1.25],
             time_inversion_p=0.5,
-            freq_mask_param=60,
+            freq_mask_param=30,
             hide_random_pixels_p=0.25,
             std_noise=0.01,
             concat_n_samples=3,
