@@ -1,48 +1,62 @@
 from pathlib import Path
 from typing import List
 
-from description import get_models_desc, predict_images_desc
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 
 import src.server.controllers as controllers
 from src.enums.enums import SupportedDatasetDirType
-from src.server.interface import DatasetDirDict, DatasetDirsI, MultilabelPrediction
+from src.server import interface
+from src.server.description import (
+    GET_DATASET_DESC,
+    GET_MODELS_DESC,
+    MODELS_INFERENCE_TAG,
+    PREDICT_DIR_DESC,
+    PREDICT_DIR_STREAM_DESC,
+    PREDICT_FILES_DESC,
+    RESOURCES_TAG,
+    TEST_DIR_DESC,
+    TEST_DIR_STREAM_DESC,
+)
+from src.server.interface import JsonPrediction, JsonPredictions, TypeDatasetDict
 from src.server.middleware import dep_audio_file, dep_model_checkpoint
 from src.server.server_store import server_store
 
-router = APIRouter(prefix="/model")
+dataset_router = APIRouter(prefix="/dataset-type")
 
 
-@router.get(
+@dataset_router.get(
     "s",
-    tags=["available models"],
-    response_model=List[Path],
-    description=get_models_desc,
-)
-async def get_models():
-    return server_store.get_available_models()
-
-
-@router.get(
-    "/dataset-types",
-    tags=["available models"],
+    tags=[RESOURCES_TAG],
     response_model=List[str],
-    description=get_models_desc,
+    description=GET_DATASET_DESC,
 )
 async def get_supported_datasets():
     return [e.value for e in SupportedDatasetDirType]
 
 
-@router.post(
+model_router = APIRouter(prefix="/model")
+
+
+@model_router.get(
+    "s",
+    tags=[RESOURCES_TAG],
+    response_model=List[Path],
+    description=GET_MODELS_DESC,
+)
+async def get_models():
+    return server_store.get_available_models()
+
+
+@model_router.post(
     "/test-directory-stream",
-    tags=["predict"],
-    response_model=List[MultilabelPrediction],
-    description=predict_images_desc,
+    tags=[MODELS_INFERENCE_TAG],
+    response_model=interface.PredictionsWithMetrics,
+    description=TEST_DIR_STREAM_DESC,
 )
 async def test_directory_stream(
     model_checkpoint: Path,
-    dataset_dirs: list[DatasetDirDict],
+    dataset_dirs: list[TypeDatasetDict],
 ):
     controllers.set_server_store_model(model_checkpoint)
     controllers.set_inference_datamodule(dataset_dirs, type="test")
@@ -52,15 +66,15 @@ async def test_directory_stream(
     )
 
 
-@router.post(
+@model_router.post(
     "/test-directory",
-    tags=["predict"],
-    response_model=List[MultilabelPrediction],
-    description=predict_images_desc,
+    tags=[MODELS_INFERENCE_TAG],
+    response_model=interface.PredictionsWithMetrics,
+    description=TEST_DIR_DESC,
 )
 async def test_directory(
     model_checkpoint: Path,
-    dataset_dirs: list[DatasetDirDict],
+    dataset_dirs: list[TypeDatasetDict],
 ):
     controllers.set_server_store_model(model_checkpoint)
     controllers.set_inference_datamodule(dataset_dirs, type="test")
@@ -68,15 +82,15 @@ async def test_directory(
     return JSONResponse(controllers.test_directory(), media_type="application/json")
 
 
-@router.post(
+@model_router.post(
     "/predict-directory-stream",
-    tags=["predict"],
-    response_model=List[MultilabelPrediction],
-    description=predict_images_desc,
+    tags=[MODELS_INFERENCE_TAG],
+    response_model=JsonPredictions,
+    description=PREDICT_DIR_STREAM_DESC,
 )
 async def predict_directory_stream(
     model_checkpoint: Path,
-    dataset_dirs: list[DatasetDirDict],
+    dataset_dirs: list[TypeDatasetDict],
 ):
     controllers.set_server_store_model(model_checkpoint)
     controllers.set_inference_datamodule(dataset_dirs, type="predict")
@@ -86,15 +100,15 @@ async def predict_directory_stream(
     )
 
 
-@router.post(
+@model_router.post(
     "/predict-directory",
-    tags=["predict"],
-    response_model=List[MultilabelPrediction],
-    description=predict_images_desc,
+    tags=[MODELS_INFERENCE_TAG],
+    response_model=JsonPredictions,
+    description=PREDICT_DIR_DESC,
 )
 async def predict_directory(
     model_checkpoint: Path,
-    dataset_dirs: list[DatasetDirDict],
+    dataset_dirs: list[TypeDatasetDict],
 ):
     controllers.set_server_store_model(model_checkpoint)
     controllers.set_inference_datamodule(dataset_dirs, type="predict")
@@ -102,11 +116,11 @@ async def predict_directory(
     return JSONResponse(controllers.predict_directory(), media_type="application/json")
 
 
-@router.post(
+@model_router.post(
     "/predict-files",
-    tags=["predict"],
-    response_model=List[MultilabelPrediction],
-    description=predict_images_desc,
+    tags=[MODELS_INFERENCE_TAG],
+    response_model=List[JsonPrediction],
+    description=PREDICT_FILES_DESC,
 )
 async def predict_files(
     audio_files: list[UploadFile] = Depends(dep_audio_file),

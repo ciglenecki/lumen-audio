@@ -13,7 +13,6 @@ Percentage removed: 0.07412378821774795
 
 import json
 from pathlib import Path
-from turtle import title
 
 import cleanlab
 import matplotlib.pyplot as plt
@@ -25,6 +24,7 @@ from tqdm import tqdm
 
 import src.config.config_defaults as config_defaults
 from src.config.config_defaults import get_default_config
+from src.utils.utils_dataset import decode_instruments
 
 
 def main():
@@ -35,10 +35,10 @@ def main():
         "data-irmas-train_ast_MIT-ast-finetuned-audioset-10-10-0.4593",
     )
     TRAIN_DATASET_PATH = config.path_irmas_train
-
     embeddings = []
     labels = []
     file_paths = []
+    one_hot_label = []
     for i, json_path in tqdm(
         enumerate(Path(EMBEDDINGS_DIR, "embeddings").glob("*.json"))
     ):
@@ -46,6 +46,7 @@ def main():
         file_path = item["sample_path"]
         idx = item["indices"][0]
         embedding = item["embedding"]
+        one_hot_label.append(decode_instruments(item["instruments"]))
         embeddings.append(embedding)
         labels.append(idx)
         file_paths.append(file_path)
