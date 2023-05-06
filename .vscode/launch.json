@@ -160,9 +160,9 @@
 			"name": "Testing",
 			"type": "python",
 			"request": "launch",
-			"program": "src/scripts/cleanlab_find.py",
+			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "",
+			"args": "--train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --backbone-after backbone.features --head-after backbone.classifier --model EFFICIENT_NET_V2_S --audio-transform MEL_SPECTROGRAM --finetune-head-epochs 3 --epochs 10 --batch-size 2 --accumulate_grad_batches 4 --lr 1e-4 --augmentations CONCAT_N_SAMPLES SUM_N_SAMPLES --aug-kwargs concat_n_samples=2 sum_n_samples=3",
 			"justMyCode": false
 		},
 	]

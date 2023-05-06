@@ -309,8 +309,20 @@ class DatasetBase(Dataset[DatasetGetItem]):
         if self.audio_transform is None:
             return audio, labels, index
 
-        labels = torch.tensor(labels).float()
         features = self.audio_transform(audio)
+        labels = torch.tensor(labels).float()
+
+        # last_label = None if len(labels) % 2 == 0 else labels[-1]
+        # labels = labels if last_label is not None else labels[:-1]
+
+        # num_labels = len(labels)
+        # # labels.
+        # grouped_labels = labels.reshape(2, num_labels // 2, labels.shape[-1])
+        # grouped_labels = (torch.sum(grouped_labels, dim=0) > 1).float()
+        # if last_label is not None:
+        #     last_label = last_label.repeat(2)
+        #     grouped_labels = torch.cat((grouped_labels, last_label))
+        # labels = grouped_labels
 
         # Uncomment for playing audio
         # print(

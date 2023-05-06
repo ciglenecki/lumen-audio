@@ -7,6 +7,16 @@ import torchvision.transforms.functional
 from src.config.config_defaults import NUM_RGB_CHANNELS
 
 
+def set_image_height(image: torch.Tensor, height: int):
+    interpolation = torchvision.transforms.functional.InterpolationMode.NEAREST_EXACT
+    return torchvision.transforms.functional.resize(
+        image,
+        size=(height, image.shape[-1]),
+        interpolation=interpolation,
+        antialias=False,
+    )
+
+
 def chunk_image_by_width(
     target_image_size: tuple[int, int],
     image: torch.Tensor,
@@ -86,19 +96,19 @@ def chunk_image_by_width(
     image = image.unsqueeze(0)
 
     # Scale only the height (freqs) and don't touch the width (time) because the `time` will get chunked.
-    full_width = image.shape[-1]
-    pre_resize_height = image_height  # change the height!
-    pre_resize_width = full_width  # don't change the width!
+    # full_width = image.shape[-1]
+    # pre_resize_height = image_height  # change the height!
+    # pre_resize_width = full_width  # don't change the width!
 
     # [1, 384, 2048]
     # [Batch, height, width]
-    interpolation = torchvision.transforms.functional.InterpolationMode.NEAREST_EXACT
-    image = torchvision.transforms.functional.resize(
-        image,
-        size=(pre_resize_height, pre_resize_width),
-        interpolation=interpolation,
-        antialias=False,
-    )
+    # interpolation = torchvision.transforms.functional.InterpolationMode.NEAREST_EXACT
+    # image = torchvision.transforms.functional.resize(
+    #     image,
+    #     size=(pre_resize_height, pre_resize_width),
+    #     interpolation=interpolation,
+    #     antialias=False,
+    # )
 
     # Chunk by last dimension (width)
     # list([1, 384, 384]), length = 5

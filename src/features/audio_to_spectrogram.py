@@ -10,7 +10,11 @@ from src.config.config_defaults import (
     get_default_config,
 )
 from src.features.audio_transform_base import AudioTransformBase
-from src.features.chunking import chunk_image_by_width, undo_image_chunking
+from src.features.chunking import (
+    chunk_image_by_width,
+    set_image_height,
+    undo_image_chunking,
+)
 from src.utils.utils_dataset import (
     add_rgb_channel,
     get_example_val_sample,
@@ -66,6 +70,29 @@ class MelSpectrogram(AudioTransformBase):
         spectrogram_chunks = chunk_image_by_width(
             self.image_size, spectrogram, "repeat"
         )
+
+        last_img = (
+            None if spectrogram_chunks.shape[0] % 2 == 0 else spectrogram_chunks[-1]
+        )
+        if last_img is not None:
+            pass
+        reshape_size = (
+            spectrogram_chunks.shape[0]
+            if last_img is None
+            else spectrogram_chunks.shape[0] - 1
+        )
+        s = spectrogram_chunks.shape
+        edited_chunks = (
+            spectrogram_chunks if last_img is None else spectrogram_chunks[:-1]
+        )
+        edited_chunks = edited_chunks.reshape(reshape_size // 2, s[-2] * 2, s[-1])
+        if last_img is not None:
+            last_img = last_img.repeat(1, 2, 1)
+            edited_chunks = torch.cat((edited_chunks, last_img), dim=0)
+        spectrogram_chunks = edited_chunks
+        assert spectrogram_chunks.shape[-2] == 128 * 2
+        assert spectrogram_chunks.shape[-1] == 384
+        spectrogram_chunks = set_image_height(spectrogram_chunks, self.image_size[0])
 
         if self.normalize_image:
             spectrogram_chunks = self.normalize_spectrogram(spectrogram_chunks)
