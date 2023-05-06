@@ -2,6 +2,7 @@ import functools
 from pathlib import Path
 
 import torch
+from numpy import require
 
 from src.config.argparse_with_config import ArgParseWithConfig
 
@@ -15,6 +16,7 @@ def get_server_args():
         "--model-dir",
         type=Path,
         help="Directory which to model checkpoints (.ckpt files)",
+        required=True,
     )
     parser.add_argument(
         "--add-instrument-metrics",
@@ -37,6 +39,7 @@ def get_server_args():
         help="The device to be used eg. cuda:0.",
     )
 
+    parser_help = parser.format_help()
     args, config, pl_args = parser.parse_args()
 
     if args.add_instrument_metrics:
@@ -44,4 +47,4 @@ def get_server_args():
     else:
         config.log_per_instrument_metrics = False
 
-    return args, config, pl_args
+    return args, config, pl_args, parser_help

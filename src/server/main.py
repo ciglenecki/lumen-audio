@@ -3,16 +3,15 @@ import traceback
 from pathlib import Path
 
 import uvicorn
-from description import api_description, predict_desc
+from description import PREDICT_DESC, api_description
 from fastapi import FastAPI, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, RedirectResponse
 from server_logger import logger
 
 import src.server.router as router
+from src.server.description import MODELS_INFERENCE_TAG, RESOURCES_TAG
 from src.server.server_store import server_store
-
-# include project path so that .env file can be read from all locations
 
 
 def catch_exceptions_middleware(request, call_next):
@@ -32,12 +31,12 @@ def catch_exceptions_middleware(request, call_next):
 
 tags_metadata = [
     {
-        "name": "available models",
-        "description": "All available models from the `MODEL_DIRECTORY` directory defined in the `.env` file",
+        "name": RESOURCES_TAG,
+        "description": "Models and datasets available for inference.",
     },
     {
-        "name": "predict",
-        "description": predict_desc,
+        "name": MODELS_INFERENCE_TAG,
+        "description": PREDICT_DESC,
     },
 ]
 
@@ -55,7 +54,8 @@ async def docs_redirect():
     return RedirectResponse(url="/docs")
 
 
-app.include_router(router.router)
+app.include_router(router.model_router)
+app.include_router(router.dataset_router)
 
 with open(Path(Path(__file__).parent.resolve(), "openapi_spec.json"), "w+") as file:
     file.write(json.dumps(app.openapi()))

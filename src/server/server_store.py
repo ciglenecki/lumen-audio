@@ -10,7 +10,8 @@ from src.train.run_test import get_inference_datamodule, get_inference_model_obj
 
 class ServerStore:
     def __init__(self):
-        args, config, _ = get_server_args()
+        args, config, _, parser_help = get_server_args()
+        self.parser_help = parser_help
         self.set_config(config, args)
 
     def set_config(self, config: ConfigDefault, args):

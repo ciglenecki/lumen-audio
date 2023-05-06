@@ -7,7 +7,7 @@ from pydantic import BaseModel, create_model
 from src.config.config_defaults import InstrumentEnums
 from src.enums.enums import SupportedDatasetDirType
 from src.server.server_store import server_store
-from train.metrics import get_metrics
+from src.train.metrics import get_metrics
 
 
 class TypeDatasetDict(BaseModel):
