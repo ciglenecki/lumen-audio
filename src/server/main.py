@@ -57,6 +57,7 @@ async def docs_redirect():
 app.include_router(router.model_router)
 app.include_router(router.dataset_router)
 
+
 with open(Path(Path(__file__).parent.resolve(), "openapi_spec.json"), "w+") as file:
     file.write(json.dumps(app.openapi()))
     file.close()
