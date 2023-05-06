@@ -339,19 +339,25 @@ class ModelBase(pl.LightningModule, ABC):
         )
 
     def validation_step(self, batch, batch_idx):
-        return self._step(
-            batch, batch_idx, type="val", log_metric_dict=True, only_return_loss=True
-        )
+        with torch.no_grad():
+            out = self._step(
+                batch, batch_idx, type="val", log_metric_dict=True, only_return_loss=True
+            )
+        return out
 
     def test_step(self, batch, batch_idx):
-        return self._step(
-            batch, batch_idx, type="test", log_metric_dict=True, only_return_loss=False
-        )
+        with torch.no_grad():
+            out = self._step(
+                batch, batch_idx, type="test", log_metric_dict=True, only_return_loss=False
+            )
+        return out
 
     def predict_step(self, batch, batch_idx: int):
-        return self._step(
-            batch, batch_idx, type="pred", log_metric_dict=False, only_return_loss=False
-        )
+        with torch.no_grad():
+            out = self._step(
+                batch, batch_idx, type="pred", log_metric_dict=False, only_return_loss=False
+            )
+        return out
 
     def get_metric_dict(
         self, loss: torch.Tensor, y_pred: torch.Tensor, y_true: torch.Tensor, type: str

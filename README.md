@@ -26,7 +26,7 @@ Low priority tasks:
 - [ ] compare Mirko's wavelet transform with scipy's native transformation
   - run experiments in both cases
 - [ ] make sure augmetantions happen in batch
-- [ ] read why this loss might be a problem at the article ((classification + perceptual distance (centroid of the class in AST latent space, https://hav4ik.github.io/articles/deep-metric-learning-survey)
+- [ ] read why this loss might be a problem at the article (classification + perceptual distance (centroid of the class in AST latent space, https://hav4ik.github.io/articles/deep-metric-learning-survey)
 - [ ] add Contrastive loss from here https://kevinmusgrave.github.io/pytorch-metric-learning/losses/#contrastiveloss
 - [ ] Naive classifier
   - [ ] best accuracy = all zeros

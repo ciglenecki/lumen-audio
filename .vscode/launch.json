@@ -104,6 +104,33 @@
 			"justMyCode": false
 		},
 		{
+			"name": "Focal loss",
+			"type": "python",
+			"request": "launch",
+			"program": "src/train/train.py",
+			"console": "integratedTerminal",
+			"args": "--train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --backbone-after backbone.features --head-after backbone.classifier --loss-function FOCAL_LOSS --loss-function-kwargs gamma=0.5 --model CONVNEXT_SMALL --audio-transform MEL_SPECTROGRAM --finetune-head-epochs 3 --epochs 10 --batch-size 16 --augmentations --lr 1e-4",
+			"justMyCode": false
+		},
+		{
+			"name": "Debug pos weight",
+			"type": "python",
+			"request": "launch",
+			"program": "src/train/train.py",
+			"console": "integratedTerminal",
+			"args": "--train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --backbone-after backbone.features --head-after backbone.classifier --model CONVNEXT_SMALL --lr 1e-4 --audio-transform MEL_SPECTROGRAM --finetune-head-epochs 3 --epochs 10 --batch-size 16 --loss-function CROSS_ENTROPY_POS_WEIGHT --augmentations",
+			"justMyCode": false
+		},
+		{
+			"name": "Debug inference",
+			"type": "python",
+			"request": "launch",
+			"program": "src/scripts/inference_analysis.py",
+			"console": "integratedTerminal",
+			"args": "--model CONVNEXT_SMALL --audio-transform MEL_SPECTROGRAM --test-paths csv:data/inference_analysis_MORE.csv --devices 1 --batch-size 1",
+			"justMyCode": false
+		},
+		{
 			"name": "Python: Current File",
 			"type": "python",
 			"request": "launch",
@@ -133,9 +160,9 @@
 			"name": "Testing",
 			"type": "python",
 			"request": "launch",
-			"program": "src/train/train.py",
+			"program": "src/scripts/cleanlab_find.py",
 			"console": "integratedTerminal",
-			"args": "--backbone-after backbone.features.7.2 --head-after backbone.classifier --model EFFICIENT_NET_V2_S --audio-transform MEL_SPECTROGRAM --finetune-head-epochs 1 --batch-size 3 --accumulate_grad_batches 4 --quick --epochs 4 --loss-function FOCAL_LOSS --add-instrument-loss 0.3 --verify-config",
+			"args": "",
 			"justMyCode": false
 		},
 	]
