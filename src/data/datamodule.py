@@ -432,7 +432,10 @@ class OurDataModule(pl.LightningDataModule):
         return audio_path, label
 
     def _log_indices(self):
-        if self.train_sampler is not None:
+        if self.train_sampler is not None and not isinstance(
+            self.train_sampler,WeightedRandomSampler
+        ):
+
             train_indices = self.train_sampler.indices
             print(
                 "\nTrain size",

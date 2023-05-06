@@ -6,10 +6,9 @@ import src.config.config_defaults as config_defaults
 
 
 class FocalLoss(nn.Module):
-    def __init__(self, gamma=2, reduction="none", pos_weight=None):
+    def __init__(self, gamma=2, pos_weight=None):
         super().__init__()
         self.gamma = gamma
-        self.reduction = reduction
         self.pos_weight = pos_weight
         self.bce = nn.BCEWithLogitsLoss(reduction="none", pos_weight=self.pos_weight)
 
