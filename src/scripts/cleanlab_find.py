@@ -13,7 +13,6 @@ Percentage removed: 0.07412378821774795
 
 import json
 from pathlib import Path
-from turtle import title
 
 import cleanlab
 import matplotlib.pyplot as plt
@@ -25,7 +24,7 @@ from tqdm import tqdm
 
 import src.config.config_defaults as config_defaults
 from src.config.config_defaults import get_default_config
-from utils.utils_dataset import decode_instruments
+from src.utils.utils_dataset import decode_instruments
 
 
 def main():
