@@ -1,7 +1,22 @@
+"""
+1. Uses embeddings from a model trained on AST features to predict labels for the IRMAS dataset with a logistic regression model.
+2. Uses cleanlab to find the worst examples.
+3. Prints the worst examples and their scores.
+
+
+cutoff 0.13
+{'cel': 35, 'cla': 36, 'flu': 45, 'gac': 50, 'gel': 68, 'org': 37, 'pia': 65, 'sax': 40, 'tru': 58, 'vio': 44, 'voi': 19}
+Number of examples: 6705
+Number of removed examples: 497
+Percentage removed: 0.07412378821774795
+"""
+
 import json
 from pathlib import Path
+from turtle import title
 
 import cleanlab
+import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
@@ -15,7 +30,10 @@ from src.config.config_defaults import get_default_config
 def main():
     config = get_default_config()
 
-    EMBEDDINGS_DIR = config.path_irmas_train_features
+    EMBEDDINGS_DIR = Path(
+        config.path_embeddings,
+        "data-irmas-train_ast_MIT-ast-finetuned-audioset-10-10-0.4593",
+    )
     TRAIN_DATASET_PATH = config.path_irmas_train
 
     embeddings = []
@@ -26,7 +44,7 @@ def main():
     ):
         item = json.load(open(json_path))
         file_path = item["sample_path"]
-        idx = item["label"]
+        idx = item["indices"][0]
         embedding = item["embedding"]
         embeddings.append(embedding)
         labels.append(idx)
@@ -52,17 +70,79 @@ def main():
     cv_accuracy = accuracy_score(labels_array, predicted_labels)
     print(f"Cross-validated estimate of accuracy on held-out data: {cv_accuracy}")
 
-    label_issues_indices = cleanlab.filter.find_label_issues(
+    scores = cleanlab.rank.get_label_quality_scores(
         labels=labels_array,
         pred_probs=pred_probs,
-        return_indices_ranked_by="self_confidence",
+        # confident_joint=0.99,
+        adjust_pred_probs=True,
+    )
+    sorted_indices = np.argsort(scores)
+    # sorted_scores = scores[sorted_indices]
+    # num_examples = len(sorted_indices)
+
+    # plt.show()
+
+    data = scores
+
+    fig, ax = plt.subplots()
+    fig.set_size_inches(10, 5)
+    fig.set_dpi(100)
+
+    # Create a histogram with 20 bins
+    bins = 20
+
+    # Compute the cumulative histogram
+    n_cumulative, bins_cumulative, bars_cum = ax.hist(
+        data, bins=bins, alpha=1, cumulative=True, label="Cumulative Histogram"
+    )
+    ax.bar_label(
+        bars_cum,
+        labels=[f"{int(p / n_cumulative.max() * 100)}%" for p in n_cumulative],
+    )
+
+    n, bins, patches = ax.hist(data, bins=bins, alpha=1, label="Histogram")
+
+    # Add labels and a title
+    ax.set_xlabel("Label quality score")
+    ax.set_ylabel("Number of examples")
+    ax.set_title(
+        "CleanLab label quality score (Logistic regression trained on AST features)"
+    )
+
+    ax.legend()
+
+    fig.savefig(
+        Path(
+            config.path_figures,
+            f"cleanlab_{str(EMBEDDINGS_DIR)[:20].replace('/', '_')}.png",
+        )
     )
 
     # Print bad files
-    for i in label_issues_indices:
+    result: list[tuple[float, str]] = []
+
+    for i in sorted_indices[::-1]:
+        score = scores[i]
         instrument = config_defaults.IDX_TO_INSTRUMENT[labels[i]]
-        full_path = Path(TRAIN_DATASET_PATH, instrument, file_paths[i])
-        print()
+        full_path = Path(file_paths[i])
+        result.append((score, str(full_path), instrument))
+        print(f"{score:.4f}", str(full_path))
+
+    cutoff = input("Enter a cutoff score:")
+
+    class_dict = {e.value: 0 for e in config_defaults.InstrumentEnums}
+    num_examples = 0
+    for score, path, instrument in result:
+        if score < float(cutoff):
+            class_dict[instrument] += 1
+            print(path)
+            num_examples += 1
+    print("Cut off:", cutoff)
+    print(class_dict)
+    print("Number of examples:", len(result))
+    print("Number of removed examples:", num_examples)
+    print("Number of remaining examples:", len(result) - num_examples)
+    print("Percentage removed:", num_examples / len(result))
 
 
 if __name__ == "__main__":
