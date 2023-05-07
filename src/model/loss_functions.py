@@ -11,7 +11,9 @@ class FocalLoss(nn.Module):
         self.gamma = gamma
         self.pos_weight = pos_weight
         self.reduction = reduction
-        self.bce = nn.BCEWithLogitsLoss(reduction=self.reduction, pos_weight=self.pos_weight)
+        self.bce = nn.BCEWithLogitsLoss(
+            reduction=self.reduction, pos_weight=self.pos_weight
+        )
 
     def forward(self, inputs, targets):
         """
@@ -22,7 +24,7 @@ class FocalLoss(nn.Module):
             focal_loss: scalar tensor representing the computed focal loss
         """
 
-        probs = torch.clamp(torch.sigmoid(inputs), min=1e-9, max=1-1e-9)
+        probs = torch.clamp(torch.sigmoid(inputs), min=1e-9, max=1 - 1e-9)
         focal_weight = (1 - probs) ** self.gamma
         cross_entropy = self.bce(inputs, targets)
         focal_loss = focal_weight * cross_entropy

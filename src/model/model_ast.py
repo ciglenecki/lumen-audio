@@ -1,14 +1,14 @@
 import librosa
 import torch
 import torchaudio
-from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import TensorBoardLogger
 from transformers import ASTConfig, ASTFeatureExtractor, ASTForAudioClassification
 from transformers.modeling_outputs import BaseModelOutputWithPooling
 
 import src.config.config_defaults as config_defaults
 from src.config.argparse_with_config import ArgParseWithConfig
-from src.enums.enums import SupportedModels
+from src.enums.enums import SupportedHeads, SupportedModels
+from src.model.heads import get_head_constructor
 from src.model.model_base import ModelBase
 from src.utils.utils_audio import load_audio_from_file, play_audio
 from src.utils.utils_dataset import get_example_val_sample
@@ -38,8 +38,21 @@ class ASTModelWrapper(ModelBase):
                 config=ast_config,
             )
         )
-        self.subclassifier = self.create_head(ast_config.num_labels)
-        self.subclassifier
+        self.subclassifier = torch.nn.Linear(
+            ast_config.num_labels,
+            config_defaults.DEFAULT_NUM_LABELS,
+        )
+        new_weights = torch.zeros(self.subclassifier.weight.shape)
+        new_bias = torch.zeros(self.subclassifier.bias.shape)
+
+        for irmas_idx, ast_idx in enumerate(
+            config_defaults.AST_INSTRUMENTS_IRMAS.keys()
+        ):
+            new_weights[irmas_idx, ast_idx] = 1.0
+        with torch.no_grad():
+            self.subclassifier.weight.copy_(new_weights)
+            self.subclassifier.bias.copy_(new_bias)
+
         self.save_hyperparameters()
 
     def forward(self, image: torch.Tensor):
@@ -57,6 +70,7 @@ if __name__ == "__main__":
     parser = ArgParseWithConfig()
     args, config, pl_args = parser.parse_args()
     audio = get_example_val_sample(config.sampling_rate)
+    head_constructor = get_head_constructor(SupportedHeads.DEEP_HEAD)
     ast_our = ASTModelWrapper(
         pretrained=config.pretrained,
         pretrained_tag=config_defaults.TAG_AST_AUDIOSET,
@@ -80,16 +94,15 @@ if __name__ == "__main__":
         finetune_train_bn=config.finetune_train_bn,
         model_enum=SupportedModels.AST,
         loss_function=torch.nn.BCEWithLogitsLoss(reduction="none"),
-        head_constructor=None,
+        head_constructor=head_constructor,
         use_fluffy=config.use_fluffy,
         config=config,
         head_hidden_dim=config.head_hidden_dim,
         add_instrument_loss=config.add_instrument_loss,
     )
-    trainer = Trainer()
-    trainer.strategy.connect(ast_our)
-    trainer.save_checkpoint("models/ast_our.pt")
-    # torch.save(ast_our, "models/ast_our.pt")
+    # trainer = Trainer()
+    # trainer.strategy.connect(ast_our)
+    # trainer.save_checkpoint("models/ast_our.pt")
 
     # example_audio_mel_audio()
     config_ = ASTConfig.from_pretrained(

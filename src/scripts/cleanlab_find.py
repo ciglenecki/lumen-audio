@@ -3,14 +3,23 @@
 2. Uses cleanlab to find the worst examples.
 3. Prints the worst examples and their scores.
 
-
+Irmas Train
 cutoff 0.13
 {'cel': 35, 'cla': 36, 'flu': 45, 'gac': 50, 'gel': 68, 'org': 37, 'pia': 65, 'sax': 40, 'tru': 58, 'vio': 44, 'voi': 19}
 Number of examples: 6705
 Number of removed examples: 497
 Percentage removed: 0.07412378821774795
+
+Audioset
+Cut off: 0.11
+{'cel': 272, 'cla': 0, 'flu': 292, 'gac': 286, 'gel': 155, 'org': 194, 'pia': 169, 'sax': 195, 'tru': 239, 'vio': 297, 'voi': 243}
+Number of examples: 14940
+Number of removed examples: 2342
+Number of remaining examples: 12598
+Percentage removed: 0.156760374832664
 """
 
+import argparse
 import json
 from pathlib import Path
 
@@ -27,14 +36,18 @@ from src.config.config_defaults import get_default_config
 from src.utils.utils_dataset import decode_instruments
 
 
+def parse_args():
+    # Parse train dataset path
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--embeddings", type=Path, required=True)
+    args = parser.parse_args()
+    return args
+
+
 def main():
     config = get_default_config()
-
-    EMBEDDINGS_DIR = Path(
-        config.path_embeddings,
-        "data-irmas-train_ast_MIT-ast-finetuned-audioset-10-10-0.4593",
-    )
-    TRAIN_DATASET_PATH = config.path_irmas_train
+    args = parse_args()
+    EMBEDDINGS_DIR = args.embeddings
     embeddings = []
     labels = []
     file_paths = []
@@ -44,6 +57,8 @@ def main():
     ):
         item = json.load(open(json_path))
         file_path = item["sample_path"]
+        if not Path(file_path).exists():
+            continue
         idx = item["indices"][0]
         embedding = item["embedding"]
         one_hot_label.append(decode_instruments(item["instruments"]))
@@ -58,12 +73,14 @@ def main():
 
     # can decrease this value to reduce runtime, or increase it to get better results
     num_crossval_folds = 10
+    print("Cross validating...")
     pred_probs = cross_val_predict(
         estimator=model,
         X=embeddings_array,
         y=labels_array,
         cv=num_crossval_folds,
         method="predict_proba",
+        n_jobs=4,
         verbose=True,
     )
 
