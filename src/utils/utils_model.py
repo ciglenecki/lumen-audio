@@ -1,5 +1,7 @@
+from pathlib import Path
 from typing import Callable, Union
 
+import pytorch_lightning as pl
 import pytorch_lightning.callbacks
 import torch.nn as nn
 from pytorch_lightning.callbacks import BaseFinetuning
@@ -8,6 +10,12 @@ from torchmetrics.metric import Metric
 from transformers.trainer_pt_utils import get_parameter_names
 
 from src.utils.utils_exceptions import InvalidModuleStr
+
+
+def dummy_save_pl_module(module: pl.LightningModule, output_path: Path | str):
+    trainer = pl.Trainer()
+    trainer.strategy.connect(module)
+    trainer.save_checkpoint(output_path)
 
 
 def filter_modules(module: nn.Module, module_type=nn.Linear):

@@ -217,6 +217,20 @@ ALL_INSTRUMENTS_NAMES = [INSTRUMENT_TO_FULLNAME[ins] for ins in ALL_INSTRUMENTS]
 
 AUDIO_EXTENSIONS = ["wav", "mp3", "ogg"]
 
+# Order is important here, since we use the index as the label
+AST_INSTRUMENTS_IRMAS = {
+    193: "Cello",
+    198: "Clarinet",
+    196: "Flute",
+    143: "Acoustic guitar",
+    141: "Electric guitar",
+    155: "Organ",
+    153: "Piano",
+    197: "Saxophone",
+    187: "Trumpet",
+    191: "Violin, fiddle",
+    27: "Singing",
+}
 
 USAGE_TEXT_PATHS = f"Usage:\t--train-paths <TYPE>:/path/to/dataset (for training)\n\t--val-paths <TYPE>:/path/to/dataset (for training)\n\t--test-paths <TYPE>:/path/to/dataset (for inference)\nSupported <TYPE>: {[ d.value for d in SupportedDatasetDirType]}"
 

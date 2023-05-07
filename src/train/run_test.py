@@ -4,8 +4,6 @@ from pathlib import Path
 import numpy as np
 import pytorch_lightning as pl
 import torch
-from torch.utils.data import DataLoader
-from tqdm import tqdm
 
 from src.config.argparse_with_config import ArgParseWithConfig
 from src.config.config_defaults import ConfigDefault
@@ -20,18 +18,21 @@ from src.train.metrics import get_metrics
 
 def main(args, config: ConfigDefault):
     validate_inference_args(config)
+    config.test_paths = config.dataset_paths
     device = torch.device(args.device)
     model, model_config, audio_transform = get_inference_model_objs(
         config, args, device
     )
     datamodule = get_inference_datamodule(config, audio_transform, model_config)
-    data_loader = datamodule.train_dataloader()
-    result = aggregate_inference_loops(device, model, datamodule, data_loader)
+    data_loader = datamodule.test_dataloader()
+    result = aggregate_inference_loops(
+        device, model, datamodule, data_loader, step_type="test"
+    )
 
-    y_pred = torch.stack(result.y_pred)
-    y_pred_file = torch.stack(result.y_pred_file)
-    y_true = torch.stack(result.y_true)
-    y_true_file = torch.stack(result.y_true_file)
+    y_pred = torch.tensor(result.y_pred)
+    y_pred_file = torch.tensor(result.y_pred_file)
+    y_true = torch.tensor(result.y_true)
+    y_true_file = torch.tensor(result.y_true_file)
 
     metric_dict = get_metrics(
         y_pred=y_pred,
