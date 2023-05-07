@@ -5,6 +5,7 @@ import torch
 from sklearn.calibration import label_binarize
 from sklearn.metrics import confusion_matrix
 from torchmetrics.functional.classification import (
+    f1_score,
     multilabel_accuracy,
     multilabel_f1_score,
     multilabel_hamming_distance,
@@ -15,7 +16,6 @@ from torchmetrics.functional.classification import (
 import src.config.config_defaults as config_defaults
 from src.config.config_defaults import (
     ALL_INSTRUMENTS,
-    ALL_INSTRUMENTS_NAMES,
     INSTRUMENT_TO_FULLNAME,
     INSTRUMENT_TO_IDX,
 )
@@ -43,37 +43,88 @@ def mlb_confusion_matrix(
     return conf_mat_dict
 
 
-def find_best_threshold(
-    y_pred_prob: torch.Tensor, y_true: torch.Tensor, num_labels: int, num_iter=1000
-):
+def find_best_threshold_per_class(
+    y_pred_prob: torch.Tensor,
+    y_true: torch.Tensor,
+    num_labels: int,
+    num_iter=1000,
+    metric_fn=f1_score,
+    min_or_max="max",
+) -> list[float]:
+    # TODO: check that this works
+    arg_max_or_min = torch.argmax if min_or_max == "max" else torch.argmin
+
     y_pred_prob = torch.tensor(y_pred_prob)
     y_true = torch.tensor(y_true)
-    threshold_values_coarse = torch.tensor(np.linspace(0, 1, num=num_iter))
-    coarse_idx = torch.argmax(
+    thresh_coarse = torch.tensor(np.linspace(0, 1, num=num_iter))
+
+    # Find the best threshold for each class
+    coarse_indices = []
+    for label_idx in range(num_labels):
+        y_pred_prob_i = y_pred_prob[:, label_idx]
+        y_true_i = y_true[:, label_idx]
+        metrics = []
+        for t in thresh_coarse:
+            metrics.append(metric_fn(y_pred_prob_i > t, y_true_i, task="binary"))
+        t_coarse = arg_max_or_min(torch.tensor(metrics))
+        coarse_indices.append(t_coarse)
+
+    t_coarses = [thresh_coarse[idx] for idx in coarse_indices]
+
+    # Find the best threshold for each class
+    thresh_fine: list[list[float]] = []
+    for label_idx, t_coarse in zip(range(num_labels), t_coarses):
+        y_pred_prob_i = y_pred_prob[:, label_idx]
+        y_true_i = y_true[:, label_idx]
+        coarse_start = t_coarse - 0.1
+        coarse_end = t_coarse + 0.1
+        thresh_fine = torch.tensor(np.linspace(coarse_start, coarse_end, num=num_iter))
+        metrics = []
+        for t in thresh_fine:
+            metrics.append(metric_fn(y_pred_prob_i > t, y_true_i, task="binary"))
+        t_fine = arg_max_or_min(torch.tensor(metrics))
+        thresh_fine.append(float(t_fine))
+
+    return thresh_fine
+
+
+def find_best_threshold(
+    y_pred_prob: torch.Tensor,
+    y_true: torch.Tensor,
+    num_labels: int,
+    num_iter=1000,
+    metric_fn=multilabel_f1_score,
+    min_or_max="max",
+):
+    # TODO: implement this per instrument
+    arg_max_or_min = torch.argmax if min_or_max == "max" else torch.argmin
+
+    y_pred_prob = torch.tensor(y_pred_prob)
+    y_true = torch.tensor(y_true)
+    thresh_coarse = torch.tensor(np.linspace(0, 1, num=num_iter))
+    coarse_idx = arg_max_or_min(
         torch.stack(
             [
-                multilabel_f1_score(y_pred_prob > t, y_true, num_labels=num_labels)
-                for t in threshold_values_coarse
+                metric_fn(y_pred_prob > t, y_true, num_labels=num_labels)
+                for t in thresh_coarse
             ]
         )
     )
 
-    t_coarse = threshold_values_coarse[coarse_idx]
+    t_coarse = thresh_coarse[coarse_idx]
     coarse_start = t_coarse - 0.1
     coarse_end = t_coarse + 0.1
 
-    threshold_values_fine = torch.tensor(
-        np.random.uniform(np.linspace(coarse_start, coarse_end, num=num_iter))
-    )
-    fine_idx = torch.argmax(
+    thresh_fine = torch.tensor(np.linspace(coarse_start, coarse_end, num=num_iter))
+    fine_idx = arg_max_or_min(
         torch.stack(
             [
-                multilabel_f1_score(y_pred_prob > t, y_true, num_labels=num_labels)
-                for t in threshold_values_fine
+                metric_fn(y_pred_prob > t, y_true, num_labels=num_labels)
+                for t in thresh_fine
             ]
         )
     )
-    return float(threshold_values_fine[fine_idx])
+    return float(thresh_fine[fine_idx])
 
 
 def get_metrics(
@@ -82,9 +133,14 @@ def get_metrics(
     num_labels=config_defaults.DEFAULT_NUM_LABELS,
     return_per_instrument=False,
     threshold=0.5,
+    kwargs={},
 ):
     kwargs = dict(
-        preds=y_pred, target=y_true, num_labels=num_labels, threshold=threshold
+        preds=y_pred,
+        target=y_true,
+        num_labels=num_labels,
+        threshold=threshold,
+        **kwargs,
     )
 
     accuracy = multilabel_accuracy(**kwargs)
@@ -127,6 +183,7 @@ def get_metrics_npy(
     y_true: np.ndarray,
     num_labels=config_defaults.DEFAULT_NUM_LABELS,
     return_per_instrument=False,
+    **kwargs,
 ):
     return dict_torch_to_npy(
         get_metrics(
@@ -134,5 +191,6 @@ def get_metrics_npy(
             torch.tensor(y_true),
             num_labels,
             return_per_instrument,
+            **kwargs,
         )
     )
