@@ -39,7 +39,7 @@ class ASTModelWrapper(ModelBase):
             )
         )
         self.subclassifier = self.create_head(ast_config.num_labels)
-
+        self.subclassifier
         self.save_hyperparameters()
 
     def forward(self, image: torch.Tensor):
