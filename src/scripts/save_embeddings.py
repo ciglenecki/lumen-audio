@@ -217,9 +217,9 @@ if __name__ == "__main__":
 
             json_file_name = Path(embedding_dir, f"{stem}.json")
 
-            if json_file_name.exists():
-                print(f"File exists {json_file_name}")
-                input()
+            # if json_file_name.exists():
+            #     print(f"File exists {json_file_name}")
+
             with open(json_file_name, "w") as file:
                 json.dump(json_item, file)
     print("Saved embeddings to directory:", embedding_dir)
