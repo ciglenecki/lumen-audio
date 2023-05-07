@@ -28,6 +28,10 @@ def dict_with_keys(d: dict, keys: list[str]):
     return {x: d[x] for x in d if x in keys}
 
 
+def dataset_path_to_str(dataset_path: str | Path):
+    return str(dataset_path).replace("data/", "").replace("/", "_")
+
+
 def parse_kwargs(kwargs_strs: list[str], list_sep=",", key_value_sep="="):
     """
 
