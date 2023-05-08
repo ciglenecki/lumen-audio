@@ -1,3 +1,7 @@
+"""python3 src/inference/run_test.py  --dataset-paths irmastest:data/irmas/test --ckpt
+models/05-08-11-38-04_SlickDelta_ast_astfiliteredhead-irmas-
+audioset/checkpoints/05-08-11-38-04_SlickDelta_ast_astfiliteredhead-irmas-
+audioset_val_acc_0.3742_val_loss_0.3504.ckpt --batch-size 2 --num-workers 1."""
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -5,11 +9,12 @@ import numpy as np
 import pandas as pd
 import sklearn.metrics as skmetrics
 import torch
+from matplotlib.ticker import FormatStrFormatter
 from tqdm import tqdm
 
 from src.config.argparse_with_config import ArgParseWithConfig
-from src.config.config_defaults import ALL_INSTRUMENTS_NAMES, ConfigDefault
-from src.train.inference_utils import (
+from src.config.config_defaults import ALL_INSTRUMENTS_NAMES
+from src.inference.inference_utils import (
     aggregate_inference_loops,
     get_inference_datamodule,
     get_inference_model_objs,
@@ -32,7 +37,9 @@ def get_model_description(config):
 
 
 def parse_args():
-    parser = ArgParseWithConfig()
+    config_pl_args = ["--ckpt", "--dataset-paths"]
+    parser = ArgParseWithConfig(config_pl_args=config_pl_args)
+
     parser.add_argument(
         "--device",
         type=str,
@@ -53,13 +60,13 @@ def parse_args():
     parser.add_argument(
         "--save-roc",
         action="store_true",
-        default=True,
+        default=False,
         help="Caculate and save ROC for each instrument",
     )
     parser.add_argument(
         "--save-metric-hist",
         action="store_true",
-        default=True,
+        default=False,
         help="Caculate and save histogram for metrics",
     )
 
@@ -72,10 +79,10 @@ def main():
     validate_inference_args(config)
     config.test_paths = config.dataset_paths
     device = torch.device(args.device)
+    torch.set_grad_enabled(False)
     model, model_config, audio_transform = get_inference_model_objs(
         config, args, device
     )
-    torch.set_grad_enabled(False)
 
     model_text, text_train, _ = get_model_description(model_config)
 
@@ -185,10 +192,11 @@ def main():
         plt.close()
 
     if args.save_metric_hist:
+        # Gets average metric for each file
         metrics_no_reduction_file = get_metrics(
-            y_pred=torch.tensor(y_pred_file),
-            y_true=torch.tensor(y_true_file),
-            num_labels=config.num_labels,
+            y_pred=torch.tensor(y_pred_file).T,
+            y_true=torch.tensor(y_true_file).T,
+            num_labels=len(y_true_file),
             return_per_instrument=False,
             threshold=threshold,
             kwargs={"average": "none"},
@@ -201,9 +209,13 @@ def main():
                 output_dir_hist,
                 f"{metric_name}_hist_{experiment_name}.png",
             )
-            plt.hist(metric_values, bins=20)
-            plt.xlabel("Values")
-            plt.ylabel("Frequency")
+
+            plt.figure(figsize=(12, 5))
+            plt.hist(metric_values, bins=np.linspace(0, 1, 11))
+            plt.xticks(np.linspace(0, 1, 11), fontsize=14)
+            plt.gca().xaxis.set_major_formatter(FormatStrFormatter("%.2f"))
+            plt.xlabel("Values", fontsize=14)
+            plt.ylabel("Frequency", fontsize=14)
             plt.title(f"Histogram of {metric_name} for \n{experiment_desc}")
             plt.tight_layout()
             plt.savefig(png_path)
