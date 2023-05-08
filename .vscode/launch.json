@@ -131,6 +131,15 @@
 			"justMyCode": false
 		},
 		{
+			"name": "Test mobnet",
+			"type": "python",
+			"request": "launch",
+			"program": "src/train/train.py",
+			"console": "integratedTerminal",
+			"args": "--train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --backbone-after features --head-after classifier --model MOBNET --lr 1e-4 --audio-transform MEL_SPECTROGRAM --finetune-head-epochs 3 --epochs 10 --batch-size 16 --augmentations",
+			"justMyCode": false
+		},
+		{
 			"name": "Python: Current File",
 			"type": "python",
 			"request": "launch",

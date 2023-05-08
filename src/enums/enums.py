@@ -18,6 +18,8 @@ class SupportedModels(Enum):
     CONVNEXT_BASE = "convnext_base"
     MOBILENET_V3_LARGE = "mobilenet_v3_large"
     CONVLSTM = "conv_lstm"
+    MOBNET = "mobnet"
+
 
 
 class SupportedHeads(Enum):
