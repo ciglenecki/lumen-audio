@@ -3,10 +3,12 @@ import torch
 import torchaudio
 from pytorch_lightning.loggers import TensorBoardLogger
 from transformers import ASTConfig, ASTFeatureExtractor, ASTForAudioClassification
-from transformers.modeling_outputs import SequenceClassifierOutput
+from transformers.modeling_outputs import BaseModelOutputWithPooling
 
 import src.config.config_defaults as config_defaults
 from src.config.argparse_with_config import ArgParseWithConfig
+from src.enums.enums import SupportedHeads, SupportedModels
+from src.model.heads import get_head_constructor
 from src.model.model_base import ModelBase
 from src.utils.utils_audio import load_audio_from_file, play_audio
 from src.utils.utils_dataset import get_example_val_sample
@@ -26,9 +28,6 @@ class ASTModelWrapper(ModelBase):
 
         ast_config = ASTConfig.from_pretrained(
             pretrained_model_name_or_path=self.pretrained_tag,
-            id2label=config_defaults.IDX_TO_INSTRUMENT,
-            label2id=config_defaults.INSTRUMENT_TO_IDX,
-            num_labels=self.num_labels,
             finetuning_task="audio-classification",
             problem_type="multi_label_classification",
         )
@@ -37,26 +36,73 @@ class ASTModelWrapper(ModelBase):
             ASTForAudioClassification.from_pretrained(
                 self.pretrained_tag,
                 config=ast_config,
-                ignore_mismatched_sizes=True,
             )
         )
+        self.subclassifier = torch.nn.Linear(
+            ast_config.num_labels,
+            config_defaults.DEFAULT_NUM_LABELS,
+        )
+        new_weights = torch.zeros(self.subclassifier.weight.shape)
+        new_bias = torch.zeros(self.subclassifier.bias.shape)
 
-        self.backbone.classifier = self.create_head(ast_config.hidden_size)
+        for irmas_idx, ast_idx in enumerate(
+            config_defaults.AST_INSTRUMENTS_IRMAS.keys()
+        ):
+            new_weights[irmas_idx, ast_idx] = 1.0
+        with torch.no_grad():
+            self.subclassifier.weight.copy_(new_weights)
+            self.subclassifier.bias.copy_(new_bias)
+
         self.save_hyperparameters()
 
     def forward(self, image: torch.Tensor):
-        out: SequenceClassifierOutput = self.backbone.forward(
+        out: BaseModelOutputWithPooling = self.backbone.audio_spectrogram_transformer(
             image,
             output_attentions=True,
             return_dict=True,
         )
-        return out.logits
+        out = self.backbone.classifier(out.pooler_output)
+        logits = self.subclassifier(out)
+        return logits
 
 
 if __name__ == "__main__":
     parser = ArgParseWithConfig()
     args, config, pl_args = parser.parse_args()
     audio = get_example_val_sample(config.sampling_rate)
+    head_constructor = get_head_constructor(SupportedHeads.DEEP_HEAD)
+    ast_our = ASTModelWrapper(
+        pretrained=config.pretrained,
+        pretrained_tag=config_defaults.TAG_AST_AUDIOSET,
+        lr=config.lr,
+        batch_size=config.batch_size,
+        scheduler_type=config.scheduler,
+        epochs=config.epochs,
+        lr_warmup=config.lr_warmup,
+        optimizer_type=config.optimizer,
+        num_labels=config.num_labels,
+        optimization_metric=config.metric,
+        weight_decay=config.weight_decay,
+        metric_mode=config.metric_mode,
+        early_stopping_metric_patience=config.early_stopping_metric_patience,
+        finetune_head_epochs=config.finetune_head_epochs,
+        finetune_head=config.finetune_head,
+        backbone_after=config.backbone_after,
+        head_after=config.head_after,
+        lr_onecycle_max=config.lr_onecycle_max,
+        log_per_instrument_metrics=config.log_per_instrument_metrics,
+        finetune_train_bn=config.finetune_train_bn,
+        model_enum=SupportedModels.AST,
+        loss_function=torch.nn.BCEWithLogitsLoss(reduction="none"),
+        head_constructor=head_constructor,
+        use_fluffy=config.use_fluffy,
+        config=config,
+        head_hidden_dim=config.head_hidden_dim,
+        add_instrument_loss=config.add_instrument_loss,
+    )
+    # trainer = Trainer()
+    # trainer.strategy.connect(ast_our)
+    # trainer.save_checkpoint("models/ast_our.pt")
 
     # example_audio_mel_audio()
     config_ = ASTConfig.from_pretrained(

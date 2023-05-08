@@ -208,7 +208,7 @@ if __name__ == "__main__":
     )
 
     validation_dataset = IRMASDatasetTest(
-        dataset_dir=config.path_irmas_test,
+        dataset_path=config.path_irmas_test,
         audio_transform=get_audio_transform(
             config=config,
             spectrogram_augmentation=None,

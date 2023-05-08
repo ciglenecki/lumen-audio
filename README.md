@@ -26,7 +26,7 @@ Low priority tasks:
 - [ ] compare Mirko's wavelet transform with scipy's native transformation
   - run experiments in both cases
 - [ ] make sure augmetantions happen in batch
-- [ ] read why this loss might be a problem at the article ((classification + perceptual distance (centroid of the class in AST latent space, https://hav4ik.github.io/articles/deep-metric-learning-survey)
+- [ ] read why this loss might be a problem at the article (classification + perceptual distance (centroid of the class in AST latent space, https://hav4ik.github.io/articles/deep-metric-learning-survey)
 - [ ] add Contrastive loss from here https://kevinmusgrave.github.io/pytorch-metric-learning/losses/#contrastiveloss
 - [ ] Naive classifier
   - [ ] best accuracy = all zeros
@@ -89,9 +89,6 @@ Low priority tasks:
 
 
 ## Rep:
-- [ ] **Inference analysis**: run inference on single audio with multiple different durations (0.1 sec, 1 sec, 5 sec, 10 sec, 1 minute, 5 minutes, 30 minutes, 60 minutes)
-  - [ ] np.rand(1, self.sampling_rate * num_of_seconds)
-  - [ ] ⚠️ create csv file for loading 7 audios (look at `openmic_r0.8_n_8858.csv` structure)
 - [ ] **gradcam plots** create gradcam plots for trained model
   - [ ] 🖊️ report your findings in Google Docs
 - [ ] **Rep vs IRMAS:** perform validation on Rep's corected dataset to check how many labels are correctly marked in the original dataset
@@ -100,8 +97,7 @@ Low priority tasks:
   - hamming distance between Rep's and original
   - how dirty is the training set in terms of including non-predominant instruments
   - [ ] 🖊️ report your findings in Google Docs
-- [ ] **train with relabeled data (cleanlab):** (@matej has to provide csv) Include train override csv. No augmentations. Compare both models metrics.
-  - [ ] 🖊️ report your findings in Google Docs
+
 
 ## Rep Experiments
 - [ ] **Train rand init cnn**: train CNN with random initializations (use pretraning_tag=None or something, WARNING: pretraining_tag="DEFAULT" is pretrained model!)
@@ -507,6 +503,9 @@ https://github.com/janmyler/web-audio-editor
 ## Done tasks
 
 Tasks:
+- [x] **train with relabeled data (cleanlab):** (@matej has to provide csv) Include train override csv. No augmentations. Compare both models metrics.
+  - [x] 🖊️ report your findings in Google Docs
+- [x] **Inference analysis**: run inference on single audio with multiple different durations (run on 10, 20, ..., 590, 600 seconds)
 - [x] ❗ check whatsup with pretrained weights (crop and resize) -> everything is fine
   - turns out that the models use average pooling over the height and width which means that the final representation only has dimension (B, C)
   - the model silently fails instead of breaking, so keep an eye out in case something doesn't work
