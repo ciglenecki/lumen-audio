@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.cm import rainbow
+from collections import OrderedDict
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.decomposition import PCA
@@ -85,6 +87,21 @@ def instrument_number_test(y):
     plt.show()
     plt.close()
 
+def instrument_incidence_correlation(y):
+    '''y = data.y_test'''
+    labels = ['cel', 'cla', 'flu', 'gac', 'gel', 'org', 'pia', 'sax', 'tru', 'vio', 'voi']
+    df = pd.DataFrame(data=y, columns=labels)
+    corrM = df.corr()
+    plt.figure(figsize=(15,15))
+    plt.matshow(corrM, fignum=0, cmap='seismic', vmin=-1, vmax=1)
+    plt.colorbar()
+    plt.title('Instrument incidence correlation matrix for the IRMAS test set', size=15)
+    plt.xticks(ticks=np.arange(11), labels=labels, rotation='vertical', size=12)
+    plt.yticks(ticks=np.arange(11), labels=labels, size=12)
+    plt.savefig(r'.\data\exploratory_data_analysis\figures\instrument_incidence_correlation_test.png')
+    plt.show()
+    plt.close()
+
 def data_correlation_matrix_train(X, y):
     '''x = data.X_train, y = data.y_train'''
     a = np.concatenate((y, X), axis=1)
@@ -138,67 +155,22 @@ def data_clusters_train(X, y):
     X_scaled = MinMaxScaler().fit_transform(X)
     pca = PCA(n_components=2)
     X_pca = pca.fit_transform(X_scaled)
-
-    plt.figure(figsize=(15,25))
-
-    ax1 = plt.subplot2grid((4, 3), (0, 0))
-    ax2 = plt.subplot2grid((4, 3), (0, 1))
-    ax3 = plt.subplot2grid((4, 3), (0, 2))
-    ax4 = plt.subplot2grid((4, 3), (1, 0))
-    ax5 = plt.subplot2grid((4, 3), (1, 1))
-    ax6 = plt.subplot2grid((4, 3), (1, 2))
-    ax7 = plt.subplot2grid((4, 3), (2, 0))
-    ax8 = plt.subplot2grid((4, 3), (2, 1))
-    ax9 = plt.subplot2grid((4, 3), (2, 2))
-    ax10 = plt.subplot2grid((4, 3), (3, 0))
-    ax11 = plt.subplot2grid((4, 3), (3, 1))
-
-    ax1.scatter(X_pca[:, 0], X_pca[:, 1], c=y[:,0], s=10, cmap='coolwarm')
-    ax1.set_title('cello', size=15)
-    ax1.set_xlabel('$PCA_0$', size=12)
-    ax1.set_ylabel('$PCA_1$', size=12)
-    ax2.scatter(X_pca[:, 0], X_pca[:, 1], c=y[:,1], s=10, cmap='coolwarm')
-    ax2.set_title('clarinet', size=15)
-    ax2.set_xlabel('$PCA_0$', size=12)
-    ax2.set_ylabel('$PCA_1$', size=12)
-    ax3.scatter(X_pca[:, 0], X_pca[:, 1], c=y[:,2], s=10, cmap='coolwarm')
-    ax3.set_title('flute', size=15)
-    ax3.set_xlabel('$PCA_0$', size=12)
-    ax3.set_ylabel('$PCA_1$', size=12)
-    ax4.scatter(X_pca[:, 0], X_pca[:, 1], c=y[:,3], s=10, cmap='coolwarm')
-    ax4.set_title('acoustic guitar', size=15)
-    ax4.set_xlabel('$PCA_0$', size=12)
-    ax4.set_ylabel('$PCA_1$', size=12)
-    ax5.scatter(X_pca[:, 0], X_pca[:, 1], c=y[:,4], s=10, cmap='coolwarm')
-    ax5.set_title('electric guitar', size=15)
-    ax5.set_xlabel('$PCA_0$', size=12)
-    ax5.set_ylabel('$PCA_1$', size=12)
-    ax6.scatter(X_pca[:, 0], X_pca[:, 1], c=y[:,5], s=10, cmap='coolwarm')
-    ax6.set_title('organ', size=15)
-    ax6.set_xlabel('$PCA_0$', size=12)
-    ax6.set_ylabel('$PCA_1$', size=12)
-    ax7.scatter(X_pca[:, 0], X_pca[:, 1], c=y[:,6], s=10, cmap='coolwarm')
-    ax7.set_title('piano', size=15)
-    ax7.set_xlabel('$PCA_0$', size=12)
-    ax7.set_ylabel('$PCA_1$', size=12)
-    ax8.scatter(X_pca[:, 0], X_pca[:, 1], c=y[:,7], s=10, cmap='coolwarm')
-    ax8.set_title('saxophone', size=15)
-    ax8.set_xlabel('$PCA_0$', size=12)
-    ax8.set_ylabel('$PCA_1$', size=12)
-    ax9.scatter(X_pca[:, 0], X_pca[:, 1], c=y[:,8], s=10, cmap='coolwarm')
-    ax9.set_title('trumpet', size=15)
-    ax9.set_xlabel('$PCA_0$', size=12)
-    ax9.set_ylabel('$PCA_1$', size=12)
-    ax10.scatter(X_pca[:, 0], X_pca[:, 1], c=y[:,9], s=10, cmap='coolwarm')
-    ax10.set_title('violin', size=15)
-    ax10.set_xlabel('$PCA_0$', size=12)
-    ax10.set_ylabel('$PCA_1$', size=12)
-    ax11.scatter(X_pca[:, 0], X_pca[:, 1], c=y[:,10], s=10, cmap='coolwarm')
-    ax11.set_title('voice', size=15)
-    ax11.set_xlabel('$PCA_0$', size=12)
-    ax11.set_ylabel('$PCA_1$', size=12)
+    colors = rainbow(np.linspace(0, 1, 11))
+    labels = ['cel', 'cla', 'flu', 'gac', 'gel', 'org', 'pia', 'sax', 'tru', 'vio', 'voi']
+    def color_label(y):
+        for i, val in enumerate(y):
+            if(val == 1):
+                return colors[i], labels[i]
+    plt.figure(figsize=(12,8))
+    for x, y in zip(X_pca, y):
+        plt.scatter(x[0], x[1], s=10, color=color_label(y)[0], label=color_label(y)[1])
+    plt.title('The IRMAS training data clusters', fontsize=16)
+    plt.xlabel('$PCA_0$', size=12)
+    plt.ylabel('$PCA_1$', size=12)
+    handles, labels = plt.gca().get_legend_handles_labels()
+    by_label = OrderedDict(zip(labels, handles))
+    plt.legend(by_label.values(), by_label.keys(), fontsize=12)
     plt.tight_layout()
-    plt.suptitle('The IRMAS training data clusters', fontsize=16, y=1.01)
     plt.savefig(r'.\data\exploratory_data_analysis\figures\data_clusters_train.png')
     plt.show()
     plt.close()
@@ -211,7 +183,7 @@ def data_clusters_test(X, y):
     pca = PCA(n_components=2)
     X_pca = pca.fit_transform(X_scaled)
 
-    plt.figure(figsize=(15,25), )
+    plt.figure(figsize=(20, 15))
 
     ax1 = plt.subplot2grid((4, 3), (0, 0))
     ax2 = plt.subplot2grid((4, 3), (0, 1))
