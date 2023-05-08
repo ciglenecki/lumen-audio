@@ -210,6 +210,7 @@ DEFAULT_PRETRAINED_TAG_MAP = {
     SupportedModels.CONVNEXT_LARGE: TAG_IMAGENET1K_V1,
     SupportedModels.CONVNEXT_BASE: TAG_IMAGENET1K_V1,
     SupportedModels.MOBILENET_V3_LARGE: TAG_IMAGENET1K_V1,
+    SupportedModels.MOBNET: TAG_IMAGENET1K_V1,
     SupportedModels.CONVLSTM: None,
 }
 ALL_INSTRUMENTS = [e.value for e in InstrumentEnums]
@@ -217,6 +218,20 @@ ALL_INSTRUMENTS_NAMES = [INSTRUMENT_TO_FULLNAME[ins] for ins in ALL_INSTRUMENTS]
 
 AUDIO_EXTENSIONS = ["wav", "mp3", "ogg"]
 
+# Order is important here, since we use the index as the label
+AST_INSTRUMENTS_IRMAS = {
+    193: "Cello",
+    198: "Clarinet",
+    196: "Flute",
+    143: "Acoustic guitar",
+    141: "Electric guitar",
+    155: "Organ",
+    153: "Piano",
+    197: "Saxophone",
+    187: "Trumpet",
+    191: "Violin, fiddle",
+    27: "Singing",
+}
 
 USAGE_TEXT_PATHS = f"Usage:\t--train-paths <TYPE>:/path/to/dataset (for training)\n\t--val-paths <TYPE>:/path/to/dataset (for training)\n\t--test-paths <TYPE>:/path/to/dataset (for inference)\nSupported <TYPE>: {[ d.value for d in SupportedDatasetDirType]}"
 
@@ -373,7 +388,7 @@ class ConfigDefault(Serializable):
         dict(
             stretch_factors=[0.8, 1.25],
             time_inversion_p=0.5,
-            freq_mask_param=60,
+            freq_mask_param=30,
             hide_random_pixels_p=0.25,
             std_noise=0.01,
             concat_n_samples=3,
@@ -600,6 +615,7 @@ class ConfigDefault(Serializable):
                 SupportedModels.CONVNEXT_LARGE: True,
                 SupportedModels.CONVNEXT_BASE: True,
                 SupportedModels.MOBILENET_V3_LARGE: True,
+                SupportedModels.MOBNET: True,
                 SupportedModels.CONVLSTM: False,
             }
             self.use_rgb = USE_RGB[self.model]
@@ -621,6 +637,7 @@ class ConfigDefault(Serializable):
                 SupportedModels.CONVNEXT_LARGE: (224, 224),
                 SupportedModels.CONVNEXT_BASE: (224, 224),
                 SupportedModels.MOBILENET_V3_LARGE: (224, 224),
+                SupportedModels.MOBNET: (224, 224),
                 SupportedModels.CONVLSTM: None,
             }
             self.image_size = IMAGE_SIZE_MAP[self.model]
@@ -798,6 +815,7 @@ class ConfigDefault(Serializable):
                 SupportedModels.CONVNEXT_LARGE: None,
                 SupportedModels.CONVNEXT_BASE: None,
                 SupportedModels.MOBILENET_V3_LARGE: None,
+                SupportedModels.MOBNET: None,
                 SupportedModels.CONVLSTM: None,
             }
             self.max_num_width_samples = MAX_NUM_WIDTH_SAMPLE[self.model]
@@ -827,6 +845,7 @@ class ConfigDefault(Serializable):
                 SupportedModels.CONVNEXT_LARGE: False,
                 SupportedModels.CONVNEXT_BASE: False,
                 SupportedModels.MOBILENET_V3_LARGE: False,
+                SupportedModels.MOBNET: False,
             }
             if not SUPPORTS_ATTENTION_HEAD[self.model]:
                 raise InvalidArgument(

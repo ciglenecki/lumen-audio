@@ -10,7 +10,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --train-paths irmastrain:data/irmas/train csv:data/openmic_r0.8_n_8858.csv --val-paths irmastest:data/irmas/test --backbone-after backbone.classifier --head-after backbone.classifier --model AST --audio-transform AST --finetune-head-epochs 1 --epochs 5 --batch-size 1 --num-workers 6 --skip-validation",
+			"args": "--accelerator gpu --devices -1 --train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --backbone-after classifier --head-after classifier --model AST --audio-transform AST --finetune-head-epochs 1 --epochs 4 --batch-size 1 --num-workers 4",
 			"justMyCode": false
 		},
 		{
@@ -131,6 +131,15 @@
 			"justMyCode": false
 		},
 		{
+			"name": "Test mobnet",
+			"type": "python",
+			"request": "launch",
+			"program": "src/train/train.py",
+			"console": "integratedTerminal",
+			"args": "--train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --backbone-after features --head-after classifier --model MOBNET --lr 1e-4 --audio-transform MEL_SPECTROGRAM --finetune-head-epochs 3 --epochs 10 --batch-size 16 --augmentations",
+			"justMyCode": false
+		},
+		{
 			"name": "Python: Current File",
 			"type": "python",
 			"request": "launch",
@@ -144,7 +153,7 @@
 			"request": "launch",
 			"program": "src/train/run_test.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --test-paths irmastest:data/irmas/test --ckpt models_quick/04-29-17-15-23_SlickDelta_resnext50_32x4d/checkpoints/04-29-17-15-23_SlickDelta_resnext50_32x4d_val_acc_0.0000_val_loss_0.7160.ckpt --batch-size 8 --num-workers 8",
+			"args": "--accelerator gpu --devices -1 --dataset-paths irmastest:data/irmas/test --ckpt models/04-24-14-02-11_SlickDelta_ast/checkpoints/04-24-14-02-11_SlickDelta_ast_val_acc_0.0000_val_loss_0.6686.ckpt --batch-size 2 --num-workers 8",
 			"justMyCode": false
 		},
 		{
@@ -160,9 +169,9 @@
 			"name": "Testing",
 			"type": "python",
 			"request": "launch",
-			"program": "src/scripts/cleanlab_find.py",
+			"program": "src/model/model_ast.py",
 			"console": "integratedTerminal",
-			"args": "",
+			"args": "--train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --backbone-after backbone.classifier --head-after backbone.classifier --model AST --audio-transform AST --finetune-head-epochs 2 --epochs 10 --batch-size 2 --num-workers 10 --lr 2e-5 --lr-warmup 1e-4 --lr-onecycle-max 5e-5",
 			"justMyCode": false
 		},
 	]

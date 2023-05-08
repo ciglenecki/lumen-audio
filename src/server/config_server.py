@@ -9,7 +9,7 @@ from src.config.argparse_with_config import ArgParseWithConfig
 
 @functools.cache
 def get_server_args():
-    config_pl_args = ["--batch-size", "--num-workers"]
+    config_pl_args = ["--batch-size", "--num-workers", "--log-per-instrument-metrics"]
 
     parser = ArgParseWithConfig(add_lightning_args=True, config_pl_args=config_pl_args)
     parser.add_argument(
@@ -39,8 +39,8 @@ def get_server_args():
         help="The device to be used eg. cuda:0.",
     )
 
-    args, config, pl_args = parser.parse_args()
     parser_help = parser.format_help()
+    args, config, pl_args = parser.parse_args()
 
     if args.add_instrument_metrics:
         config.log_per_instrument_metrics = True

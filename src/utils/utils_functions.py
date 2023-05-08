@@ -28,6 +28,10 @@ def dict_with_keys(d: dict, keys: list[str]):
     return {x: d[x] for x in d if x in keys}
 
 
+def dataset_path_to_str(dataset_path: str | Path):
+    return str(dataset_path).replace("data/", "").replace("/", "_")
+
+
 def parse_kwargs(kwargs_strs: list[str], list_sep=",", key_value_sep="="):
     """
 
@@ -81,6 +85,10 @@ def dict_torch_to_npy(d: dict):
 
 def dict_npy_to_list(d: dict):
     return {k: v.tolist() if isinstance(v, np.ndarray) else v for k, v in d.items()}
+
+
+def torch_to_list(d: dict):
+    return {k: v.tolist() if isinstance(v, torch.Tensor) else v for k, v in d.items()}
 
 
 def tensor_sum_of_elements_to_one(tensor: torch.Tensor, dim):
@@ -295,6 +303,12 @@ def timeit(func):
 
 def to_yaml(data):
     return yaml.dump(data, allow_unicode=True, default_flow_style=False)
+
+
+def save_yaml(data: object, path: Path):
+    print("Saving file:", str(path))
+    with open(path, "w") as outfile:
+        yaml.dump(data, outfile, default_flow_style=False)
 
 
 def function_kwargs(func):

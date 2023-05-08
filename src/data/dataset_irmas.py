@@ -41,9 +41,10 @@ class IRMASDatasetTrain(DatasetBase):
 
         super().__init__(*args, **kwargs)
 
-        assert (
-            len(self.dataset_list) == config_defaults.DEFAULT_IRMAS_TRAIN_SIZE
-        ), f"IRMAS train set should contain {config_defaults.DEFAULT_IRMAS_TRAIN_SIZE} samples"
+        # assert (
+        #     len(self.dataset_list) == config_defaults.DEFAULT_IRMAS_TRAIN_SIZE
+        # ), f"IRMAS train set should contain {config_defaults.DEFAULT_IRMAS_TRAIN_SIZE} samples"
+
 
     def create_dataset_list(self) -> list[DatasetInternalItem]:
         """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)
@@ -57,15 +58,15 @@ class IRMASDatasetTrain(DatasetBase):
             self.dataset_path.rglob(glob_exp) for glob_exp in glob_expressions
         ]
         for item_idx, path in tqdm(enumerate(chain(*glob_generators))):
-            filename = str(path.stem)
-            characteristics = re.findall(
-                r"\[(.*?)\]", filename
-            )  # 110__[org][dru][jaz_blu]1117__2 => ["org", "dru", "jaz_blue"]
+            instrument = path.parent.name
 
-            path_str = str(path)
-            instrument = characteristics[0]
+            # filename = str(path.stem)
+            # characteristics = re.findall(
+            #     r"\[(.*?)\]", filename
+            # )  # 110__[org][dru][jaz_blu]1117__2 => ["org", "dru", "jaz_blue"]
+            # instrument = characteristics[0]
+
             item_instruments = [instrument]
-
             labels = encode_instruments(item_instruments)
 
             # drums, genre = None, None
