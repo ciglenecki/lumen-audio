@@ -78,7 +78,6 @@ class ArgParseWithConfig(simple_parsing.ArgumentParser):
             group_dict = {
                 a.dest: getattr(args, a.dest, None) for a in group._group_actions
             }
-            print(group.title, group_dict)
             if group.title:
                 args_dict[group.title] = argparse.Namespace(**group_dict)
 
@@ -184,4 +183,3 @@ if __name__ == "__main__":
     parser.add_argument("--my-cool-arg", type=str, default=3)
     parser.add_argument("--hello-there", type=str, default=4)
     args, config, pl_args = parser.parse_args()
-    print(args, config, pl_args)

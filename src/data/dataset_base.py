@@ -46,7 +46,6 @@ class DatasetBase(Dataset[DatasetGetItem]):
         self.train_override_csvs = train_override_csvs
         self.use_concat = concat_n_samples is not None and concat_n_samples > 1
         self.use_sum = sum_n_samples is not None and sum_n_samples > 1
-
         self.dataset_list: list[tuple[Path, np.ndarray]] = self.create_dataset_list()
         if self.train_override_csvs:
             self.override_with_csv()

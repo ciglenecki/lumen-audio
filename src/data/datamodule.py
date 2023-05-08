@@ -433,9 +433,8 @@ class OurDataModule(pl.LightningDataModule):
 
     def _log_indices(self):
         if self.train_sampler is not None and not isinstance(
-            self.train_sampler,WeightedRandomSampler
+            self.train_sampler, WeightedRandomSampler
         ):
-
             train_indices = self.train_sampler.indices
             print(
                 "\nTrain size",

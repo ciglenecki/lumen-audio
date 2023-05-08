@@ -9,7 +9,7 @@ from src.config.argparse_with_config import ArgParseWithConfig
 
 @functools.cache
 def get_server_args():
-    config_pl_args = ["--batch-size", "--log-per-instrument-metrics"]
+    config_pl_args = ["--batch-size", "--num-workers", "--log-per-instrument-metrics"]
 
     parser = ArgParseWithConfig(add_lightning_args=True, config_pl_args=config_pl_args)
     parser.add_argument(

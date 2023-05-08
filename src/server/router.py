@@ -18,7 +18,11 @@ from src.server.description import (
     TEST_DIR_DESC,
     TEST_DIR_STREAM_DESC,
 )
-from src.server.interface import JsonPrediction, JsonPredictions, TypeDatasetDict
+from src.server.interface import (
+    DatasetBody,
+    InstrumentPrediction,
+    InstrumentPredictions,
+)
 from src.server.middleware import dep_audio_file, dep_model_checkpoint
 from src.server.server_store import server_store
 
@@ -56,7 +60,7 @@ async def get_models():
 )
 async def test_directory_stream(
     model_checkpoint: Path,
-    dataset_dirs: list[TypeDatasetDict],
+    dataset_dirs: list[DatasetBody],
 ):
     controllers.set_server_store_model(model_checkpoint)
     controllers.set_inference_datamodule(dataset_dirs, type="test")
@@ -74,7 +78,7 @@ async def test_directory_stream(
 )
 async def test_directory(
     model_checkpoint: Path,
-    dataset_dirs: list[TypeDatasetDict],
+    dataset_dirs: list[DatasetBody],
 ):
     controllers.set_server_store_model(model_checkpoint)
     controllers.set_inference_datamodule(dataset_dirs, type="test")
@@ -85,12 +89,12 @@ async def test_directory(
 @model_router.post(
     "/predict-directory-stream",
     tags=[MODELS_INFERENCE_TAG],
-    response_model=JsonPredictions,
+    response_model=InstrumentPredictions,
     description=PREDICT_DIR_STREAM_DESC,
 )
 async def predict_directory_stream(
     model_checkpoint: Path,
-    dataset_dirs: list[TypeDatasetDict],
+    dataset_dirs: list[DatasetBody],
 ):
     controllers.set_server_store_model(model_checkpoint)
     controllers.set_inference_datamodule(dataset_dirs, type="predict")
@@ -103,12 +107,12 @@ async def predict_directory_stream(
 @model_router.post(
     "/predict-directory",
     tags=[MODELS_INFERENCE_TAG],
-    response_model=JsonPredictions,
+    response_model=InstrumentPredictions,
     description=PREDICT_DIR_DESC,
 )
 async def predict_directory(
     model_checkpoint: Path,
-    dataset_dirs: list[TypeDatasetDict],
+    dataset_dirs: list[DatasetBody],
 ):
     controllers.set_server_store_model(model_checkpoint)
     controllers.set_inference_datamodule(dataset_dirs, type="predict")
@@ -119,7 +123,7 @@ async def predict_directory(
 @model_router.post(
     "/predict-files",
     tags=[MODELS_INFERENCE_TAG],
-    response_model=List[JsonPrediction],
+    response_model=List[InstrumentPrediction],
     description=PREDICT_FILES_DESC,
 )
 async def predict_files(

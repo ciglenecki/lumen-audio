@@ -12,9 +12,18 @@ help_text = re.sub(r"^", r"\t", server_store.parser_help, flags=re.MULTILINE).re
     "main.py", "python3 src/server/main.py"
 )
 
-api_description = (
-    f"API used for testing and predicting audio data on trained models.\n\n{help_text}"
-)
+api_description = f"""API used for testing and predicting audio data on trained models.\n\n{help_text}
+
+### Quick instructions:
+0. Make sure you have a `.ckpt` model inside of the `--model-dir` directory.
+1. Click on `GET /models`
+2. Send a request to get all available models.
+2. Copy the model path you want to use for prediction.
+3. Click on `POST /model/predict-files`
+4. Paste the model path into the `model_checkpoint` field.
+5. Choose the audio files you want to predict.
+6. Predict labels for the audio files.
+"""
 # api_description = """API used for testing and predicting audio data on trained models.\n\n\testa\n\ttestb"""
 PREDICT_DESC = """Endpoints used for predicting audio data on trained models. Curl example for multiple audios:
 

@@ -10,7 +10,7 @@ from src.server.server_store import server_store
 from src.train.metrics import get_metrics
 
 
-class TypeDatasetDict(BaseModel):
+class DatasetBody(BaseModel):
     dataset_type: SupportedDatasetDirType
     dataset_path: Path
 
@@ -34,10 +34,11 @@ metrics = example_metrics.keys()
 instrument_fields = {e.value: (float, ...) for e in InstrumentEnums}
 metric_fields = {m: (float, ...) for m in metrics}
 
-JsonPrediction = create_model("JsonPrediction", **instrument_fields)
-JsonPredictions = dict[str, JsonPrediction]
+InstrumentPrediction = create_model("InstrumentPrediction", **instrument_fields)
+InstrumentPredictions = dict[str, InstrumentPrediction]
 
 
 PredictionsWithMetrics = create_model(
-    "PredictionsWithMetrics", **{**metric_fields, "predictions": (JsonPredictions, ...)}
+    "PredictionsWithMetrics",
+    **{**metric_fields, "predictions": (InstrumentPredictions, ...)}
 )
