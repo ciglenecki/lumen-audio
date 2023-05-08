@@ -1,4 +1,4 @@
-"""python3 src/visual/plot_dataset_distrib.py -dataset-paths irmastrain:data/irmas/train
+"""python3 src/visual/plot_dataset_distrib.py --dataset-paths irmastrain:data/irmas/train
 irmastest:data/irmas/test --dataset-names 'IRMAS Train' 'Irmas Test' --title-suffix 'Train Dataset
 Distribution'."""
 from pathlib import Path
