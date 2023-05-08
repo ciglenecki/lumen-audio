@@ -11,7 +11,7 @@ class ManageData():
         pass
 
     def LoadTrainData(self, path = r'C:\Users\dragu\Desktop\Lumen\Dataset\Dataset\IRMAS_Training_Data\*\*.wav', label_position = 65):
-        """Loads data and labels for training"""
+        """Loads IRMAS data and labels for training"""
 
         X = []
         y = []
@@ -26,8 +26,8 @@ class ManageData():
 
         print('Training data and labels loaded!\nExample:\nX:', self.data_train[0], '\ny:', self.y_train[0])
     
-    def LoadValidationData(self, path = r'C:\Users\dragu\Desktop\Lumen\Dataset\Dataset\IRMAS_Validation_Data\set1\*.wav'):
-        """Loads the validation data as well as the corresponding labels"""
+    def LoadTestData(self, path = r'C:\Users\dragu\Desktop\Lumen\Dataset\Dataset\IRMAS_Test_Data\set1\*.wav'):
+        """Loads IRMAS test data as well as the corresponding labels"""
 
         X = []
         y = []
@@ -50,13 +50,13 @@ class ManageData():
             X.append(data)
             y.append(label)
             
-        self.data_val = np.array(X, dtype=object)
-        self.y_val = np.array(y)
+        self.data_test = np.array(X, dtype=object)
+        self.y_test = np.array(y)
 
-        print('Validation data and labels loaded!\nExample:\nX:', self.data_val[0], '\ny:', self.y_val[0])
+        print('Test data and labels loaded!\nExample:\nX:', self.data_test[0], '\ny:', self.y_test[0])
 
     def LoadTrainFeatures(self, path = r'C:\Users\dragu\Desktop\Lumen\Dataset\Dataset\IRMAS_Training_Data\*\*.wav', label_position = 65):
-        """Loads training features and the corresponding labels"""
+        """Loads IRMAS training features and the corresponding labels"""
 
         X = []
         y = []
@@ -71,8 +71,8 @@ class ManageData():
 
         print('Training features and labels loaded!\nExample:\nX:', self.X_train[0], '\ny:', self.y_train[0])
     
-    def LoadValidationFeatures(self, path = r'C:\Users\dragu\Desktop\Lumen\Dataset\Dataset\IRMAS_Validation_Data\set1\*.wav'):
-        """Loads the validation features as well as the corresponding labels"""
+    def LoadTestFeatures(self, path = r'C:\Users\dragu\Desktop\Lumen\Dataset\Dataset\IRMAS_Test_Data\set1\*.wav'):
+        """Loads IRMAS test features as well as the corresponding labels"""
 
         X = []
         y = []
@@ -95,10 +95,10 @@ class ManageData():
             X.append(self._Feature(data))
             y.append(label)
             
-        self.X_val = np.array(X)#, dtype=object)
-        self.y_val = np.array(y)
+        self.X_test = np.array(X)#, dtype=object)
+        self.y_test = np.array(y)
 
-        print('Validation features and labels loaded!\nExample:\nX:', self.X_val[0], '\ny:', self.y_val[0])
+        print('Test features and labels loaded!\nExample:\nX:', self.X_test[0], '\ny:', self.y_test[0])
 
     def _MakeLabel(self, instrument):
         '''Makes a one-hot encoded label from the strings describing the instruments contained in the file'''
@@ -219,7 +219,7 @@ class multilabelSVM_linear(BaseEstimator):
     
     def predict(self, X = None):
         """Gives a prediction for input X based on a model"""
-        X = self.X_val if X is None else X
+        X = self.X_test if X is None else X
 
         prediction = np.array([self.model0.predict(X), self.model1.predict(X), self.model2.predict(X),
                       self.model3.predict(X), self.model4.predict(X), self.model5.predict(X),
@@ -269,7 +269,7 @@ class multilabelSVM(BaseEstimator):
     
     def predict(self, X = None):
         """Gives a prediction for input X based on a model"""
-        X = self.X_val if X is None else X
+        X = self.X_test if X is None else X
 
         prediction = np.array([self.model0.predict(X), self.model1.predict(X), self.model2.predict(X),
                       self.model3.predict(X), self.model4.predict(X), self.model5.predict(X),
