@@ -133,6 +133,7 @@ def get_metrics(
     num_labels=config_defaults.DEFAULT_NUM_LABELS,
     return_per_instrument=False,
     threshold=0.5,
+    return_deep_dict=False,
     kwargs={},
 ):
     kwargs = dict(
@@ -170,10 +171,18 @@ def get_metrics(
         recall=multilabel_recall(**kwargs),
     )
 
-    for metric_name, metric_value in metrics_per_instrument.items():
-        for instrument_enum, idx in INSTRUMENT_TO_IDX.items():
-            fullname = INSTRUMENT_TO_FULLNAME[instrument_enum]
-            metrics[f"instruments/{fullname}_{metric_name}"] = metric_value[idx]
+    if return_deep_dict:
+        for metric_name, metric_value in metrics_per_instrument.items():
+            for instrument_enum, idx in INSTRUMENT_TO_IDX.items():
+                fullname = INSTRUMENT_TO_FULLNAME[instrument_enum]
+                if fullname not in metrics:
+                    metrics[fullname] = {}
+                metrics[fullname][metric_name] = metric_value[idx]
+    else:
+        for metric_name, metric_value in metrics_per_instrument.items():
+            for instrument_enum, idx in INSTRUMENT_TO_IDX.items():
+                fullname = INSTRUMENT_TO_FULLNAME[instrument_enum]
+                metrics[f"instruments/{fullname}_{metric_name}"] = metric_value[idx]
 
     return metrics
 

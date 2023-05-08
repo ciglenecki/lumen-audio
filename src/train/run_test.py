@@ -1,6 +1,8 @@
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import sklearn.metrics as skmetrics
 import torch
 from tqdm import tqdm
@@ -60,6 +62,7 @@ def parse_args():
         default=True,
         help="Caculate and save histogram for metrics",
     )
+
     args, config, _ = parser.parse_args()
     return args, config
 
@@ -138,6 +141,48 @@ def main():
     save_yaml(
         metric_dict_file, Path(output_dir, f"metrics_files_{experiment_name}.yaml")
     )
+    if True:
+        metric_deep_file = get_metrics(
+            y_pred=torch.tensor(y_pred_file),
+            y_true=torch.tensor(y_true_file),
+            num_labels=config.num_labels,
+            return_per_instrument=True,
+            threshold=threshold,
+            return_deep_dict=True,
+        )
+        instrument_dict = {
+            k: torch_to_list(v)
+            for k, v in metric_deep_file.items()
+            if k in ALL_INSTRUMENTS_NAMES
+        }
+        flat = []
+        for instrument in instrument_dict:
+            for metric in instrument_dict[instrument]:
+                value = instrument_dict[instrument][metric]
+                flat.append([instrument, metric, value])
+        df = pd.DataFrame(flat, columns=["instrument", "metric", "value"])
+        df.pivot(columns="metric", index="instrument", values="value").plot(
+            kind="bar", figsize=(14, 4), width=0.6, edgecolor="black"
+        )
+        png_path = Path(
+            output_dir,
+            f"metrics_hist_{experiment_name}.png",
+        )
+        print("Saving to: ", png_path)
+
+        plt.xticks(rotation=0, fontsize=14)
+        plt.title(f"Metrics by instrument for \n{experiment_desc}")
+        plt.ylabel("Values", fontsize=14)
+        plt.xlabel("")
+        plt.legend(
+            bbox_to_anchor=(1, 1),
+            loc="upper right",
+            bbox_transform=plt.gcf().transFigure,
+            ncol=3,
+        )
+        plt.tight_layout()
+        plt.savefig(png_path)
+        plt.close()
 
     if args.save_metric_hist:
         metrics_no_reduction_file = get_metrics(
