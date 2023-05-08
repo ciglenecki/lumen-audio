@@ -61,7 +61,7 @@ class MobNet(ModelBase):
                 print(list(model.children())[-1])
 
             self.mobilenets.append(model)
-        self.num_labels = 11
+        self.num_labels = DEFAULT_NUM_LABELS
 
         self.save_hyperparameters()
 
