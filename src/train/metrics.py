@@ -2,7 +2,6 @@ from itertools import combinations
 
 import numpy as np
 import torch
-from sklearn.calibration import label_binarize
 from sklearn.metrics import confusion_matrix
 from torchmetrics.functional.classification import (
     f1_score,
