@@ -80,7 +80,7 @@
 			"name": "Gradcam",
 			"type": "python",
 			"request": "launch",
-			"program": "src/grad_vis/visualize_grads.py",
+			"program": "src/visual/visualize_grads.py",
 			"console": "integratedTerminal",
 			"args": "--dataset-paths irmastest:data/irmas/test --ckpt models_quick/04-14-15-25-32_CalmAlan_resnext50_32x4d/checkpoints/04-14-15-25-32_CalmAlan_resnext50_32x4d_val_acc_0.0000_val_loss_1.1923.ckpt --target_layer backbone.avgpool --model RESNEXT50_32X4D --audio-transform MEL_SPECTROGRAM --label vio --batch-size 2",
 			"justMyCode": false
@@ -153,7 +153,7 @@
 			"request": "launch",
 			"program": "src/train/run_test.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --dataset-paths irmastest:data/irmas/test --ckpt models/04-24-14-02-11_SlickDelta_ast/checkpoints/04-24-14-02-11_SlickDelta_ast_val_acc_0.0000_val_loss_0.6686.ckpt --batch-size 2 --num-workers 8",
+			"args": "--accelerator gpu --devices -1 --dataset-paths irmastest:data/irmas/test --ckpt models/05-06-19-55-50_SlickDelta_efficient_net_v2_s/checkpoints/05-06-19-55-50_SlickDelta_efficient_net_v2_s_val_acc_0.2491_val_loss_0.7147.ckpt --batch-size 1 --num-workers 1 --dataset-fraction 0.003",
 			"justMyCode": false
 		},
 		{
@@ -169,9 +169,9 @@
 			"name": "Testing",
 			"type": "python",
 			"request": "launch",
-			"program": "src/model/model_ast.py",
+			"program": "src/visual/plot_dataset_distrib.py",
 			"console": "integratedTerminal",
-			"args": "--train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --backbone-after backbone.classifier --head-after backbone.classifier --model AST --audio-transform AST --finetune-head-epochs 2 --epochs 10 --batch-size 2 --num-workers 10 --lr 2e-5 --lr-warmup 1e-4 --lr-onecycle-max 5e-5",
+			"args": "--dataset-paths irmastrain:data/irmas/train irmastest:data/irmas/test --dataset-names 'Irmas Train' 'Irmas Test' ",
 			"justMyCode": false
 		},
 	]

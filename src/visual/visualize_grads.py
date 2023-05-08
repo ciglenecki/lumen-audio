@@ -1,4 +1,4 @@
-"""python3 src/grad_vis/visualize_grads.py --input-dirs irmastrain:data/irmas/train --path_to_model
+"""python3 src/visual/visualize_grads.py --input-dirs irmastrain:data/irmas/train --path_to_model
 models_quick/04-14-15-25-32_CalmAlan_resnext50_32x4d/checkpoints/04-14-15-25-
 32_CalmAlan_resnext50_32x4d_val_acc_0.0000_val_loss_1.1923.ckpt --target_layer backbone.avgpool.
 

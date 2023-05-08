@@ -32,6 +32,10 @@ def dataset_path_to_str(dataset_path: str | Path):
     return str(dataset_path).replace("data/", "").replace("/", "_")
 
 
+def clean_str(s: str):
+    return s.replace("/", "_").replace(" ", "_").replace(".", "_")
+
+
 def parse_kwargs(kwargs_strs: list[str], list_sep=",", key_value_sep="="):
     """
 
