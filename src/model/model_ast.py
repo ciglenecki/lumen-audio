@@ -26,7 +26,51 @@ class ASTModelWrapper(ModelBase):
     ):
         super().__init__(*args, **kwargs)
 
-        ast_config = ASTConfig.from_pretrained(
+        # ast_config = ASTConfig.from_pretrained(
+        #     pretrained_model_name_or_path=self.pretrained_tag,
+        #     id2label=config_defaults.IDX_TO_INSTRUMENT,
+        #     label2id=config_defaults.INSTRUMENT_TO_IDX,
+        #     num_labels=self.num_labels,
+        #     finetuning_task="audio-classification",
+        #     problem_type="multi_label_classification",
+        # )
+
+        # self.backbone: ASTForAudioClassification = (
+        #     ASTForAudioClassification.from_pretrained(
+        #         self.pretrained_tag,
+        #         config=ast_config,
+        #         ignore_mismatched_sizes=True,
+        #     )
+        # )
+
+        # ast_config = ASTConfig.from_pretrained(
+        #     pretrained_model_name_or_path=self.pretrained_tag,
+        #     finetuning_task="audio-classification",
+        #     problem_type="multi_label_classification",
+        # )
+
+        # self.backbone: ASTForAudioClassification = (
+        #     ASTForAudioClassification.from_pretrained(
+        #         self.pretrained_tag,
+        #         config=ast_config,
+        #     )
+        # )
+        # self.subclassifier = torch.nn.Linear(
+        #     ast_config.num_labels,
+        #     config_defaults.DEFAULT_NUM_LABELS,
+        # )
+        # new_weights = torch.zeros(self.subclassifier.weight.shape)
+        # new_bias = torch.zeros(self.subclassifier.bias.shape)
+
+        # for irmas_idx, ast_idx in enumerate(
+        #     config_defaults.AST_INSTRUMENTS_IRMAS.keys()
+        # ):
+        #     new_weights[irmas_idx, ast_idx] = 1.0
+        # with torch.no_grad():
+        #     self.subclassifier.weight.copy_(new_weights)
+        #     self.subclassifier.bias.copy_(new_bias)
+
+        ast_config: ASTConfig = ASTConfig.from_pretrained(
             pretrained_model_name_or_path=self.pretrained_tag,
             finetuning_task="audio-classification",
             problem_type="multi_label_classification",
@@ -38,32 +82,40 @@ class ASTModelWrapper(ModelBase):
                 config=ast_config,
             )
         )
-        self.subclassifier = torch.nn.Linear(
-            ast_config.num_labels,
+        new_classifier = torch.nn.Linear(
+            ast_config.hidden_size,
             config_defaults.DEFAULT_NUM_LABELS,
         )
-        new_weights = torch.zeros(self.subclassifier.weight.shape)
-        new_bias = torch.zeros(self.subclassifier.bias.shape)
-
-        for irmas_idx, ast_idx in enumerate(
-            config_defaults.AST_INSTRUMENTS_IRMAS.keys()
-        ):
-            new_weights[irmas_idx, ast_idx] = 1.0
+        ast_indices = list(config_defaults.AST_INSTRUMENTS_IRMAS.keys())
         with torch.no_grad():
-            self.subclassifier.weight.copy_(new_weights)
-            self.subclassifier.bias.copy_(new_bias)
+            new_classifier.weight.copy_(
+                self.backbone.classifier.dense.weight[ast_indices, :]
+            )
+            new_classifier.bias.copy_(self.backbone.classifier.dense.bias[ast_indices])
+        # with torch.no_grad():
+        #     self.classifier.dense.weight.copy_(new_weights)
+        #     self.classifier.bias.copy_(new_bias)
 
+        self.backbone.classifier = new_classifier
         self.save_hyperparameters()
 
-    def forward(self, image: torch.Tensor):
-        out: BaseModelOutputWithPooling = self.backbone.audio_spectrogram_transformer(
-            image,
+    def forward(self, audio: torch.Tensor):
+        out = self.backbone.forward(
+            audio,
             output_attentions=True,
             return_dict=True,
         )
-        out = self.backbone.classifier(out.pooler_output)
-        logits = self.subclassifier(out)
-        return logits
+        return out.logits
+
+    # def forward(self, image: torch.Tensor):
+    #     out: BaseModelOutputWithPooling = self.backbone.audio_spectrogram_transformer(
+    #         image,
+    #         output_attentions=True,
+    #         return_dict=True,
+    #     )
+    #     out = self.backbone.classifier(out.pooler_output)
+    #     logits = self.subclassifier(out)
+    #     return logits
 
 
 if __name__ == "__main__":

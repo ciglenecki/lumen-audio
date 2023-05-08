@@ -10,7 +10,7 @@
 			"request": "launch",
 			"program": "src/train/train.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --backbone-after subclassifier --head-after subclassifier --model AST --audio-transform AST --finetune-head-epochs 1 --epochs 4 --batch-size 1 --num-workers 4",
+			"args": "--accelerator gpu --devices -1 --train-paths irmastrain:data/irmas/train --val-paths irmastest:data/irmas/test --backbone-after classifier --head-after classifier --model AST --audio-transform AST --finetune-head-epochs 1 --epochs 4 --batch-size 1 --num-workers 4",
 			"justMyCode": false
 		},
 		{
@@ -144,7 +144,7 @@
 			"request": "launch",
 			"program": "src/train/run_test.py",
 			"console": "integratedTerminal",
-			"args": "--accelerator gpu --devices -1 --dataset-paths irmastest:data/irmas/test_sum3 --ckpt models/efnet2best/05-06-19-08-32_SlickDelta_efficient_net_v2_s/checkpoints/05-06-19-08-32_SlickDelta_efficient_net_v2_s_val_acc_0.3702_val_loss_0.7923.ckpt --batch-size 8 --num-workers 8 --dataset-fraction 0.01 --save-confusion",
+			"args": "--accelerator gpu --devices -1 --dataset-paths irmastest:data/irmas/test --ckpt models/04-24-14-02-11_SlickDelta_ast/checkpoints/04-24-14-02-11_SlickDelta_ast_val_acc_0.0000_val_loss_0.6686.ckpt --batch-size 2 --num-workers 8",
 			"justMyCode": false
 		},
 		{

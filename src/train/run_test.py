@@ -72,6 +72,7 @@ def main():
     model, model_config, audio_transform = get_inference_model_objs(
         config, args, device
     )
+    torch.set_grad_enabled(False)
 
     model_text, text_train, _ = get_model_description(model_config)
 
