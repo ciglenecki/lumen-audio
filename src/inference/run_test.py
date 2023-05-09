@@ -12,9 +12,9 @@ import torch
 from matplotlib.ticker import FormatStrFormatter
 from tqdm import tqdm
 
-from enums.enums import NON_INFERENCE_DIR_TYPES, SupportedDatasetDirType
 from src.config.argparse_with_config import ArgParseWithConfig
 from src.config.config_defaults import ALL_INSTRUMENTS_NAMES, ConfigDefault
+from src.enums.enums import NON_INFERENCE_DIR_TYPES, SupportedDatasetDirType
 from src.inference.inference_utils import (
     aggregate_inference_loops,
     get_inference_datamodule,
@@ -60,19 +60,25 @@ def parse_args():
         "--save-confusion",
         action="store_true",
         default=False,
-        help="Caculate and save confusion matrices",
+        help="Caculate and save confusion matrices plot",
     )
     parser.add_argument(
         "--save-roc",
         action="store_true",
         default=False,
-        help="Caculate and save ROC for each instrument",
+        help="Caculate and save ROC plot for each instrument",
     )
     parser.add_argument(
         "--save-metric-hist",
         action="store_true",
         default=False,
-        help="Caculate and save histogram for metrics",
+        help="Caculate and save histogram plot for distribution of each metric",
+    )
+    parser.add_argument(
+        "--save-instrument-metrics",
+        action="store_true",
+        default=False,
+        help="Caculate and save the plot metrics for each instrument",
     )
     args, config, _ = parser.parse_args()
     config.required_dataset_paths()
@@ -130,7 +136,7 @@ def main():
 
     datamodule = get_inference_datamodule(config, audio_transform, model_config)
     data_loader = (
-        datamodule.test_dataloader() if is_inf else datamodule.pred_dataloader()
+        datamodule.test_dataloader() if not is_inf else datamodule.predict_dataloader()
     )
     result = aggregate_inference_loops(
         device, model, datamodule, data_loader, step_type="pred" if is_inf else "test"
@@ -179,7 +185,7 @@ def main():
     print(to_yaml(metric_dict_file))
     save_yaml(metric_dict_file, Path(out_dir, f"metrics_files_{experiment_name}.yaml"))
 
-    if True:
+    if args.save_instrument_metrics:
         # Plot metrics by instrument
         metric_deep_file = get_metrics(
             y_pred=torch.tensor(y_pred_file),
