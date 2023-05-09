@@ -1,0 +1,4 @@
+pandoc --standalone --toc --pdf-engine=xelatex --resource-path=. -H head.tex --wrap auto --highlight-style espresso technical_doc.md -o technical_first_part.pdf
+
+
+pdfunite technical_first_part.pdf api_docs.pdf technical_docs.pdf

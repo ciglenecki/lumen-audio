@@ -9,7 +9,7 @@ from argparse import Namespace
 
 from src.config.argparse_with_config import ArgParseWithConfig
 from src.config.config_defaults import ConfigDefault
-from src.enums.enums import all_enums
+from src.enums.enums import SupportedDatasetDirType, all_enums
 
 
 def get_epipolog():
@@ -18,7 +18,17 @@ def get_epipolog():
     for enum_class in all_enums:
         enums = list(enum_class)
         epilog += enum_class.__name__ + ": "
-        epilog += ", ".join([e.name for e in enums]) + "\n\n\n"
+        epilog += (
+            ", ".join(
+                [
+                    e.value
+                    if issubclass(e.__class__, SupportedDatasetDirType)
+                    else e.name
+                    for e in enums
+                ]
+            )
+            + "\n\n\n"
+        )
     return epilog
 
 

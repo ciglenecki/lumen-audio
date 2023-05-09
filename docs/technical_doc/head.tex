@@ -1,0 +1,8 @@
+\usepackage{xcolor}
+\definecolor{bgcolor}{HTML}{ffcccb}
+\definecolor{tcolor}{HTML}{c7254e}
+\let\oldtexttt\texttt
+
+\renewcommand{\texttt}[1]{
+  \textcolor{tcolor}{\colorbox{bgcolor}{\oldtexttt{#1}}}
+}

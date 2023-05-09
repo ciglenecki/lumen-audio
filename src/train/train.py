@@ -202,7 +202,7 @@ if __name__ == "__main__":
         filename="_".join(
             [
                 experiment_name,
-                "val_acc_{val/f1_epoch:.4f}",
+                "val_f1_{val/f1_epoch:.4f}",
                 "val_loss_{val/loss_epoch:.4f}",
             ]
         ),
