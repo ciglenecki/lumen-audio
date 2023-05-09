@@ -11,7 +11,7 @@ help_text = re.sub(r"^", r"\t", server_store.parser_help, flags=re.MULTILINE).re
     "main.py", "python3 src/server/main.py"
 )
 
-api_description = f"""API used for testing and predicting audio data on trained models.\n\n{help_text}
+api_description = f"""API used for testing and predicting audio data on trained models.
 
 ### Quick instructions:
 0. Make sure you have a `.ckpt` model inside of the `--model-dir` directory.

@@ -2,11 +2,11 @@
 
 Important: 0 dependencies except to enums and log!
 """
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+from itertools import product
 from pathlib import Path
 
 import pyrootutils
@@ -15,6 +15,7 @@ from simple_parsing.helpers import Serializable
 
 from src.config.logger import log
 from src.enums.enums import (
+    NON_INFERENCE_DIR_TYPES,
     AudioTransforms,
     MetricMode,
     OptimizeMetric,
@@ -700,12 +701,22 @@ class ConfigDefault(Serializable):
         self.set_test_paths()
         self.set_dataset_paths()
 
+    def check_all_paths_non_inference(
+        self, dataset_paths_with_type: list[tuple[SupportedDatasetDirType, Path]]
+    ):
+        for ds_type, ds_path in dataset_paths_with_type:
+            if ds_type not in NON_INFERENCE_DIR_TYPES:
+                raise InvalidArgument(
+                    f"Invalid dataset type: {ds_type}. Since labels have to be loaded use one of the following dataset types: {NON_INFERENCE_DIR_TYPES}"
+                )
+
     def set_train_paths(self):
         if self.train_paths is None:
             self.train_paths = [
                 f"{SupportedDatasetDirType.IRMAS_TRAIN.value}:{str(self.path_irmas_train)}"
             ]
         self.train_paths = parse_dataset_paths(self.train_paths)
+        self.check_all_paths_non_inference(self.train_paths)
 
     def set_val_paths(self):
         if self.val_paths is None:
@@ -713,10 +724,12 @@ class ConfigDefault(Serializable):
                 f"{SupportedDatasetDirType.IRMAS_TEST.value}:{str(self.path_irmas_test)}"
             ]
         self.val_paths = parse_dataset_paths(self.val_paths)
+        self.check_all_paths_non_inference(self.train_paths)
 
     def set_test_paths(self):
         if self.test_paths is not None:
             self.test_paths = parse_dataset_paths(self.test_paths)
+        self.check_all_paths_non_inference(self.train_paths)
 
     def set_dataset_paths(self):
         if self.dataset_paths is not None:
@@ -849,6 +862,39 @@ class ConfigDefault(Serializable):
             if not SUPPORTS_ATTENTION_HEAD[self.model]:
                 raise InvalidArgument(
                     f"You can't use ATTENTION_HEAD with {self.model}. Only models {[k.name for k, v in SUPPORTS_ATTENTION_HEAD.items() if v]} support it."
+                )
+        if self.model and self.audio_transform:
+            pair = (self.model, self.audio_transform)
+            supported_combinations = list(
+                product(
+                    {
+                        SupportedModels.EFFICIENT_NET_V2_S,
+                        SupportedModels.EFFICIENT_NET_V2_M,
+                        SupportedModels.EFFICIENT_NET_V2_L,
+                        SupportedModels.RESNEXT50_32X4D,
+                        SupportedModels.RESNEXT101_32X8D,
+                        SupportedModels.RESNEXT101_64X4D,
+                        SupportedModels.CONVNEXT_TINY,
+                        SupportedModels.CONVNEXT_SMALL,
+                        SupportedModels.CONVNEXT_LARGE,
+                        SupportedModels.CONVNEXT_BASE,
+                        SupportedModels.MOBILENET_V3_LARGE,
+                        SupportedModels.MOBNET,
+                    },
+                    {
+                        AudioTransforms.MEL_SPECTROGRAM,
+                        AudioTransforms.MULTI_SPECTROGRAM,
+                        AudioTransforms.MFCC,
+                    },
+                )
+            ) + [
+                (SupportedModels.AST, AudioTransforms.AST),
+                (SupportedModels.WAV2VEC, AudioTransforms.WAV2VEC),
+            ]
+
+            if pair not in supported_combinations:
+                raise InvalidArgument(
+                    f"You can't use {self.audio_transform.name} with {self.model.name}. Supported audio audiotransforms are {[v.name for k, v in supported_combinations if k == self.model ]} support it."
                 )
 
     def isfloat(self, x: str):
