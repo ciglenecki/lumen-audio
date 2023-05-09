@@ -9,7 +9,10 @@ from src.config.argparse_with_config import ArgParseWithConfig
 
 @functools.cache
 def get_server_args():
-    config_pl_args = ["--batch-size", "--num-workers", "--log-per-instrument-metrics"]
+    config_pl_args = [
+        "--batch-size",
+        "--num-workers",
+    ]
 
     parser = ArgParseWithConfig(add_lightning_args=True, config_pl_args=config_pl_args)
     parser.add_argument(
@@ -30,7 +33,7 @@ def get_server_args():
         "--hot-reload",
         action="store_true",
         default=False,
-        help="Use hot reload, not recommanded.",
+        help="Use hot reload which auto-restarts the server on code change(not recommanded).",
     )
     parser.add_argument(
         "--device",

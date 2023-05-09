@@ -4,8 +4,8 @@ from typing import Literal
 import torch
 
 from src.config.config_defaults import ConfigDefault
+from src.inference.run_test import get_inference_datamodule, get_inference_model_objs
 from src.server.config_server import get_server_args
-from src.train.run_test import get_inference_datamodule, get_inference_model_objs
 
 
 class ServerStore:

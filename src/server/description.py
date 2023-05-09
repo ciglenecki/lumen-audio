@@ -20,7 +20,7 @@ api_description = f"""API used for testing and predicting audio data on trained 
 2. Send a request to get all available models.
 2. Copy the model path you want to use for prediction.
 3. Click on `POST /model/predict-files`
-4. Paste the model path into the `model_checkpoint` field.
+4. Paste the model path into the `model_ckpt_path` field.
 5. Choose the audio files you want to predict.
 6. Predict labels for the audio files.
 """
@@ -28,7 +28,7 @@ api_description = f"""API used for testing and predicting audio data on trained 
 PREDICT_DESC = """Endpoints used for predicting audio data on trained models. Curl example for multiple audios:
 
     curl -X 'POST' \\
-        'http://localhost:8090/model/predict-files?model_checkpoint=models%2Fmy_model.ckpt' \\
+        'http://localhost:8090/model/predict-files?model_ckpt_path=models%2Fmy_model.ckpt' \\
         -H 'accept: application/json' \\
         -H 'Content-Type: multipart/form-data' \\
         -F 'audio_files=@track_23.wav;type=audio/wav'
@@ -43,8 +43,16 @@ TEST_DIR_STREAM_DESC = """Streams classes of audios from a directory and returns
 
 TEST_DIR_DESC = """Infers classes of audios from a directory and returns metrics for multiclass classification."""
 
-PREDICT_DIR_STREAM_DESC = """Streams classes of audios from a directory. Streaming is useful if your directory is large and you don't want to wait for the whole directory to be processed. If you want to process the whole directory at once, use the endpoint `predict-directory`"""
+PREDICT_SUFFIX = (
+    "**You don't have to specify the dataset structure type is always `inference`**"
+)
+PREDICT_DIR_STREAM_DESC = (
+    """Streams classes of audios from a directory. Streaming is useful if your directory is large and you don't want to wait for the whole directory to be processed. If you want to process the whole directory at once, use the endpoint `predict-directory`"""
+    + PREDICT_SUFFIX
+)
 
-PREDICT_DIR_DESC = """Infers classes of audios from a directory."""
+PREDICT_DIR_DESC = """Infers classes of audios from a directory.""" + PREDICT_SUFFIX
 
-PREDICT_FILES_DESC = """Infers classes of audios from a list of files."""
+PREDICT_FILES_DESC = (
+    """Infers classes of audios from a list of files.""" + PREDICT_SUFFIX
+)

@@ -21,7 +21,6 @@ class SupportedModels(Enum):
     MOBNET = "mobnet"
 
 
-
 class SupportedHeads(Enum):
     DEEP_HEAD = "deep_head"
     ATTENTION_HEAD = "attention_head"
@@ -94,9 +93,11 @@ class SupportedDatasetDirType(Enum):
 
     IRMAS_TRAIN = "irmastrain"
     IRMAS_TEST = "irmastest"
-    OPENMIC = "openmic"
     CSV = "csv"
     INFERENCE = "inference"
+
+    # Legacy
+    OPENMIC = "openmic"
 
 
 class MetricMode(Enum):

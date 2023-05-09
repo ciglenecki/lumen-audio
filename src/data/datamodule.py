@@ -253,8 +253,6 @@ class OurDataModule(pl.LightningDataModule):
                     train_override_csvs=self.train_override_csvs,
                     num_classes=self.num_classes,
                 )
-            elif dataset_enum == SupportedDatasetDirType.OPENMIC:
-                pass
             elif dataset_enum == SupportedDatasetDirType.CSV:
                 dataset = CSVDataset(
                     dataset_path=dataset_path,

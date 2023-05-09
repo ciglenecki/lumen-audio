@@ -12,17 +12,17 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from src.data.dataset_audio_pure import PureAudioDataset
+from src.enums.enums import SupportedDatasetDirType
 from src.features.chunking import collate_fn_feature
-from src.model.model_base import ModelBase
-from src.server.interface import DatasetBody
-from src.server.server_store import server_store
-from src.train.inference_utils import (
+from src.inference.inference_utils import (
     StepResult,
     aggregate_inference_loops,
     aggregate_step_dicts,
     inference_loop,
     json_pred_from_step_result,
 )
+from src.model.model_base import ModelBase
+from src.server.server_store import server_store
 from src.train.metrics import get_metrics_npy
 from src.utils.utils_functions import dict_npy_to_list, dict_torch_to_npy
 
@@ -127,9 +127,9 @@ def set_server_store_model(model_path: str):
 
 
 def set_inference_datamodule(
-    dataset_dirs: list[DatasetBody], type=Literal["test", "pred"]
+    dataset_pairs: list[tuple[SupportedDatasetDirType, Path]],
+    type=Literal["test", "pred"],
 ):
-    dataset_pairs = [(d.dataset_type, d.dataset_path) for d in dataset_dirs]
     if dataset_pairs != server_store.config.test_paths:
         server_store.config.test_paths = dataset_pairs
         server_store.set_dataset(type=type)

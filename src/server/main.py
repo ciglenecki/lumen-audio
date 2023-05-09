@@ -40,8 +40,13 @@ tags_metadata = [
     },
 ]
 
-app = FastAPI(debug=True, openapi_tags=tags_metadata, description=api_description)
-# app.middleware("http")(catch_exceptions_middleware)
+app = FastAPI(
+    title="Audio prediction API",
+    debug=True,
+    openapi_tags=tags_metadata,
+    description=api_description,
+)
+app.middleware("http")(catch_exceptions_middleware)
 
 
 @app.on_event("shutdown")

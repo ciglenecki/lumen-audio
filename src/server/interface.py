@@ -1,17 +1,26 @@
+from enum import Enum
+from itertools import chain
 from pathlib import Path
-from typing import Literal, Optional
 
 import torch
-from pydantic import BaseModel, create_model
+from fastapi import HTTPException
+from pydantic import BaseModel, create_model, validator
 
+import src.config.config_defaults as config_defaults
 from src.config.config_defaults import InstrumentEnums
 from src.enums.enums import SupportedDatasetDirType
 from src.server.server_store import server_store
 from src.train.metrics import get_metrics
 
 
-class DatasetBody(BaseModel):
-    dataset_type: SupportedDatasetDirType
+class SupportedDatasetDirTypeTrain(Enum):
+    IRMAS_TEST = SupportedDatasetDirType.IRMAS_TEST.value
+    IRMAS_TRAIN = SupportedDatasetDirType.IRMAS_TRAIN.value
+    CSV = SupportedDatasetDirType.CSV.value
+
+
+class DatasetTypedPath(BaseModel):
+    dataset_type: SupportedDatasetDirTypeTrain
     dataset_path: Path
 
     class Config:
@@ -40,5 +49,5 @@ InstrumentPredictions = dict[str, InstrumentPrediction]
 
 PredictionsWithMetrics = create_model(
     "PredictionsWithMetrics",
-    **{**metric_fields, "predictions": (InstrumentPredictions, ...)}
+    **{**metric_fields, "predictions": (InstrumentPredictions, ...)},
 )

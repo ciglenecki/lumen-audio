@@ -313,9 +313,6 @@ class ConfigDefault(Serializable):
     """Path to the root of the project."""
 
     path_data: Path | None = create(None)
-    """Path to the data directory."""
-
-    path_data: Path | None = create(None)
     path_irmas: Path | None = create(None)
     path_irmas_train: Path | None = create(None)
     path_irmas_test: Path | None = create(None)

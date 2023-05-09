@@ -19,14 +19,22 @@ from src.server.description import (
     TEST_DIR_STREAM_DESC,
 )
 from src.server.interface import (
-    DatasetBody,
+    DatasetTypedPath,
     InstrumentPrediction,
     InstrumentPredictions,
+    SupportedDatasetDirTypeTrain,
 )
-from src.server.middleware import dep_audio_file, dep_model_checkpoint
+from src.server.middleware import (
+    dep_audio_file,
+    dep_dataset_paths,
+    dep_dataset_paths_with_type,
+    dep_model_ckpt_path,
+)
 from src.server.server_store import server_store
 
 dataset_router = APIRouter(prefix="/dataset-type")
+
+default_model_path = server_store.config.path_models / "model.ckpt"
 
 
 @dataset_router.get(
@@ -36,7 +44,7 @@ dataset_router = APIRouter(prefix="/dataset-type")
     description=GET_DATASET_DESC,
 )
 async def get_supported_datasets():
-    return [e.value for e in SupportedDatasetDirType]
+    return [e.value for e in SupportedDatasetDirTypeTrain]
 
 
 model_router = APIRouter(prefix="/model")
@@ -59,11 +67,14 @@ async def get_models():
     description=TEST_DIR_STREAM_DESC,
 )
 async def test_directory_stream(
-    model_checkpoint: Path,
-    dataset_dirs: list[DatasetBody],
+    dataset_paths_with_type: list[DatasetTypedPath] = Depends(
+        dep_dataset_paths_with_type
+    ),
+    model_ckpt_path: Path = Depends(dep_model_ckpt_path),
 ):
-    controllers.set_server_store_model(model_checkpoint)
-    controllers.set_inference_datamodule(dataset_dirs, type="test")
+    dataset_pairs = [(d.dataset_type, d.dataset_path) for d in dataset_paths_with_type]
+    controllers.set_server_store_model(model_ckpt_path)
+    controllers.set_inference_datamodule(dataset_pairs, type="test")
 
     return StreamingResponse(
         controllers.test_directory_stream(), media_type="application/json"
@@ -77,11 +88,14 @@ async def test_directory_stream(
     description=TEST_DIR_DESC,
 )
 async def test_directory(
-    model_checkpoint: Path,
-    dataset_dirs: list[DatasetBody],
+    dataset_paths_with_type: list[DatasetTypedPath] = Depends(
+        dep_dataset_paths_with_type
+    ),
+    model_ckpt_path: Path = Depends(dep_model_ckpt_path),
 ):
-    controllers.set_server_store_model(model_checkpoint)
-    controllers.set_inference_datamodule(dataset_dirs, type="test")
+    dataset_pairs = [(d.dataset_type, d.dataset_path) for d in dataset_paths_with_type]
+    controllers.set_server_store_model(model_ckpt_path)
+    controllers.set_inference_datamodule(dataset_pairs, type="test")
 
     return JSONResponse(controllers.test_directory(), media_type="application/json")
 
@@ -93,11 +107,14 @@ async def test_directory(
     description=PREDICT_DIR_STREAM_DESC,
 )
 async def predict_directory_stream(
-    model_checkpoint: Path,
-    dataset_dirs: list[DatasetBody],
+    dataset_paths: list[Path] = Depends(dep_dataset_paths),
+    model_ckpt_path: Path = Depends(dep_model_ckpt_path),
 ):
-    controllers.set_server_store_model(model_checkpoint)
-    controllers.set_inference_datamodule(dataset_dirs, type="predict")
+    dataset_paths_with_type = [
+        (SupportedDatasetDirType.INFERENCE, path) for path in dataset_paths
+    ]
+    controllers.set_server_store_model(model_ckpt_path)
+    controllers.set_inference_datamodule(dataset_paths_with_type, type="predict")
 
     return StreamingResponse(
         controllers.predict_directory_stream(), media_type="application/json"
@@ -111,11 +128,14 @@ async def predict_directory_stream(
     description=PREDICT_DIR_DESC,
 )
 async def predict_directory(
-    model_checkpoint: Path,
-    dataset_dirs: list[DatasetBody],
+    dataset_paths: list[Path] = Depends(dep_dataset_paths),
+    model_ckpt_path: Path = Depends(dep_model_ckpt_path),
 ):
-    controllers.set_server_store_model(model_checkpoint)
-    controllers.set_inference_datamodule(dataset_dirs, type="predict")
+    dataset_paths_with_type = [
+        (SupportedDatasetDirType.INFERENCE, path) for path in dataset_paths
+    ]
+    controllers.set_server_store_model(model_ckpt_path)
+    controllers.set_inference_datamodule(dataset_paths_with_type, type="predict")
 
     return JSONResponse(controllers.predict_directory(), media_type="application/json")
 
@@ -127,10 +147,10 @@ async def predict_directory(
     description=PREDICT_FILES_DESC,
 )
 async def predict_files(
+    model_ckpt_path: Path = Depends(dep_model_ckpt_path),
     audio_files: list[UploadFile] = Depends(dep_audio_file),
-    model_checkpoint: Path = Depends(dep_model_checkpoint),
 ):
-    controllers.set_server_store_model(model_checkpoint)
+    controllers.set_server_store_model(model_ckpt_path)
     controllers.set_io_dataloader(audio_files)
 
     return JSONResponse(controllers.predict_files(), media_type="application/json")

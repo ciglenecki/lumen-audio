@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from src.config.config_defaults import AUDIO_EXTENSIONS
+from src.config.config_defaults import AUDIO_EXTENSIONS, DEFAULT_NUM_LABELS
 from src.data.dataset_base import DatasetBase
 from src.features.audio_transform_base import AudioTransformBase
 from src.utils.utils_exceptions import InvalidDataException
@@ -58,7 +58,7 @@ class InferenceDataset(DatasetBase):
             df = pd.read_csv(self.dataset_path)
             for _, row in df.iterrows():
                 filepath = Path(row["file"])
-                labels = np.array([0])
+                labels = np.array([0] * DEFAULT_NUM_LABELS)
                 dataset_list.append((filepath, labels))
 
         elif self.dataset_path.is_dir():
