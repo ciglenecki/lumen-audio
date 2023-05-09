@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from pytorch_lightning.loggers import TensorBoardLogger
+from pytorch_metric_learning import losses
 from torchvision.models import (
     convnext_base,
     convnext_large,
@@ -16,6 +17,7 @@ from torchvision.models import (
 )
 
 from src.model.model import SupportedModels
+from src.model.model_arcface import ArcFaceModel
 from src.model.model_base import ModelBase
 from src.utils.utils_exceptions import UnsupportedModel
 
@@ -77,7 +79,8 @@ class TorchvisionModel(ModelBase):
             old_linear = self.backbone.fc
             last_dim = old_linear.in_features
             head = self.create_head(head_input_size=last_dim)
-            self.backbone.fc = head
+
+            self.backbone.fc = torch.nn.ModuleList([ArcFaceModel(last_dim), head])
         elif backbone_constructor in {
             mobilenet_v3_large,
             efficientnet_v2_s,
@@ -91,7 +94,9 @@ class TorchvisionModel(ModelBase):
             old_linear = self.backbone.classifier[-1]
             last_dim = old_linear.in_features
             head = self.create_head(head_input_size=last_dim)
-            self.backbone.classifier[-1] = head
+            self.backbone.classifier[-1] = torch.nn.ModuleList(
+                [ArcFaceModel(last_dim), head]
+            )
         else:
             raise UnsupportedModel(
                 f"Please implement classifier logic for model {self.model_enum}"
