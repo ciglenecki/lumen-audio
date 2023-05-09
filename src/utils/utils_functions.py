@@ -4,7 +4,6 @@ import json
 import os
 import random
 import sys
-import time
 from datetime import datetime
 from pathlib import Path
 from typing import TypeVar
@@ -272,6 +271,7 @@ def flatten(list):
 
 
 def print_df_sample(df: pd.DataFrame):
+    """Prints sample of the dataframe."""
     pd.set_option("display.max_columns", None)
     print(
         "\nSample of the dataframe:",
@@ -286,24 +286,6 @@ def print_df_sample(df: pd.DataFrame):
         sep="\n\n\n",
     )
     pd.reset_option("display.max_columns")
-
-
-def serialize_functions(*rest):
-    current = rest[len(rest) - 1]
-    rest = rest[:-1]
-    return lambda x: current(serialize_functions(*rest)(x) if rest else x)
-
-
-def timeit(func):
-    def timed(*args, **kwargs):
-        print("START", func.__qualname__)
-        ts = time.time()
-        result = func(*args, **kwargs)
-        te = time.time()
-        print("END", func.__qualname__, "time:", round((te - ts) * 1000, 1), "ms")
-        return result
-
-    return timed
 
 
 def to_yaml(data):
@@ -323,6 +305,7 @@ def save_json(data: object, path: Path):
 
 
 def function_kwargs(func):
+    """Returns function keyword arguments."""
     return inspect.getfullargspec(func)
 
 

@@ -24,7 +24,7 @@ from src.utils.utils_functions import dict_torch_to_npy
 def mlb_confusion_matrix(
     y_true: np.ndarray, y_pred: np.ndarray
 ) -> dict[tuple[str, str], np.ndarray]:
-    # Convert the true labels and predicted labels to corresponding custom labels
+    """Compute the confusion matrix for each pair of instruments."""
     labels = ALL_INSTRUMENTS
     lables_indices = [INSTRUMENT_TO_IDX[label] for label in labels]
     labels_names = [INSTRUMENT_TO_FULLNAME[label] for label in labels]
@@ -50,7 +50,18 @@ def find_best_threshold_per_class(
     metric_fn=f1_score,
     min_or_max="max",
 ) -> list[float]:
-    # TODO: check that this works
+    """Find the best threshold for each class.
+
+    # WARNING: this function shouldn't be used as it's heavly biased towards the distribution of the test dataset.
+    Args:
+        y_pred_prob
+        y_true
+        num_labels
+        num_iter: number of iterations to find the best threshold
+        metric_fn: metric function to use to find the best threshold
+        min_or_max: whether to find the minimum or maximum of the metric function
+    """
+
     arg_max_or_min = torch.argmax if min_or_max == "max" else torch.argmin
 
     y_pred_prob = torch.tensor(y_pred_prob)
@@ -95,7 +106,11 @@ def find_best_threshold(
     metric_fn=multilabel_f1_score,
     min_or_max="max",
 ):
-    # TODO: implement this per instrument
+    """Find the best threshold for a given metric function.
+
+    The function first finds the best threshold in a coarse range and then finds the best threshold
+    in a fine range around the coarse threshold.
+    """
     arg_max_or_min = torch.argmax if min_or_max == "max" else torch.argmin
 
     y_pred_prob = torch.tensor(y_pred_prob)
@@ -134,7 +149,21 @@ def get_metrics(
     threshold=0.5,
     return_deep_dict=False,
     kwargs={},
-):
+) -> dict[str, float | torch.Tensor]:
+    """Compute the metrics for a given set of predictions and targets.
+
+    Args:
+        y_pred
+        y_true
+        num_labels..
+        return_per_instrument: return the metrics per instrument. Dictionary will stay flat.
+        threshold: the threshold to use for the multilabel classification.
+        return_deep_dict: return a deep dictionary with metrics for each instrument.
+        kwargs: _description_..
+
+    Returns dictionary with metrics
+        {"f1": f1, "precision": precision, ... "instruments/gel_f1": gel_f1, ...}
+    """
     kwargs = dict(
         preds=y_pred,
         target=y_true,
@@ -193,6 +222,7 @@ def get_metrics_npy(
     return_per_instrument=False,
     **kwargs,
 ):
+    """Same as get_metrics but for numpy."""
     return dict_torch_to_npy(
         get_metrics(
             torch.tensor(y_pred),

@@ -13,12 +13,14 @@ from src.utils.utils_exceptions import InvalidModuleStr
 
 
 def dummy_save_pl_module(module: pl.LightningModule, output_path: Path | str):
+    """Saves a pl module to a given path."""
     trainer = pl.Trainer()
     trainer.strategy.connect(module)
     trainer.save_checkpoint(output_path)
 
 
 def filter_modules(module: nn.Module, module_type=nn.Linear):
+    """Returns all modules of a given type in a module."""
     output = []
     for submodule in pytorch_lightning.callbacks.BaseFinetuning.flatten_modules(module):
         if isinstance(submodule, module_type):
@@ -45,6 +47,7 @@ def get_linear_init(activation: nn.Module) -> tuple[Callable, dict]:
 
 
 def count_module_params(module: nn.Module):
+    """Counts the number of trainable, non-trainable and total parameters in a module."""
     total_params = float(sum(p.numel() for p in module.parameters()))
     trainable_params = float(
         sum(p.numel() for p in module.parameters() if p.requires_grad)
@@ -100,6 +103,7 @@ def get_all_modules_after(
 
 
 def print_trainable_modules(module: Union[nn.ModuleList, nn.Module]):
+    """Print trainable modules."""
     print("\n================== Learnable modules ==================\n")
     for m in BaseFinetuning.flatten_modules(module):
         if any([p.requires_grad for p in m.parameters()]):
@@ -108,7 +112,7 @@ def print_trainable_modules(module: Union[nn.ModuleList, nn.Module]):
 
 
 def print_params(module: Union[nn.ModuleList, nn.Module], filter_fn=None):
-    """Print params."""
+    """Print module params."""
     headers = ["Parameter name", "Req.grad", "Num."]
     table = []
     for param_name, param in module.named_parameters():

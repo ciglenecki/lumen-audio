@@ -109,7 +109,6 @@ def extract_embeddings(embeddings: torch.Tensor, model: SupportedModels):
 
 
 if __name__ == "__main__":
-    # Todo cacualte for each dataset train/val
     args, config, pl_args = parse_args()
     config: config_defaults.ConfigDefault
 
