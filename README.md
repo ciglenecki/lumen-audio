@@ -91,12 +91,6 @@ Low priority tasks:
 ## Rep:
 - [ ] **gradcam plots** create gradcam plots for trained model
   - [ ] 🖊️ report your findings in Google Docs
-- [ ] **Rep vs IRMAS:** perform validation on Rep's corected dataset to check how many labels are correctly marked in the original dataset
-  - check if all instruments are correct
-  - check if at least one instrument is correct
-  - hamming distance between Rep's and original
-  - how dirty is the training set in terms of including non-predominant instruments
-  - [ ] 🖊️ report your findings in Google Docs
 
 
 ## Rep Experiments
@@ -107,7 +101,6 @@ Low priority tasks:
   - [ ] --backbone-after layer.6
   - [ ] --backbone-after layers.11.final_layer_norm.weight
 - [x] **Fluffy**: Directly compare Fluffy Deep head CNN to standard Deep head  CNN
-  - [ ] 🖊️ report your findings in Google Docs
 
 
 ## Vinko:
@@ -503,6 +496,12 @@ https://github.com/janmyler/web-audio-editor
 ## Done tasks
 
 Tasks:
+- [x] **Rep vs IRMAS:** perform validation on Rep's corected dataset to check how many labels are correctly marked in the original dataset
+  - check if all instruments are correct
+  - check if at least one instrument is correct
+  - hamming distance between Rep's and original
+  - how dirty is the training set in terms of including non-predominant instruments
+  - [x] 🖊️ report your findings in Google Docs
 - [x] **train with relabeled data (cleanlab):** (@matej has to provide csv) Include train override csv. No augmentations. Compare both models metrics.
   - [x] 🖊️ report your findings in Google Docs
 - [x] **Inference analysis**: run inference on single audio with multiple different durations (run on 10, 20, ..., 590, 600 seconds)
