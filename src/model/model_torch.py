@@ -70,7 +70,7 @@ class TorchvisionModel(ModelBase):
         print("\n================== Backbone before changing the classifier:\n")
         print(list(self.backbone.children())[-1])
 
-        # TODO: cutting off model so that Attention head fits
+        # cutting off model so that Attention head fits
         # if backbone_constructor in {
         #     resnext50_32x4d,
         #     resnext101_32x8d,

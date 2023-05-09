@@ -189,6 +189,8 @@ For testing it's use `POST /model/test-directory` and fill out the `dataset_type
 
 ## 4 b) Inference via the Python script (`src/inference/run_test.py`)
 
+It's also possible to use a python script to test and
+
 ```
 usage: python3 src/inference/run_test.py [--save-confusion] [-h] [--save-roc] [--save-metric-hist] [--device str] [--relative-save-path None] [--dataset-paths [List]] [--ckpt [Path]]
 

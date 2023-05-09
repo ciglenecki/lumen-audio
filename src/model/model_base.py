@@ -95,6 +95,7 @@ class ModelBase(pl.LightningModule, ABC):
         config: None | ConfigDefault = None,
         head_constructor: Callable[[Any], HeadTypes] = DeepHead,
         head_hidden_dim: list[int] = [],
+        prediction_threshold: float | None = None,
         *args,
         **kwargs,
     ) -> None:
@@ -174,6 +175,7 @@ class ModelBase(pl.LightningModule, ABC):
         self.finetune_head_epochs = finetune_head_epochs
         self.weight_decay = weight_decay
         self.config = config
+        self.prediction_threshold = prediction_threshold
 
         if self.finetune_head:
             # Initially set to learning rate to warmup. later ot will change to 'normal' lr
@@ -267,7 +269,8 @@ class ModelBase(pl.LightningModule, ABC):
             batch_logits_pred = self.forward(batch_feature)
 
             batch_y_pred_prob = torch.sigmoid(batch_logits_pred)
-            batch_y_pred = (batch_y_pred_prob >= 0.5).float()
+            pred_threshold = self.prediction_threshold or 0.5
+            batch_y_pred = (batch_y_pred_prob >= pred_threshold).float()
 
             y_pred_prob[start:end] = batch_y_pred_prob
             y_pred[start:end] = batch_y_pred
@@ -341,21 +344,33 @@ class ModelBase(pl.LightningModule, ABC):
     def validation_step(self, batch, batch_idx):
         with torch.no_grad():
             out = self._step(
-                batch, batch_idx, type="val", log_metric_dict=True, only_return_loss=True
+                batch,
+                batch_idx,
+                type="val",
+                log_metric_dict=True,
+                only_return_loss=True,
             )
         return out
 
     def test_step(self, batch, batch_idx):
         with torch.no_grad():
             out = self._step(
-                batch, batch_idx, type="test", log_metric_dict=True, only_return_loss=False
+                batch,
+                batch_idx,
+                type="test",
+                log_metric_dict=True,
+                only_return_loss=False,
             )
         return out
 
     def predict_step(self, batch, batch_idx: int):
         with torch.no_grad():
             out = self._step(
-                batch, batch_idx, type="pred", log_metric_dict=False, only_return_loss=False
+                batch,
+                batch_idx,
+                type="pred",
+                log_metric_dict=False,
+                only_return_loss=False,
             )
         return out
 

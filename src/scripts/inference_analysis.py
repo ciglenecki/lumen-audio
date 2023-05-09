@@ -1,3 +1,7 @@
+import json
+from time import time
+
+import numpy as np
 import torch
 from tqdm import tqdm
 
@@ -6,9 +10,7 @@ from src.data.datamodule import OurDataModule
 from src.features.audio_transform import get_audio_transform
 from src.features.chunking import collate_fn_feature
 from src.model.model import get_model
-from time import time
-import json
-import numpy as np
+
 
 def parse():
     parser = ArgParseWithConfig()
@@ -16,6 +18,7 @@ def parse():
     config.required_test_paths()
     config.required_audio_transform()
     return args, config
+
 
 def main():
     args, config = parse()
@@ -60,16 +63,19 @@ def main():
             _ = model.test_step(b, 0)
             end = time()
             time_for_ex.append(end - start)
-        
-        infer_times.append({
-            "step": step,
-            "mean": np.mean(time_for_ex),
-            "std": np.std(time_for_ex),
-        })
+
+        infer_times.append(
+            {
+                "step": step,
+                "mean": np.mean(time_for_ex),
+                "std": np.std(time_for_ex),
+            }
+        )
 
         step += 1
 
-    with open(f"data/{config.experiment_suffix}_infer_res.json", 'w') as f:
+    with open(f"data/{config.experiment_suffix}_infer_res.json", "w") as f:
         json.dump(infer_times, f)
+
 
 main()
