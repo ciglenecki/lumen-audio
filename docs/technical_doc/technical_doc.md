@@ -40,7 +40,7 @@ pip install -e .
 
 # 2. Dataset setup
 
-This project allows training and predicting on multiple different datasets. Although you can specify the dataset to any directory, we suggest moving your datasets to `data` directory.
+This project allows training and inference on multiple different datasets. Although you can specify the dataset to any directory, we suggest moving your datasets to `data` directory.
 
 Datasets are almost always specified in the following format when using the CLI:
 ```
@@ -102,8 +102,19 @@ Wav filename format:
 
 IRMAS test-like directory
 Wav/label filename format:
-- `<PREFIX>[<INSTRUMENT>][<DRUMS>][<GENRE>]<suffix>.wav.`
-- `<PREFIX>[<INSTRUMENT>][<GENRE>]<suffix>.wav.`
+- `<FILENAME>-<SONG_PART>.{wav,txt}`
+
+Directory structure:
+```
+├── dataset
+│   ├── 0050_10CC___I_M_NOT_IN_LOVE-11.txt
+│   ├── 0050_10CC___I_M_NOT_IN_LOVE-11.wav
+│   ├── 0050_10CC___I_M_NOT_IN_LOVE-13.txt
+│   ├── 0050_10CC___I_M_NOT_IN_LOVE-13.wav
+│   ├── 0050_10CC___I_M_NOT_IN_LOVE-15.txt
+│   ├── 0050_10CC___I_M_NOT_IN_LOVE-15.wav
+│   ├── 0050_10CC___I_M_NOT_IN_LOVE-17.txt
+```
 
 Label file format:
 ```
@@ -111,20 +122,6 @@ cel
 gel
 voi
 ```
-Directory structure:
-```
-├── dataset
-│   ├── 008__[cel][nod][cla]0058__1.wav
-│   ├── 008__[cel][nod][cla]0058__1.txt
-│   ├── 008__[cel][nod][cla]0058__2.wav
-│   ├── 008__[cel][nod][cla]0058__2.txt
-│   ├── 008__[cel][nod][cla]0058__3.wav
-│   ├── 008__[cel][nod][cla]0058__3.txt
-│   ├── 012__[cel][nod][cla]0043__1.wav
-│   ├── 012__[cel][nod][cla]0043__1.txt
-│   ├── ...
-```
-
 
 ### `csv`
 
@@ -189,6 +186,8 @@ For testing it's use `POST /model/test-directory` and fill out the `dataset_type
 
 ## 4 b) Inference via the Python script (`src/inference/run_test.py`)
 
+It's also possible to use a python script to test and
+
 ```
 usage: python3 src/inference/run_test.py [--save-confusion] [-h] [--save-roc] [--save-metric-hist] [--device str] [--relative-save-path None] [--dataset-paths [List]] [--ckpt [Path]]
 
@@ -209,7 +208,15 @@ Script arguments:
                         Output directory that's relative to the path of the checkpoint (default: None)
 ```
 
-python3 src/train/run_test.py --dataset-paths irmastest:data/irmas/test_sum3 --ckpt models/05-08-11-38-04_SlickDelta_ast_astfiliteredhead-irmas-audioset/checkpoints/05-08-11-38-04_SlickDelta_ast_astfiliteredhead-irmas-audioset_val_acc_0.3742_val_loss_0.3504.ckpt --batch-size 1 --num-workers 1
+For example:
+```
+python3 src/train/run_test.py --dataset-paths irmastest:data/irmas/test --ckpt models/model.ckpt --batch-size 1 --num-workers 1
+```
+
+```
+python3 src/train/run_test.py --dataset-paths irmastest:data/irmas/test --ckpt models/model.ckpt --batch-size 1 --num-workers 1
+```
+
 
 ## Training
 After you prepared new dataset structure, you can start the _quick version_ of training:

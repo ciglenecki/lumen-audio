@@ -481,6 +481,8 @@ class ConfigDefault(Serializable):
 
     use_rgb: bool | None = create(None)
 
+    prediction_threshold: float | None = create(None)
+
     # ======================== OPTIM ===========================
 
     optimizer: str = create(SupportedOptimizer.ADAMW)

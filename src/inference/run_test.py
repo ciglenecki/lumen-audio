@@ -13,16 +13,20 @@ from matplotlib.ticker import FormatStrFormatter
 from tqdm import tqdm
 
 from src.config.argparse_with_config import ArgParseWithConfig
-from src.config.config_defaults import ALL_INSTRUMENTS_NAMES
+from src.config.config_defaults import ALL_INSTRUMENTS_NAMES, ConfigDefault
+from src.enums.enums import NON_INFERENCE_DIR_TYPES, SupportedDatasetDirType
 from src.inference.inference_utils import (
     aggregate_inference_loops,
     get_inference_datamodule,
     get_inference_model_objs,
+    json_from_step_result,
     validate_inference_args,
 )
 from src.train.metrics import find_best_threshold, get_metrics, mlb_confusion_matrix
+from src.utils.utils_exceptions import InvalidArgument
 from src.utils.utils_functions import (
     dataset_path_to_str,
+    save_json,
     save_yaml,
     to_yaml,
     torch_to_list,
@@ -37,7 +41,7 @@ def get_model_description(config):
 
 
 def parse_args():
-    config_pl_args = ["--ckpt", "--dataset-paths"]
+    config_pl_args = ["--ckpt", "--dataset-paths", "--batch-size", "--num-workers"]
     parser = ArgParseWithConfig(config_pl_args=config_pl_args)
 
     parser.add_argument(
@@ -46,37 +50,73 @@ def parse_args():
         default="cuda" if torch.cuda.is_available() else "cpu",
         help="The device to be used eg. cuda:0.",
     )
+
     parser.add_argument(
-        "--relative-save-path",
-        type=None,
-        help="Output directory that's relative to the path of the checkpoint",
+        "--out-dir",
+        type=Path,
+        help="Sets the output directory",
     )
     parser.add_argument(
         "--save-confusion",
         action="store_true",
         default=False,
-        help="Caculate and save confusion matrices",
+        help="Caculate and save confusion matrices plot",
     )
     parser.add_argument(
         "--save-roc",
         action="store_true",
         default=False,
-        help="Caculate and save ROC for each instrument",
+        help="Caculate and save ROC plot for each instrument",
     )
     parser.add_argument(
         "--save-metric-hist",
         action="store_true",
         default=False,
-        help="Caculate and save histogram for metrics",
+        help="Caculate and save histogram plot for distribution of each metric",
     )
-
+    parser.add_argument(
+        "--save-instrument-metrics",
+        action="store_true",
+        default=False,
+        help="Caculate and save the plot metrics for each instrument",
+    )
     args, config, _ = parser.parse_args()
+    config.required_dataset_paths()
+
     return args, config
+
+
+def check_inf_non_inf_dataset_paths(config: ConfigDefault):
+    is_inf = all([d[0] not in NON_INFERENCE_DIR_TYPES for d in config.dataset_paths])
+    is_non_inf = all([d[0] in NON_INFERENCE_DIR_TYPES for d in config.dataset_paths])
+    if is_inf and is_non_inf:
+        raise InvalidArgument(
+            f"All dataset paths must be either inference or non-inference. Use inference to get only the predictions. To specify inference paths use /path/to/data or inference:/path/to/data format. If you want to get predictions and metrics, specify non-inference dataset e.g. irmastrain:/path/to/data. Possible non-inference dataset directory types are {NON_INFERENCE_DIR_TYPES}"
+        )
+    return is_inf
+
+
+def get_dataset_text(
+    dataset_paths_with_type: list[tuple[SupportedDatasetDirType, Path]]
+):
+    return "_".join([dataset_path_to_str(p[1]) for p in dataset_paths_with_type])
+
+
+def get_out_dir(args, config: ConfigDefault):
+    if args.out_dir is not None:
+        out_dir = args.out_dir
+    else:
+        out_dir = Path(config.ckpt).parent
+        if out_dir.name == "checkpoints":
+            out_dir = out_dir.parent
+    return out_dir
 
 
 def main():
     args, config = parse_args()
     validate_inference_args(config)
+    is_inf = check_inf_non_inf_dataset_paths(config)
+
     config.test_paths = config.dataset_paths
     device = torch.device(args.device)
     torch.set_grad_enabled(False)
@@ -85,29 +125,29 @@ def main():
     )
 
     model_text, text_train, _ = get_model_description(model_config)
-
-    train_ds_text = "_".join(
-        [dataset_path_to_str(p[1]) for p in model_config.train_paths]
-    )
-    val_ds_text = "_".join([dataset_path_to_str(p[1]) for p in model_config.val_paths])
-    test_ds_text = "_".join([dataset_path_to_str(p[1]) for p in config.dataset_paths])
-
-    if args.relative_save_path is None:
-        relative_save_path = Path(config.ckpt).parent.parent
-    else:
-        relative_save_path = args.relative_save_path
-
-    output_dir = Path(relative_save_path)
-    experiment_name = f"{model_config.experiment_suffix}_train_{train_ds_text}_val_{val_ds_text}_test_{test_ds_text}"
+    train_ds_text = get_dataset_text(model_config.train_paths)
+    val_ds_text = get_dataset_text(model_config.val_paths)
+    test_ds_text = get_dataset_text(config.dataset_paths)
+    out_dir = get_out_dir(args, config)
+    experiment_name = f"{model_config.experiment_suffix}__train__{train_ds_text}__val__{val_ds_text}__pred__{test_ds_text}"
     experiment_desc = (
         f"{model_text}\nTrained on: {text_train}\nResults for: {test_ds_text}"
     )
 
     datamodule = get_inference_datamodule(config, audio_transform, model_config)
-    data_loader = datamodule.test_dataloader()
-    result = aggregate_inference_loops(
-        device, model, datamodule, data_loader, step_type="test"
+    data_loader = (
+        datamodule.test_dataloader() if not is_inf else datamodule.predict_dataloader()
     )
+    result = aggregate_inference_loops(
+        device, model, datamodule, data_loader, step_type="pred" if is_inf else "test"
+    )
+
+    json_dict = json_from_step_result(result)
+    json_path = out_dir / f"preds_{experiment_name}.json"
+    save_json(json_dict, json_path)
+
+    if is_inf:
+        return
 
     threshold = find_best_threshold(
         y_pred_prob=result.y_pred_prob_file,
@@ -131,9 +171,7 @@ def main():
         )
     )
     print(to_yaml(metric_dict_patch))
-    save_yaml(
-        metric_dict_patch, Path(output_dir, f"metrics_patch_{experiment_name}.yaml")
-    )
+    save_yaml(metric_dict_patch, Path(out_dir, f"metrics_patch_{experiment_name}.yaml"))
 
     metric_dict_file = torch_to_list(
         get_metrics(
@@ -145,10 +183,10 @@ def main():
         )
     )
     print(to_yaml(metric_dict_file))
-    save_yaml(
-        metric_dict_file, Path(output_dir, f"metrics_files_{experiment_name}.yaml")
-    )
-    if True:
+    save_yaml(metric_dict_file, Path(out_dir, f"metrics_files_{experiment_name}.yaml"))
+
+    if args.save_instrument_metrics:
+        # Plot metrics by instrument
         metric_deep_file = get_metrics(
             y_pred=torch.tensor(y_pred_file),
             y_true=torch.tensor(y_true_file),
@@ -172,7 +210,7 @@ def main():
             kind="bar", figsize=(14, 4), width=0.6, edgecolor="black"
         )
         png_path = Path(
-            output_dir,
+            out_dir,
             f"metrics_hist_{experiment_name}.png",
         )
         print("Saving to: ", png_path)
@@ -192,7 +230,7 @@ def main():
         plt.close()
 
     if args.save_metric_hist:
-        # Gets average metric for each file
+        # Plot frequency of value for each metric
         metrics_no_reduction_file = get_metrics(
             y_pred=torch.tensor(y_pred_file).T,
             y_true=torch.tensor(y_true_file).T,
@@ -201,12 +239,12 @@ def main():
             threshold=threshold,
             kwargs={"average": "none"},
         )
-        output_dir_hist = Path(output_dir, "metric_hist")
-        output_dir_hist.mkdir(parents=True, exist_ok=True)
-        print("Saving metric histograms to:", output_dir_hist)
+        out_dir_hist = Path(out_dir, "metric_hist")
+        out_dir_hist.mkdir(parents=True, exist_ok=True)
+        print("Saving metric histograms to:", out_dir_hist)
         for metric_name, metric_values in metrics_no_reduction_file.items():
             png_path = Path(
-                output_dir_hist,
+                out_dir_hist,
                 f"{metric_name}_hist_{experiment_name}.png",
             )
 
@@ -222,11 +260,12 @@ def main():
             plt.close()
 
     if args.save_confusion:
-        output_dir_conf = Path(output_dir, "conf_matrix")
-        output_dir_conf.mkdir(parents=True, exist_ok=True)
+        # Plot confusion matrices
+        out_dir_conf = Path(out_dir, "conf_matrix")
+        out_dir_conf.mkdir(parents=True, exist_ok=True)
 
         conf_matr_dict = mlb_confusion_matrix(y_pred_file, y_true_file)
-        print("Saving confusion matrices to:", output_dir_conf)
+        print("Saving confusion matrices to:", out_dir_conf)
         for (name1, name2), conf_matrix in tqdm(conf_matr_dict.items()):
             cm_display = skmetrics.ConfusionMatrixDisplay(
                 conf_matrix,
@@ -234,7 +273,7 @@ def main():
             )
             cm_display.plot()
             png_path = Path(
-                output_dir_conf,
+                out_dir_conf,
                 f"conf_matrix_{experiment_name}_{name1.replace(' ', '')}{name2.replace(' ', '')}.png",
             )
             plt.title(
@@ -245,9 +284,10 @@ def main():
             plt.close()
 
     if args.save_roc:
-        output_dir_roc = Path(output_dir, "roc")
-        output_dir_roc.mkdir(parents=True, exist_ok=True)
-        print("Saving ROC to:", output_dir_roc)
+        # Plot ROC
+        out_dir_roc = Path(out_dir, "roc")
+        out_dir_roc.mkdir(parents=True, exist_ok=True)
+        print("Saving ROC to:", out_dir_roc)
         num_colors = y_true.shape[-1]
         cm = plt.get_cmap("gist_rainbow")
 
@@ -270,7 +310,7 @@ def main():
                 color=cm(i / num_colors),
             )
         png_path = Path(
-            output_dir_roc,
+            out_dir_roc,
             f"roc_{experiment_name}.png",
         )
         plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left")

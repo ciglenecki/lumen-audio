@@ -21,7 +21,7 @@ class InferenceDataset(DatasetBase):
         sampling_rate: int,
         normalize_audio: bool,
     ):
-        """_summary_
+        """Dataset for inference. No labels, just audio.
 
         Args:
             dataset_path directory with the following structure:
@@ -66,7 +66,7 @@ class InferenceDataset(DatasetBase):
                 self.dataset_path.rglob(glob_exp) for glob_exp in glob_expressions
             ]
             for item_idx, audio_path in tqdm(enumerate(chain(*glob_generators))):
-                labels = np.array([0])
+                labels = np.array([0] * DEFAULT_NUM_LABELS)
                 dataset_list.append((audio_path, labels))
             if not dataset_list:
                 raise InvalidDataException(

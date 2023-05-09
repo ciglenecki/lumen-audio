@@ -100,6 +100,13 @@ class SupportedDatasetDirType(Enum):
     OPENMIC = "openmic"
 
 
+NON_INFERENCE_DIR_TYPES = [
+    SupportedDatasetDirType.IRMAS_TRAIN,
+    SupportedDatasetDirType.IRMAS_TEST,
+    SupportedDatasetDirType.CSV,
+]
+
+
 class MetricMode(Enum):
     MIN = "min"
     MAX = "max"

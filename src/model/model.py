@@ -7,9 +7,9 @@ from src.model.heads import get_head_constructor
 from src.model.model_ast import ASTModelWrapper
 from src.model.model_base import ModelBase
 from src.model.model_conv_lstm import ConvLSTM
+from src.model.model_mobnet import MobNet
 from src.model.model_torch import TorchvisionModel
 from src.model.model_wav2vec import Wav2VecWrapper
-from src.model.model_mobnet import MobNet
 from src.model.model_wav2vec_cnn import Wav2VecCnnWrapper
 from src.utils.utils_exceptions import UnsupportedModel
 
@@ -96,6 +96,7 @@ def get_model(
         config=config,
         head_hidden_dim=config.head_hidden_dim,
         add_instrument_loss=config.add_instrument_loss,
+        prediction_threshold=config.prediction_threshold,
     )
 
     if model_enum not in model_constructor_map:

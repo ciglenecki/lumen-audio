@@ -1,9 +1,9 @@
 import argparse
 import inspect
+import json
 import os
 import random
 import sys
-import time
 from datetime import datetime
 from pathlib import Path
 from typing import TypeVar
@@ -271,6 +271,7 @@ def flatten(list):
 
 
 def print_df_sample(df: pd.DataFrame):
+    """Prints sample of the dataframe."""
     pd.set_option("display.max_columns", None)
     print(
         "\nSample of the dataframe:",
@@ -287,35 +288,24 @@ def print_df_sample(df: pd.DataFrame):
     pd.reset_option("display.max_columns")
 
 
-def serialize_functions(*rest):
-    current = rest[len(rest) - 1]
-    rest = rest[:-1]
-    return lambda x: current(serialize_functions(*rest)(x) if rest else x)
-
-
-def timeit(func):
-    def timed(*args, **kwargs):
-        print("START", func.__qualname__)
-        ts = time.time()
-        result = func(*args, **kwargs)
-        te = time.time()
-        print("END", func.__qualname__, "time:", round((te - ts) * 1000, 1), "ms")
-        return result
-
-    return timed
-
-
 def to_yaml(data):
     return yaml.dump(data, allow_unicode=True, default_flow_style=False)
 
 
 def save_yaml(data: object, path: Path):
-    print("Saving file:", str(path))
+    print("Saving yaml file:", str(path))
     with open(path, "w") as outfile:
         yaml.dump(data, outfile, default_flow_style=False)
 
 
+def save_json(data: object, path: Path):
+    print("Saving json file:", str(path))
+    with open(path, "w") as outfile:
+        json.dump(data, outfile)
+
+
 def function_kwargs(func):
+    """Returns function keyword arguments."""
     return inspect.getfullargspec(func)
 
 

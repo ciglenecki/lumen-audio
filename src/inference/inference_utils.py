@@ -1,6 +1,5 @@
 from collections.abc import Iterator  # Python >=3.9
 from pathlib import Path
-from typing import Literal
 
 import numpy as np
 import pytorch_lightning as pl
@@ -8,12 +7,11 @@ import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from src.config.argparse_with_config import ArgParseWithConfig
 from src.config.config_defaults import ConfigDefault
 from src.data.datamodule import OurDataModule
 from src.features.audio_transform import AudioTransformBase, get_audio_transform
 from src.features.chunking import collate_fn_feature
-from src.model.model import SupportedModels, get_model, model_constructor_map
+from src.model.model import SupportedModels, model_constructor_map
 from src.model.model_base import ModelBase
 from src.utils.utils_dataset import multihot_to_dict
 from src.utils.utils_exceptions import InvalidArgument, UnsupportedModel
@@ -161,7 +159,7 @@ def aggregate_inference_loops(
     return result
 
 
-def json_pred_from_step_result(result: StepResult):
+def json_from_step_result(result: StepResult):
     json_dict = {}
     y_pred_file = result.y_pred_file
     filenames = result.filenames
