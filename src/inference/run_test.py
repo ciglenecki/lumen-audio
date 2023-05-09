@@ -2,8 +2,6 @@
 models/05-08-11-38-04_SlickDelta_ast_astfiliteredhead-irmas-
 audioset/checkpoints/05-08-11-38-04_SlickDelta_ast_astfiliteredhead-irmas-
 audioset_val_acc_0.3742_val_loss_0.3504.ckpt --batch-size 2 --num-workers 1."""
-import json
-from operator import is_
 from pathlib import Path
 
 import matplotlib.pyplot as plt

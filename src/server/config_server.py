@@ -2,7 +2,6 @@ import functools
 from pathlib import Path
 
 import torch
-from numpy import require
 
 from src.config.argparse_with_config import ArgParseWithConfig
 

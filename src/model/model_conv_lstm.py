@@ -1,8 +1,5 @@
-from typing import Any
-
 import torch
 import torch.nn as nn
-import torchaudio
 from pytorch_lightning.loggers import TensorBoardLogger
 
 import src.config.config_defaults as config_defaults

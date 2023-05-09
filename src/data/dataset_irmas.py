@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 import os
-import re
 from itertools import chain
 from pathlib import Path
 
 import librosa
 import numpy as np
-import pandas as pd
 from tqdm import tqdm
 
 import src.config.config_defaults as config_defaults

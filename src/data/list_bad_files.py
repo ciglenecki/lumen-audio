@@ -4,7 +4,6 @@ from pathlib import Path
 
 import librosa
 import numpy as np
-from tqdm import tqdm
 
 from src.config.config_defaults import AUDIO_EXTENSIONS
 

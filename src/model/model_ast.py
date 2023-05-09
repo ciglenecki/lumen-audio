@@ -3,7 +3,6 @@ import torch
 import torchaudio
 from pytorch_lightning.loggers import TensorBoardLogger
 from transformers import ASTConfig, ASTFeatureExtractor, ASTForAudioClassification
-from transformers.modeling_outputs import BaseModelOutputWithPooling
 
 import src.config.config_defaults as config_defaults
 from src.config.argparse_with_config import ArgParseWithConfig

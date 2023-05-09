@@ -1,5 +1,4 @@
 import torch
-import torch.nn as nn
 from pytorch_lightning.loggers import TensorBoardLogger
 from torchvision.models import (
     convnext_base,
