@@ -153,7 +153,7 @@
 			"request": "launch",
 			"program": "src/inference/run_test.py",
 			"console": "integratedTerminal",
-			"args": "--dataset-paths irmastest:data/irmas/test_small --ckpt /home/matej/projects/lumen-audio/models/05-06-19-55-50_SlickDelta_efficient_net_v2_s/checkpoints/05-06-19-55-50_SlickDelta_efficient_net_v2_s_val_acc_0.2491_val_loss_0.7147.ckpt --batch-size 1",
+			"args": "--dataset-paths data/irmas/test_small --ckpt /home/matej/projects/lumen-audio/models/05-06-19-55-50_SlickDelta_efficient_net_v2_s/checkpoints/05-06-19-55-50_SlickDelta_efficient_net_v2_s_val_acc_0.2491_val_loss_0.7147.ckpt --batch-size 1",
 			"justMyCode": false
 		},
 		{

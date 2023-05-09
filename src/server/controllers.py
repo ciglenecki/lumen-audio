@@ -19,7 +19,7 @@ from src.inference.inference_utils import (
     aggregate_inference_loops,
     aggregate_step_dicts,
     inference_loop,
-    json_pred_from_step_result,
+    json_from_step_result,
 )
 from src.model.model_base import ModelBase
 from src.server.server_store import server_store
@@ -29,7 +29,7 @@ from src.utils.utils_functions import dict_npy_to_list, dict_torch_to_npy
 
 def get_test_json_dict(step_result: StepResult) -> dict:
     metrics = get_metrics_npy(step_result.y_pred, step_result.y_true)
-    metrics["predictions"] = json_pred_from_step_result(step_result)
+    metrics["predictions"] = json_from_step_result(step_result)
     json_dict = dict_npy_to_list(metrics)
     return json_dict
 
@@ -69,7 +69,7 @@ def predict_directory_stream() -> str:
         step_type="pred",
     ):
         step_result = StepResult(result_dict)
-        json_dict = json_pred_from_step_result(step_result)
+        json_dict = json_from_step_result(step_result)
         json_encoded = json.dumps(jsonable_encoder(json_dict)).encode("utf-8") + b"\n"
         yield json_encoded
 
@@ -82,7 +82,7 @@ def predict_directory() -> dict:
         data_loader=server_store.data_loader,
         step_type="pred",
     )
-    json_dict = json_pred_from_step_result(step_result)
+    json_dict = json_from_step_result(step_result)
     return json_dict
 
 
@@ -115,7 +115,7 @@ def predict_files() -> dict:
                 torch.cuda.empty_cache()
 
     step_result = aggregate_step_dicts(step_dicts)
-    json_dict = json_pred_from_step_result(step_result)
+    json_dict = json_from_step_result(step_result)
     return json_dict
 
 

@@ -40,7 +40,7 @@ pip install -e .
 
 # 2. Dataset setup
 
-This project allows training and predicting on multiple different datasets. Although you can specify the dataset to any directory, we suggest moving your datasets to `data` directory.
+This project allows training and inference on multiple different datasets. Although you can specify the dataset to any directory, we suggest moving your datasets to `data` directory.
 
 Datasets are almost always specified in the following format when using the CLI:
 ```
@@ -211,8 +211,10 @@ Script arguments:
                         Output directory that's relative to the path of the checkpoint (default: None)
 ```
 
+For example:
+```
 python3 src/train/run_test.py --dataset-paths irmastest:data/irmas/test_sum3 --ckpt models/05-08-11-38-04_SlickDelta_ast_astfiliteredhead-irmas-audioset/checkpoints/05-08-11-38-04_SlickDelta_ast_astfiliteredhead-irmas-audioset_val_acc_0.3742_val_loss_0.3504.ckpt --batch-size 1 --num-workers 1
-
+```
 ## Training
 After you prepared new dataset structure, you can start the _quick version_ of training:
 ```sh

@@ -1,5 +1,6 @@
 import argparse
 import inspect
+import json
 import os
 import random
 import sys
@@ -310,9 +311,15 @@ def to_yaml(data):
 
 
 def save_yaml(data: object, path: Path):
-    print("Saving file:", str(path))
+    print("Saving yaml file:", str(path))
     with open(path, "w") as outfile:
         yaml.dump(data, outfile, default_flow_style=False)
+
+
+def save_json(data: object, path: Path):
+    print("Saving json file:", str(path))
+    with open(path, "w") as outfile:
+        json.dump(data, outfile)
 
 
 def function_kwargs(func):

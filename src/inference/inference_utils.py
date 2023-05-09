@@ -161,7 +161,7 @@ def aggregate_inference_loops(
     return result
 
 
-def json_pred_from_step_result(result: StepResult):
+def json_from_step_result(result: StepResult):
     json_dict = {}
     y_pred_file = result.y_pred_file
     filenames = result.filenames
