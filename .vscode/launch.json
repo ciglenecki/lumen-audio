@@ -162,7 +162,7 @@
 			"request": "launch",
 			"program": "src/server/main.py",
 			"console": "integratedTerminal",
-			"args": "--model-dir models",
+			"args": "--model-dir models/ --host localhost --port 8090 --batch-size 2 --num-workers 4",
 			"justMyCode": false
 		},
 		{

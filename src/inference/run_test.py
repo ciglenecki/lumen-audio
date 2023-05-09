@@ -149,12 +149,15 @@ def main():
     if is_inf:
         return
 
-    threshold = find_best_threshold(
-        y_pred_prob=result.y_pred_prob_file,
-        y_true=result.y_true_file,
-        num_labels=config.num_labels,
-    )
-    print("Best threshold: ", threshold)
+    if model.prediction_threshold is not None:
+        threshold = find_best_threshold(
+            y_pred_prob=result.y_pred_prob_file,
+            y_true=result.y_true_file,
+            num_labels=config.num_labels,
+        )
+        print("Best threshold: ", threshold)
+    else:
+        threshold = model.prediction_threshold
 
     y_pred = result.y_pred.astype(int)
     y_pred_file = result.y_pred_file.astype(int)

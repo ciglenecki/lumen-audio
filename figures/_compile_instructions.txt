@@ -1,0 +1,1 @@
+pandoc --standalone --toc --pdf-engine=xelatex --resource-path=. -H head.tex --wrap auto --highlight-style espresso project_documentation.md -o project_documentation.pdf

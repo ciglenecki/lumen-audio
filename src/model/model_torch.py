@@ -99,6 +99,8 @@ class TorchvisionModel(ModelBase):
         print("\n\nBackbone after changing the classifier:")
         print(list(self.backbone.children())[-1])
 
+        # Itterat
+        self.prediction_threshold = 0.31201
         self.save_hyperparameters()
 
     def forward(self, image: torch.Tensor):
