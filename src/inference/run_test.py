@@ -136,7 +136,7 @@ def main():
 
     datamodule = get_inference_datamodule(config, audio_transform, model_config)
     data_loader = (
-        datamodule.predict_dataloader() if not is_inf else datamodule.test_dataloader()
+        datamodule.test_dataloader() if not is_inf else datamodule.predict_dataloader()
     )
     result = aggregate_inference_loops(
         device, model, datamodule, data_loader, step_type="pred" if is_inf else "test"
