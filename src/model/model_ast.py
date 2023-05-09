@@ -24,7 +24,7 @@ class ASTModelWrapper(ModelBase):
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-
+        # AST WITH OUR HEAD
         # ast_config = ASTConfig.from_pretrained(
         #     pretrained_model_name_or_path=self.pretrained_tag,
         #     id2label=config_defaults.IDX_TO_INSTRUMENT,
@@ -42,18 +42,8 @@ class ASTModelWrapper(ModelBase):
         #     )
         # )
 
-        # ast_config = ASTConfig.from_pretrained(
-        #     pretrained_model_name_or_path=self.pretrained_tag,
-        #     finetuning_task="audio-classification",
-        #     problem_type="multi_label_classification",
-        # )
-
-        # self.backbone: ASTForAudioClassification = (
-        #     ASTForAudioClassification.from_pretrained(
-        #         self.pretrained_tag,
-        #         config=ast_config,
-        #     )
-        # )
+        # AST SUBCLASSIFIER
+        # self.backbone.classifier = self.create_head(ast_config.hidden_size)
         # self.subclassifier = torch.nn.Linear(
         #     ast_config.num_labels,
         #     config_defaults.DEFAULT_NUM_LABELS,
@@ -91,9 +81,6 @@ class ASTModelWrapper(ModelBase):
                 self.backbone.classifier.dense.weight[ast_indices, :]
             )
             new_classifier.bias.copy_(self.backbone.classifier.dense.bias[ast_indices])
-        # with torch.no_grad():
-        #     self.classifier.dense.weight.copy_(new_weights)
-        #     self.classifier.bias.copy_(new_bias)
 
         self.backbone.classifier = new_classifier
         self.save_hyperparameters()

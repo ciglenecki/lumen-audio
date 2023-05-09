@@ -1,3 +1,5 @@
+"""Filters out bad audio files from a dataset. A file is considered bad if the mean absolute value of the audio is less than eps for more than percentage_of_audio of the audio."""
+
 import argparse
 from itertools import chain
 from pathlib import Path
@@ -8,7 +10,6 @@ import numpy as np
 from src.config.config_defaults import AUDIO_EXTENSIONS
 
 
-# Create argparse with path to dataset
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(

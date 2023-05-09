@@ -1,3 +1,4 @@
+"""Resamples the whole dataset to a given sampling rate."""
 import argparse
 from itertools import chain
 from pathlib import Path

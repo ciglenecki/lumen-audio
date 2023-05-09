@@ -298,7 +298,6 @@ class DatasetBase(Dataset[DatasetGetItem]):
 
         return audio, labels
 
-    # @timeit
     def __getitem__(self, index: int) -> DatasetGetItem:
         audio, labels, _ = self.load_sample(index)
 

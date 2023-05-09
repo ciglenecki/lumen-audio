@@ -1,3 +1,5 @@
+"""Convert IRMAS dataset to sum of three audio files dataset"""
+
 import argparse
 import os
 import random

@@ -41,7 +41,7 @@ def get_model_description(config):
 
 
 def parse_args():
-    config_pl_args = ["--ckpt", "--dataset-paths"]
+    config_pl_args = ["--ckpt", "--dataset-paths", "--batch-size", "--num-workers"]
     parser = ArgParseWithConfig(config_pl_args=config_pl_args)
 
     parser.add_argument(

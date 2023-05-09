@@ -21,7 +21,7 @@ class InferenceDataset(DatasetBase):
         sampling_rate: int,
         normalize_audio: bool,
     ):
-        """_summary_
+        """Dataset for inference. No labels, just audio.
 
         Args:
             dataset_path directory with the following structure:

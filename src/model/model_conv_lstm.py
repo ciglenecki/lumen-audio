@@ -22,6 +22,7 @@ class ConvLSTM(ModelBase):
         *args,
         **kwargs
     ):
+        """Convolutional LSTM model."""
         super().__init__(*args, **kwargs)
 
         if convolution is None:

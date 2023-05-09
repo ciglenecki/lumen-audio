@@ -17,10 +17,10 @@ class PureAudioDataset(DatasetBase):
         num_lables: int,
         normalize_audio: bool = True,
     ):
-        """_summary_
+        """Pure audio dataset. No labels, just audio.
 
         Args:
-            audio_and_sr: [[234,2423,124], 16_000, "random_name"]
+            audio_and_sr: [[0.1,0.2,-0.1], 16_000, "random_name"]
         """
         self.dataset_path = dataset_path
         self.audio_transform = audio_transform

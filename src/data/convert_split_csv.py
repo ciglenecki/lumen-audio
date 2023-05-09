@@ -1,3 +1,5 @@
+"Randomly splits a CSV file into train and test sets."
+
 import argparse
 from pathlib import Path
 

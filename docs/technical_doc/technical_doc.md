@@ -102,8 +102,19 @@ Wav filename format:
 
 IRMAS test-like directory
 Wav/label filename format:
-- `<PREFIX>[<INSTRUMENT>][<DRUMS>][<GENRE>]<suffix>.wav.`
-- `<PREFIX>[<INSTRUMENT>][<GENRE>]<suffix>.wav.`
+- `<FILENAME>-<SONG_PART>.{wav,txt}`
+
+Directory structure:
+```
+├── dataset
+│   ├── 0050_10CC___I_M_NOT_IN_LOVE-11.txt
+│   ├── 0050_10CC___I_M_NOT_IN_LOVE-11.wav
+│   ├── 0050_10CC___I_M_NOT_IN_LOVE-13.txt
+│   ├── 0050_10CC___I_M_NOT_IN_LOVE-13.wav
+│   ├── 0050_10CC___I_M_NOT_IN_LOVE-15.txt
+│   ├── 0050_10CC___I_M_NOT_IN_LOVE-15.wav
+│   ├── 0050_10CC___I_M_NOT_IN_LOVE-17.txt
+```
 
 Label file format:
 ```
@@ -111,20 +122,6 @@ cel
 gel
 voi
 ```
-Directory structure:
-```
-├── dataset
-│   ├── 008__[cel][nod][cla]0058__1.wav
-│   ├── 008__[cel][nod][cla]0058__1.txt
-│   ├── 008__[cel][nod][cla]0058__2.wav
-│   ├── 008__[cel][nod][cla]0058__2.txt
-│   ├── 008__[cel][nod][cla]0058__3.wav
-│   ├── 008__[cel][nod][cla]0058__3.txt
-│   ├── 012__[cel][nod][cla]0043__1.wav
-│   ├── 012__[cel][nod][cla]0043__1.txt
-│   ├── ...
-```
-
 
 ### `csv`
 
@@ -213,8 +210,14 @@ Script arguments:
 
 For example:
 ```
-python3 src/train/run_test.py --dataset-paths irmastest:data/irmas/test_sum3 --ckpt models/05-08-11-38-04_SlickDelta_ast_astfiliteredhead-irmas-audioset/checkpoints/05-08-11-38-04_SlickDelta_ast_astfiliteredhead-irmas-audioset_val_acc_0.3742_val_loss_0.3504.ckpt --batch-size 1 --num-workers 1
+python3 src/train/run_test.py --dataset-paths irmastest:data/irmas/test --ckpt models/model.ckpt --batch-size 1 --num-workers 1
 ```
+
+```
+python3 src/train/run_test.py --dataset-paths irmastest:data/irmas/test --ckpt models/model.ckpt --batch-size 1 --num-workers 1
+```
+
+
 ## Training
 After you prepared new dataset structure, you can start the _quick version_ of training:
 ```sh

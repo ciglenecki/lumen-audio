@@ -39,10 +39,6 @@ class IRMASDatasetTrain(DatasetBase):
 
         super().__init__(*args, **kwargs)
 
-        # assert (
-        #     len(self.dataset_list) == config_defaults.DEFAULT_IRMAS_TRAIN_SIZE
-        # ), f"IRMAS train set should contain {config_defaults.DEFAULT_IRMAS_TRAIN_SIZE} samples"
-
     def create_dataset_list(self) -> list[DatasetInternalItem]:
         """Reads audio and label files and creates tuples of (audio_path, one hot encoded label)
         self.instrument_idx_list = {
