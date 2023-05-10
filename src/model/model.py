@@ -12,6 +12,7 @@ from src.model.model_torch import TorchvisionModel
 from src.model.model_wav2vec import Wav2VecWrapper
 from src.model.model_wav2vec_cnn import Wav2VecCnnWrapper
 from src.utils.utils_exceptions import UnsupportedModel
+from src.utils.utils_functions import all_args
 
 
 def get_data_input_type(model_enum: SupportedModels) -> ModelInputDataType:
@@ -110,7 +111,7 @@ def get_model(
     # if model_enum == SupportedModels.EFFICIENT_NET_V2_L:
     #     model_kwargs.update({"arg_i_want_to_change": "some new value"})
 
-    model = model_constructor(**model_kwargs)
+    model = all_args(model_constructor)(**model_kwargs)
     return model
 
 

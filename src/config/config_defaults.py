@@ -712,24 +712,18 @@ class ConfigDefault(Serializable):
 
     def set_train_paths(self):
         if self.train_paths is None:
-            self.train_paths = [
-                f"{SupportedDatasetDirType.IRMAS_TRAIN.value}:{str(self.path_irmas_train)}"
-            ]
-        self.train_paths = parse_dataset_paths(self.train_paths)
-        self.check_all_paths_non_inference(self.train_paths)
+            self.train_paths = parse_dataset_paths(self.train_paths)
+            self.check_all_paths_non_inference(self.train_paths)
 
     def set_val_paths(self):
-        if self.val_paths is None:
-            self.val_paths = [
-                f"{SupportedDatasetDirType.IRMAS_TEST.value}:{str(self.path_irmas_test)}"
-            ]
-        self.val_paths = parse_dataset_paths(self.val_paths)
-        self.check_all_paths_non_inference(self.train_paths)
+        if self.val_paths is not None:
+            self.val_paths = parse_dataset_paths(self.val_paths)
+            self.check_all_paths_non_inference(self.train_paths)
 
     def set_test_paths(self):
         if self.test_paths is not None:
             self.test_paths = parse_dataset_paths(self.test_paths)
-        self.check_all_paths_non_inference(self.train_paths)
+            self.check_all_paths_non_inference(self.train_paths)
 
     def set_dataset_paths(self):
         if self.dataset_paths is not None:
