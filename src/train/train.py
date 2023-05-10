@@ -38,6 +38,7 @@ from src.train.callbacks import (
 from src.utils.utils_dataset import calc_instrument_weight
 from src.utils.utils_functions import (
     add_prefix_to_keys,
+    all_args,
     dict_with_keys,
     get_timestamp,
     random_codeword,
@@ -96,12 +97,12 @@ if __name__ == "__main__":
         val_waveform_augmentation,
     ) = get_augmentations(config)
 
-    train_audio_transform: AudioTransformBase = get_audio_transform(
+    train_audio_transform: AudioTransformBase = all_args(get_audio_transform)(
         config,
         spectrogram_augmentation=train_spectrogram_augmentation,
         waveform_augmentation=train_waveform_augmentation,
     )
-    val_audio_transform: AudioTransformBase = get_audio_transform(
+    val_audio_transform: AudioTransformBase = all_args(get_audio_transform)(
         config,
         spectrogram_augmentation=val_spectrogram_augmentation,
         waveform_augmentation=val_waveform_augmentation,
@@ -119,7 +120,7 @@ if __name__ == "__main__":
     )
     collate_fn = collate_fn_feature
 
-    datamodule = OurDataModule(
+    datamodule = all_args(OurDataModule)(
         train_paths=config.train_paths,
         val_paths=config.val_paths,
         test_paths=config.test_paths,

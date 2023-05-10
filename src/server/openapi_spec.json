@@ -1,1 +1,859 @@
-{"openapi": "3.0.2", "info": {"title": "Audio prediction API", "description": "API used for testing and predicting audio data on trained models.\n\n### Quick instructions:\n0. Make sure you have a `.ckpt` model inside of the `--model-dir` directory.\n1. Click on `GET /models`\n2. Send a request to get all available models.\n2. Copy the model path you want to use for prediction.\n3. Click on `POST /model/predict-files`\n4. Paste the model path into the `model_ckpt_path` field.\n5. Choose the audio files you want to predict.\n6. Predict labels for the audio files.\n", "version": "0.1.0"}, "paths": {"/models": {"get": {"tags": ["Resources"], "summary": "Get Models", "description": "Returns paths to all available models on the server. Use these model paths for all `POST` request predictions. Models are fetched from the directory `--model-dir`. Only models with the extension `*.ckpt` are fetched.", "operationId": "get_models_models_get", "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {"title": "Response Get Models Models Get", "type": "array", "items": {"type": "string", "format": "path"}}}}}}}}, "/model/test-directory-stream": {"post": {"tags": ["Model Inference"], "summary": "Test Directory Stream", "description": "Streams classes of audios from a directory and returns metrics for multiclass classification. Streaming is useful if your directory is large and you don't want to wait for the whole directory to be processed. If you want to process the whole directory at once, use the endpoint `test-directory`", "operationId": "test_directory_stream_model_test_directory_stream_post", "parameters": [{"required": false, "schema": {"title": "Model Ckpt Path", "type": "string", "format": "path", "default": "models/model.ckpt"}, "name": "model_ckpt_path", "in": "query"}], "requestBody": {"content": {"application/json": {"schema": {"title": "Dataset Paths With Type", "type": "array", "items": {"$ref": "#/components/schemas/DatasetTypedPath"}}}}, "required": true}, "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PredictionsWithMetrics"}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/model/test-directory": {"post": {"tags": ["Model Inference"], "summary": "Test Directory", "description": "Infers classes of audios from a directory and returns metrics for multiclass classification.", "operationId": "test_directory_model_test_directory_post", "parameters": [{"required": false, "schema": {"title": "Model Ckpt Path", "type": "string", "format": "path", "default": "models/model.ckpt"}, "name": "model_ckpt_path", "in": "query"}], "requestBody": {"content": {"application/json": {"schema": {"title": "Dataset Paths With Type", "type": "array", "items": {"$ref": "#/components/schemas/DatasetTypedPath"}}}}, "required": true}, "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PredictionsWithMetrics"}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/model/predict-directory-stream": {"post": {"tags": ["Model Inference"], "summary": "Predict Directory Stream", "description": "Streams classes of audios from a directory. Streaming is useful if your directory is large and you don't want to wait for the whole directory to be processed. If you want to process the whole directory at once, use the endpoint `predict-directory`**You don't have to specify the dataset structure type is always `inference`**", "operationId": "predict_directory_stream_model_predict_directory_stream_post", "parameters": [{"required": false, "schema": {"title": "Model Ckpt Path", "type": "string", "format": "path", "default": "models/model.ckpt"}, "name": "model_ckpt_path", "in": "query"}], "requestBody": {"content": {"application/json": {"schema": {"title": "Dataset Paths", "type": "array", "items": {"type": "string", "format": "path"}, "default": ["data/my_dataset"]}}}}, "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {"title": "Response Predict Directory Stream Model Predict Directory Stream Post", "type": "object", "additionalProperties": {"$ref": "#/components/schemas/InstrumentPrediction"}}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/model/predict-directory": {"post": {"tags": ["Model Inference"], "summary": "Predict Directory", "description": "Infers classes of audios from a directory.**You don't have to specify the dataset structure type is always `inference`**", "operationId": "predict_directory_model_predict_directory_post", "parameters": [{"required": false, "schema": {"title": "Model Ckpt Path", "type": "string", "format": "path", "default": "models/model.ckpt"}, "name": "model_ckpt_path", "in": "query"}], "requestBody": {"content": {"application/json": {"schema": {"title": "Dataset Paths", "type": "array", "items": {"type": "string", "format": "path"}, "default": ["data/my_dataset"]}}}}, "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {"title": "Response Predict Directory Model Predict Directory Post", "type": "object", "additionalProperties": {"$ref": "#/components/schemas/InstrumentPrediction"}}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/model/predict-files": {"post": {"tags": ["Model Inference"], "summary": "Predict Files", "description": "Infers classes of audios from a list of files.**You don't have to specify the dataset structure type is always `inference`**", "operationId": "predict_files_model_predict_files_post", "parameters": [{"required": false, "schema": {"title": "Model Ckpt Path", "type": "string", "format": "path", "default": "models/model.ckpt"}, "name": "model_ckpt_path", "in": "query"}], "requestBody": {"content": {"multipart/form-data": {"schema": {"$ref": "#/components/schemas/Body_predict_files_model_predict_files_post"}}}, "required": true}, "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {"title": "Response Predict Files Model Predict Files Post", "type": "array", "items": {"$ref": "#/components/schemas/InstrumentPrediction"}}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/dataset-types": {"get": {"tags": ["Resources"], "summary": "Get Supported Datasets", "description": "Returns dataset types, each dataset type has a strategy for loading labels from a given directory. If you don't have labels or don't care about them, you can use the empty string `\"\"` which only loads the audio. If you want to load labels use the following dataset types: ['irmastrain', 'irmastest', 'csv', 'inference', 'openmic']", "operationId": "get_supported_datasets_dataset_types_get", "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {"title": "Response Get Supported Datasets Dataset Types Get", "type": "array", "items": {"type": "string"}}}}}}}}}, "components": {"schemas": {"Body_predict_files_model_predict_files_post": {"title": "Body_predict_files_model_predict_files_post", "required": ["audio_files"], "type": "object", "properties": {"audio_files": {"title": "Audio Files", "type": "array", "items": {"type": "string", "format": "binary"}}}}, "DatasetTypedPath": {"title": "DatasetTypedPath", "required": ["dataset_type", "dataset_path"], "type": "object", "properties": {"dataset_type": {"$ref": "#/components/schemas/SupportedDatasetDirTypeTrain"}, "dataset_path": {"title": "Dataset Path", "type": "string", "format": "path"}}, "example": {"dataset_type": "irmastest", "dataset_path": "data/irmas/test"}}, "HTTPValidationError": {"title": "HTTPValidationError", "type": "object", "properties": {"detail": {"title": "Detail", "type": "array", "items": {"$ref": "#/components/schemas/ValidationError"}}}}, "InstrumentPrediction": {"title": "InstrumentPrediction", "required": ["cel", "cla", "flu", "gac", "gel", "org", "pia", "sax", "tru", "vio", "voi"], "type": "object", "properties": {"cel": {"title": "Cel", "type": "number"}, "cla": {"title": "Cla", "type": "number"}, "flu": {"title": "Flu", "type": "number"}, "gac": {"title": "Gac", "type": "number"}, "gel": {"title": "Gel", "type": "number"}, "org": {"title": "Org", "type": "number"}, "pia": {"title": "Pia", "type": "number"}, "sax": {"title": "Sax", "type": "number"}, "tru": {"title": "Tru", "type": "number"}, "vio": {"title": "Vio", "type": "number"}, "voi": {"title": "Voi", "type": "number"}}}, "PredictionsWithMetrics": {"title": "PredictionsWithMetrics", "required": ["accuracy", "hamming_distance", "f1", "precision", "recall", "instruments/cello_accuracy", "instruments/clarinet_accuracy", "instruments/flute_accuracy", "instruments/acoustic_guitar_accuracy", "instruments/electric_guitar_accuracy", "instruments/organ_accuracy", "instruments/piano_accuracy", "instruments/saxophone_accuracy", "instruments/trumpet_accuracy", "instruments/violin_accuracy", "instruments/human_voice_accuracy", "instruments/cello_hamming_distance", "instruments/clarinet_hamming_distance", "instruments/flute_hamming_distance", "instruments/acoustic_guitar_hamming_distance", "instruments/electric_guitar_hamming_distance", "instruments/organ_hamming_distance", "instruments/piano_hamming_distance", "instruments/saxophone_hamming_distance", "instruments/trumpet_hamming_distance", "instruments/violin_hamming_distance", "instruments/human_voice_hamming_distance", "instruments/cello_f1", "instruments/clarinet_f1", "instruments/flute_f1", "instruments/acoustic_guitar_f1", "instruments/electric_guitar_f1", "instruments/organ_f1", "instruments/piano_f1", "instruments/saxophone_f1", "instruments/trumpet_f1", "instruments/violin_f1", "instruments/human_voice_f1", "instruments/cello_precision", "instruments/clarinet_precision", "instruments/flute_precision", "instruments/acoustic_guitar_precision", "instruments/electric_guitar_precision", "instruments/organ_precision", "instruments/piano_precision", "instruments/saxophone_precision", "instruments/trumpet_precision", "instruments/violin_precision", "instruments/human_voice_precision", "instruments/cello_recall", "instruments/clarinet_recall", "instruments/flute_recall", "instruments/acoustic_guitar_recall", "instruments/electric_guitar_recall", "instruments/organ_recall", "instruments/piano_recall", "instruments/saxophone_recall", "instruments/trumpet_recall", "instruments/violin_recall", "instruments/human_voice_recall", "predictions"], "type": "object", "properties": {"accuracy": {"title": "Accuracy", "type": "number"}, "hamming_distance": {"title": "Hamming Distance", "type": "number"}, "f1": {"title": "F1", "type": "number"}, "precision": {"title": "Precision", "type": "number"}, "recall": {"title": "Recall", "type": "number"}, "instruments/cello_accuracy": {"title": "Instruments/Cello Accuracy", "type": "number"}, "instruments/clarinet_accuracy": {"title": "Instruments/Clarinet Accuracy", "type": "number"}, "instruments/flute_accuracy": {"title": "Instruments/Flute Accuracy", "type": "number"}, "instruments/acoustic_guitar_accuracy": {"title": "Instruments/Acoustic Guitar Accuracy", "type": "number"}, "instruments/electric_guitar_accuracy": {"title": "Instruments/Electric Guitar Accuracy", "type": "number"}, "instruments/organ_accuracy": {"title": "Instruments/Organ Accuracy", "type": "number"}, "instruments/piano_accuracy": {"title": "Instruments/Piano Accuracy", "type": "number"}, "instruments/saxophone_accuracy": {"title": "Instruments/Saxophone Accuracy", "type": "number"}, "instruments/trumpet_accuracy": {"title": "Instruments/Trumpet Accuracy", "type": "number"}, "instruments/violin_accuracy": {"title": "Instruments/Violin Accuracy", "type": "number"}, "instruments/human_voice_accuracy": {"title": "Instruments/Human Voice Accuracy", "type": "number"}, "instruments/cello_hamming_distance": {"title": "Instruments/Cello Hamming Distance", "type": "number"}, "instruments/clarinet_hamming_distance": {"title": "Instruments/Clarinet Hamming Distance", "type": "number"}, "instruments/flute_hamming_distance": {"title": "Instruments/Flute Hamming Distance", "type": "number"}, "instruments/acoustic_guitar_hamming_distance": {"title": "Instruments/Acoustic Guitar Hamming Distance", "type": "number"}, "instruments/electric_guitar_hamming_distance": {"title": "Instruments/Electric Guitar Hamming Distance", "type": "number"}, "instruments/organ_hamming_distance": {"title": "Instruments/Organ Hamming Distance", "type": "number"}, "instruments/piano_hamming_distance": {"title": "Instruments/Piano Hamming Distance", "type": "number"}, "instruments/saxophone_hamming_distance": {"title": "Instruments/Saxophone Hamming Distance", "type": "number"}, "instruments/trumpet_hamming_distance": {"title": "Instruments/Trumpet Hamming Distance", "type": "number"}, "instruments/violin_hamming_distance": {"title": "Instruments/Violin Hamming Distance", "type": "number"}, "instruments/human_voice_hamming_distance": {"title": "Instruments/Human Voice Hamming Distance", "type": "number"}, "instruments/cello_f1": {"title": "Instruments/Cello F1", "type": "number"}, "instruments/clarinet_f1": {"title": "Instruments/Clarinet F1", "type": "number"}, "instruments/flute_f1": {"title": "Instruments/Flute F1", "type": "number"}, "instruments/acoustic_guitar_f1": {"title": "Instruments/Acoustic Guitar F1", "type": "number"}, "instruments/electric_guitar_f1": {"title": "Instruments/Electric Guitar F1", "type": "number"}, "instruments/organ_f1": {"title": "Instruments/Organ F1", "type": "number"}, "instruments/piano_f1": {"title": "Instruments/Piano F1", "type": "number"}, "instruments/saxophone_f1": {"title": "Instruments/Saxophone F1", "type": "number"}, "instruments/trumpet_f1": {"title": "Instruments/Trumpet F1", "type": "number"}, "instruments/violin_f1": {"title": "Instruments/Violin F1", "type": "number"}, "instruments/human_voice_f1": {"title": "Instruments/Human Voice F1", "type": "number"}, "instruments/cello_precision": {"title": "Instruments/Cello Precision", "type": "number"}, "instruments/clarinet_precision": {"title": "Instruments/Clarinet Precision", "type": "number"}, "instruments/flute_precision": {"title": "Instruments/Flute Precision", "type": "number"}, "instruments/acoustic_guitar_precision": {"title": "Instruments/Acoustic Guitar Precision", "type": "number"}, "instruments/electric_guitar_precision": {"title": "Instruments/Electric Guitar Precision", "type": "number"}, "instruments/organ_precision": {"title": "Instruments/Organ Precision", "type": "number"}, "instruments/piano_precision": {"title": "Instruments/Piano Precision", "type": "number"}, "instruments/saxophone_precision": {"title": "Instruments/Saxophone Precision", "type": "number"}, "instruments/trumpet_precision": {"title": "Instruments/Trumpet Precision", "type": "number"}, "instruments/violin_precision": {"title": "Instruments/Violin Precision", "type": "number"}, "instruments/human_voice_precision": {"title": "Instruments/Human Voice Precision", "type": "number"}, "instruments/cello_recall": {"title": "Instruments/Cello Recall", "type": "number"}, "instruments/clarinet_recall": {"title": "Instruments/Clarinet Recall", "type": "number"}, "instruments/flute_recall": {"title": "Instruments/Flute Recall", "type": "number"}, "instruments/acoustic_guitar_recall": {"title": "Instruments/Acoustic Guitar Recall", "type": "number"}, "instruments/electric_guitar_recall": {"title": "Instruments/Electric Guitar Recall", "type": "number"}, "instruments/organ_recall": {"title": "Instruments/Organ Recall", "type": "number"}, "instruments/piano_recall": {"title": "Instruments/Piano Recall", "type": "number"}, "instruments/saxophone_recall": {"title": "Instruments/Saxophone Recall", "type": "number"}, "instruments/trumpet_recall": {"title": "Instruments/Trumpet Recall", "type": "number"}, "instruments/violin_recall": {"title": "Instruments/Violin Recall", "type": "number"}, "instruments/human_voice_recall": {"title": "Instruments/Human Voice Recall", "type": "number"}, "predictions": {"title": "Predictions", "type": "object", "additionalProperties": {"$ref": "#/components/schemas/InstrumentPrediction"}}}}, "SupportedDatasetDirTypeTrain": {"title": "SupportedDatasetDirTypeTrain", "enum": ["irmastest", "irmastrain", "csv"], "description": "An enumeration."}, "ValidationError": {"title": "ValidationError", "required": ["loc", "msg", "type"], "type": "object", "properties": {"loc": {"title": "Location", "type": "array", "items": {"anyOf": [{"type": "string"}, {"type": "integer"}]}}, "msg": {"title": "Message", "type": "string"}, "type": {"title": "Error Type", "type": "string"}}}}}, "tags": [{"name": "Resources", "description": "Models and datasets available for inference."}, {"name": "Model Inference", "description": "Endpoints used for predicting audio data on trained models. Curl example for multiple audios:\n\n    curl -X 'POST' \\\n        'http://localhost:8090/model/predict-files?model_ckpt_path=models%2Fmy_model.ckpt' \\\n        -H 'accept: application/json' \\\n        -H 'Content-Type: multipart/form-data' \\\n        -F 'audio_files=@track_23.wav;type=audio/wav'\n"}]}
+{
+	"openapi": "3.0.2",
+	"info": {
+		"title": "Audio prediction API",
+		"description": "API used for testing and predicting audio data on trained models.\n\n### Quick instructions:\n0. Make sure you have a `.ckpt` model inside of the `--model-dir` directory.\n1. Click on `GET /models`\n2. Send a request to get all available models.\n2. Copy the model path you want to use for prediction.\n3. Click on `POST /model/predict-files`\n4. Paste the model path into the `model_ckpt_path` field.\n5. Choose the audio files you want to predict.\n6. Predict labels for the audio files.\n",
+		"version": "0.1.0"
+	},
+	"paths": {
+		"/models": {
+			"get": {
+				"tags": [
+					"Resources"
+				],
+				"summary": "Get Models",
+				"description": "Returns paths to all available models on the server. Use these model paths for all `POST` request predictions. Models are fetched from the directory `--model-dir`. Only models with the extension `*.ckpt` are fetched.",
+				"operationId": "get_models_models_get",
+				"responses": {
+					"200": {
+						"description": "Successful Response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"title": "Response Get Models Models Get",
+									"type": "array",
+									"items": {
+										"type": "string",
+										"format": "path"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/model/test-directory-stream": {
+			"post": {
+				"tags": [
+					"Model Inference"
+				],
+				"summary": "Test Directory Stream",
+				"description": "Streams classes of audios from a directory and returns metrics for multiclass classification. Streaming is useful if your directory is large and you don't want to wait for the whole directory to be processed. If you want to process the whole directory at once, use the endpoint `test-directory`",
+				"operationId": "test_directory_stream_model_test_directory_stream_post",
+				"parameters": [
+					{
+						"required": false,
+						"schema": {
+							"title": "Model Ckpt Path",
+							"type": "string",
+							"format": "path",
+							"default": "models/model.ckpt"
+						},
+						"name": "model_ckpt_path",
+						"in": "query"
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"title": "Dataset Paths With Type",
+								"type": "array",
+								"items": {
+									"$ref": "#/components/schemas/DatasetTypedPath"
+								}
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Successful Response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PredictionsWithMetrics"
+								}
+							}
+						}
+					},
+					"422": {
+						"description": "Validation Error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/HTTPValidationError"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/model/test-directory": {
+			"post": {
+				"tags": [
+					"Model Inference"
+				],
+				"summary": "Test Directory",
+				"description": "Infers classes of audios from a directory and returns metrics for multiclass classification.",
+				"operationId": "test_directory_model_test_directory_post",
+				"parameters": [
+					{
+						"required": false,
+						"schema": {
+							"title": "Model Ckpt Path",
+							"type": "string",
+							"format": "path",
+							"default": "models/model.ckpt"
+						},
+						"name": "model_ckpt_path",
+						"in": "query"
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"title": "Dataset Paths With Type",
+								"type": "array",
+								"items": {
+									"$ref": "#/components/schemas/DatasetTypedPath"
+								}
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Successful Response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PredictionsWithMetrics"
+								}
+							}
+						}
+					},
+					"422": {
+						"description": "Validation Error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/HTTPValidationError"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/model/predict-directory-stream": {
+			"post": {
+				"tags": [
+					"Model Inference"
+				],
+				"summary": "Predict Directory Stream",
+				"description": "Streams classes of audios from a directory. Streaming is useful if your directory is large and you don't want to wait for the whole directory to be processed. If you want to process the whole directory at once, use the endpoint `predict-directory`**You don't have to specify the dataset structure type is always `inference`**",
+				"operationId": "predict_directory_stream_model_predict_directory_stream_post",
+				"parameters": [
+					{
+						"required": false,
+						"schema": {
+							"title": "Model Ckpt Path",
+							"type": "string",
+							"format": "path",
+							"default": "models/model.ckpt"
+						},
+						"name": "model_ckpt_path",
+						"in": "query"
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"title": "Dataset Paths",
+								"type": "array",
+								"items": {
+									"type": "string",
+									"format": "path"
+								},
+								"default": [
+									"data/my_dataset"
+								]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Successful Response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"title": "Response Predict Directory Stream Model Predict Directory Stream Post",
+									"type": "object",
+									"additionalProperties": {
+										"$ref": "#/components/schemas/InstrumentPrediction"
+									}
+								}
+							}
+						}
+					},
+					"422": {
+						"description": "Validation Error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/HTTPValidationError"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/model/predict-directory": {
+			"post": {
+				"tags": [
+					"Model Inference"
+				],
+				"summary": "Predict Directory",
+				"description": "Infers classes of audios from a directory.**You don't have to specify the dataset structure type is always `inference`**",
+				"operationId": "predict_directory_model_predict_directory_post",
+				"parameters": [
+					{
+						"required": false,
+						"schema": {
+							"title": "Model Ckpt Path",
+							"type": "string",
+							"format": "path",
+							"default": "models/model.ckpt"
+						},
+						"name": "model_ckpt_path",
+						"in": "query"
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"title": "Dataset Paths",
+								"type": "array",
+								"items": {
+									"type": "string",
+									"format": "path"
+								},
+								"default": [
+									"data/my_dataset"
+								]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Successful Response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"title": "Response Predict Directory Model Predict Directory Post",
+									"type": "object",
+									"additionalProperties": {
+										"$ref": "#/components/schemas/InstrumentPrediction"
+									}
+								}
+							}
+						}
+					},
+					"422": {
+						"description": "Validation Error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/HTTPValidationError"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/model/predict-files": {
+			"post": {
+				"tags": [
+					"Model Inference"
+				],
+				"summary": "Predict Files",
+				"description": "Infers classes of audios from a list of files.**You don't have to specify the dataset structure type is always `inference`**",
+				"operationId": "predict_files_model_predict_files_post",
+				"parameters": [
+					{
+						"required": false,
+						"schema": {
+							"title": "Model Ckpt Path",
+							"type": "string",
+							"format": "path",
+							"default": "models/model.ckpt"
+						},
+						"name": "model_ckpt_path",
+						"in": "query"
+					}
+				],
+				"requestBody": {
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"$ref": "#/components/schemas/Body_predict_files_model_predict_files_post"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Successful Response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"title": "Response Predict Files Model Predict Files Post",
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/InstrumentPrediction"
+									}
+								}
+							}
+						}
+					},
+					"422": {
+						"description": "Validation Error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/HTTPValidationError"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/dataset-types": {
+			"get": {
+				"tags": [
+					"Resources"
+				],
+				"summary": "Get Supported Datasets",
+				"description": "Returns dataset types, each dataset type has a strategy for loading labels from a given directory. If you don't have labels or don't care about them, you can use the empty string `\"\"` which only loads the audio. If you want to load labels use the following dataset types: ['irmastrain', 'irmastest', 'csv', 'inference', 'openmic']",
+				"operationId": "get_supported_datasets_dataset_types_get",
+				"responses": {
+					"200": {
+						"description": "Successful Response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"title": "Response Get Supported Datasets Dataset Types Get",
+									"type": "array",
+									"items": {
+										"type": "string"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"components": {
+		"schemas": {
+			"Body_predict_files_model_predict_files_post": {
+				"title": "Body_predict_files_model_predict_files_post",
+				"required": [
+					"audio_files"
+				],
+				"type": "object",
+				"properties": {
+					"audio_files": {
+						"title": "Audio Files",
+						"type": "array",
+						"items": {
+							"type": "string",
+							"format": "binary"
+						}
+					}
+				}
+			},
+			"DatasetTypedPath": {
+				"title": "DatasetTypedPath",
+				"required": [
+					"dataset_type",
+					"dataset_path"
+				],
+				"type": "object",
+				"properties": {
+					"dataset_type": {
+						"$ref": "#/components/schemas/SupportedDatasetDirTypeTrain"
+					},
+					"dataset_path": {
+						"title": "Dataset Path",
+						"type": "string",
+						"format": "path"
+					}
+				},
+				"example": {
+					"dataset_type": "irmastest",
+					"dataset_path": "data/irmas/test"
+				}
+			},
+			"HTTPValidationError": {
+				"title": "HTTPValidationError",
+				"type": "object",
+				"properties": {
+					"detail": {
+						"title": "Detail",
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/ValidationError"
+						}
+					}
+				}
+			},
+			"InstrumentPrediction": {
+				"title": "InstrumentPrediction",
+				"required": [
+					"cel",
+					"cla",
+					"flu",
+					"gac",
+					"gel",
+					"org",
+					"pia",
+					"sax",
+					"tru",
+					"vio",
+					"voi"
+				],
+				"type": "object",
+				"properties": {
+					"cel": {
+						"title": "Cel",
+						"type": "number"
+					},
+					"cla": {
+						"title": "Cla",
+						"type": "number"
+					},
+					"flu": {
+						"title": "Flu",
+						"type": "number"
+					},
+					"gac": {
+						"title": "Gac",
+						"type": "number"
+					},
+					"gel": {
+						"title": "Gel",
+						"type": "number"
+					},
+					"org": {
+						"title": "Org",
+						"type": "number"
+					},
+					"pia": {
+						"title": "Pia",
+						"type": "number"
+					},
+					"sax": {
+						"title": "Sax",
+						"type": "number"
+					},
+					"tru": {
+						"title": "Tru",
+						"type": "number"
+					},
+					"vio": {
+						"title": "Vio",
+						"type": "number"
+					},
+					"voi": {
+						"title": "Voi",
+						"type": "number"
+					}
+				}
+			},
+			"PredictionsWithMetrics": {
+				"title": "PredictionsWithMetrics",
+				"required": [
+					"accuracy",
+					"hamming_distance",
+					"f1",
+					"precision",
+					"recall",
+					"instruments/cello_accuracy",
+					"instruments/clarinet_accuracy",
+					"instruments/flute_accuracy",
+					"instruments/acoustic_guitar_accuracy",
+					"instruments/electric_guitar_accuracy",
+					"instruments/organ_accuracy",
+					"instruments/piano_accuracy",
+					"instruments/saxophone_accuracy",
+					"instruments/trumpet_accuracy",
+					"instruments/violin_accuracy",
+					"instruments/human_voice_accuracy",
+					"instruments/cello_hamming_distance",
+					"instruments/clarinet_hamming_distance",
+					"instruments/flute_hamming_distance",
+					"instruments/acoustic_guitar_hamming_distance",
+					"instruments/electric_guitar_hamming_distance",
+					"instruments/organ_hamming_distance",
+					"instruments/piano_hamming_distance",
+					"instruments/saxophone_hamming_distance",
+					"instruments/trumpet_hamming_distance",
+					"instruments/violin_hamming_distance",
+					"instruments/human_voice_hamming_distance",
+					"instruments/cello_f1",
+					"instruments/clarinet_f1",
+					"instruments/flute_f1",
+					"instruments/acoustic_guitar_f1",
+					"instruments/electric_guitar_f1",
+					"instruments/organ_f1",
+					"instruments/piano_f1",
+					"instruments/saxophone_f1",
+					"instruments/trumpet_f1",
+					"instruments/violin_f1",
+					"instruments/human_voice_f1",
+					"instruments/cello_precision",
+					"instruments/clarinet_precision",
+					"instruments/flute_precision",
+					"instruments/acoustic_guitar_precision",
+					"instruments/electric_guitar_precision",
+					"instruments/organ_precision",
+					"instruments/piano_precision",
+					"instruments/saxophone_precision",
+					"instruments/trumpet_precision",
+					"instruments/violin_precision",
+					"instruments/human_voice_precision",
+					"instruments/cello_recall",
+					"instruments/clarinet_recall",
+					"instruments/flute_recall",
+					"instruments/acoustic_guitar_recall",
+					"instruments/electric_guitar_recall",
+					"instruments/organ_recall",
+					"instruments/piano_recall",
+					"instruments/saxophone_recall",
+					"instruments/trumpet_recall",
+					"instruments/violin_recall",
+					"instruments/human_voice_recall",
+					"predictions"
+				],
+				"type": "object",
+				"properties": {
+					"accuracy": {
+						"title": "Accuracy",
+						"type": "number"
+					},
+					"hamming_distance": {
+						"title": "Hamming Distance",
+						"type": "number"
+					},
+					"f1": {
+						"title": "F1",
+						"type": "number"
+					},
+					"precision": {
+						"title": "Precision",
+						"type": "number"
+					},
+					"recall": {
+						"title": "Recall",
+						"type": "number"
+					},
+					"instruments/cello_accuracy": {
+						"title": "Instruments/Cello Accuracy",
+						"type": "number"
+					},
+					"instruments/clarinet_accuracy": {
+						"title": "Instruments/Clarinet Accuracy",
+						"type": "number"
+					},
+					"instruments/flute_accuracy": {
+						"title": "Instruments/Flute Accuracy",
+						"type": "number"
+					},
+					"instruments/acoustic_guitar_accuracy": {
+						"title": "Instruments/Acoustic Guitar Accuracy",
+						"type": "number"
+					},
+					"instruments/electric_guitar_accuracy": {
+						"title": "Instruments/Electric Guitar Accuracy",
+						"type": "number"
+					},
+					"instruments/organ_accuracy": {
+						"title": "Instruments/Organ Accuracy",
+						"type": "number"
+					},
+					"instruments/piano_accuracy": {
+						"title": "Instruments/Piano Accuracy",
+						"type": "number"
+					},
+					"instruments/saxophone_accuracy": {
+						"title": "Instruments/Saxophone Accuracy",
+						"type": "number"
+					},
+					"instruments/trumpet_accuracy": {
+						"title": "Instruments/Trumpet Accuracy",
+						"type": "number"
+					},
+					"instruments/violin_accuracy": {
+						"title": "Instruments/Violin Accuracy",
+						"type": "number"
+					},
+					"instruments/human_voice_accuracy": {
+						"title": "Instruments/Human Voice Accuracy",
+						"type": "number"
+					},
+					"instruments/cello_hamming_distance": {
+						"title": "Instruments/Cello Hamming Distance",
+						"type": "number"
+					},
+					"instruments/clarinet_hamming_distance": {
+						"title": "Instruments/Clarinet Hamming Distance",
+						"type": "number"
+					},
+					"instruments/flute_hamming_distance": {
+						"title": "Instruments/Flute Hamming Distance",
+						"type": "number"
+					},
+					"instruments/acoustic_guitar_hamming_distance": {
+						"title": "Instruments/Acoustic Guitar Hamming Distance",
+						"type": "number"
+					},
+					"instruments/electric_guitar_hamming_distance": {
+						"title": "Instruments/Electric Guitar Hamming Distance",
+						"type": "number"
+					},
+					"instruments/organ_hamming_distance": {
+						"title": "Instruments/Organ Hamming Distance",
+						"type": "number"
+					},
+					"instruments/piano_hamming_distance": {
+						"title": "Instruments/Piano Hamming Distance",
+						"type": "number"
+					},
+					"instruments/saxophone_hamming_distance": {
+						"title": "Instruments/Saxophone Hamming Distance",
+						"type": "number"
+					},
+					"instruments/trumpet_hamming_distance": {
+						"title": "Instruments/Trumpet Hamming Distance",
+						"type": "number"
+					},
+					"instruments/violin_hamming_distance": {
+						"title": "Instruments/Violin Hamming Distance",
+						"type": "number"
+					},
+					"instruments/human_voice_hamming_distance": {
+						"title": "Instruments/Human Voice Hamming Distance",
+						"type": "number"
+					},
+					"instruments/cello_f1": {
+						"title": "Instruments/Cello F1",
+						"type": "number"
+					},
+					"instruments/clarinet_f1": {
+						"title": "Instruments/Clarinet F1",
+						"type": "number"
+					},
+					"instruments/flute_f1": {
+						"title": "Instruments/Flute F1",
+						"type": "number"
+					},
+					"instruments/acoustic_guitar_f1": {
+						"title": "Instruments/Acoustic Guitar F1",
+						"type": "number"
+					},
+					"instruments/electric_guitar_f1": {
+						"title": "Instruments/Electric Guitar F1",
+						"type": "number"
+					},
+					"instruments/organ_f1": {
+						"title": "Instruments/Organ F1",
+						"type": "number"
+					},
+					"instruments/piano_f1": {
+						"title": "Instruments/Piano F1",
+						"type": "number"
+					},
+					"instruments/saxophone_f1": {
+						"title": "Instruments/Saxophone F1",
+						"type": "number"
+					},
+					"instruments/trumpet_f1": {
+						"title": "Instruments/Trumpet F1",
+						"type": "number"
+					},
+					"instruments/violin_f1": {
+						"title": "Instruments/Violin F1",
+						"type": "number"
+					},
+					"instruments/human_voice_f1": {
+						"title": "Instruments/Human Voice F1",
+						"type": "number"
+					},
+					"instruments/cello_precision": {
+						"title": "Instruments/Cello Precision",
+						"type": "number"
+					},
+					"instruments/clarinet_precision": {
+						"title": "Instruments/Clarinet Precision",
+						"type": "number"
+					},
+					"instruments/flute_precision": {
+						"title": "Instruments/Flute Precision",
+						"type": "number"
+					},
+					"instruments/acoustic_guitar_precision": {
+						"title": "Instruments/Acoustic Guitar Precision",
+						"type": "number"
+					},
+					"instruments/electric_guitar_precision": {
+						"title": "Instruments/Electric Guitar Precision",
+						"type": "number"
+					},
+					"instruments/organ_precision": {
+						"title": "Instruments/Organ Precision",
+						"type": "number"
+					},
+					"instruments/piano_precision": {
+						"title": "Instruments/Piano Precision",
+						"type": "number"
+					},
+					"instruments/saxophone_precision": {
+						"title": "Instruments/Saxophone Precision",
+						"type": "number"
+					},
+					"instruments/trumpet_precision": {
+						"title": "Instruments/Trumpet Precision",
+						"type": "number"
+					},
+					"instruments/violin_precision": {
+						"title": "Instruments/Violin Precision",
+						"type": "number"
+					},
+					"instruments/human_voice_precision": {
+						"title": "Instruments/Human Voice Precision",
+						"type": "number"
+					},
+					"instruments/cello_recall": {
+						"title": "Instruments/Cello Recall",
+						"type": "number"
+					},
+					"instruments/clarinet_recall": {
+						"title": "Instruments/Clarinet Recall",
+						"type": "number"
+					},
+					"instruments/flute_recall": {
+						"title": "Instruments/Flute Recall",
+						"type": "number"
+					},
+					"instruments/acoustic_guitar_recall": {
+						"title": "Instruments/Acoustic Guitar Recall",
+						"type": "number"
+					},
+					"instruments/electric_guitar_recall": {
+						"title": "Instruments/Electric Guitar Recall",
+						"type": "number"
+					},
+					"instruments/organ_recall": {
+						"title": "Instruments/Organ Recall",
+						"type": "number"
+					},
+					"instruments/piano_recall": {
+						"title": "Instruments/Piano Recall",
+						"type": "number"
+					},
+					"instruments/saxophone_recall": {
+						"title": "Instruments/Saxophone Recall",
+						"type": "number"
+					},
+					"instruments/trumpet_recall": {
+						"title": "Instruments/Trumpet Recall",
+						"type": "number"
+					},
+					"instruments/violin_recall": {
+						"title": "Instruments/Violin Recall",
+						"type": "number"
+					},
+					"instruments/human_voice_recall": {
+						"title": "Instruments/Human Voice Recall",
+						"type": "number"
+					},
+					"predictions": {
+						"title": "Predictions",
+						"type": "object",
+						"additionalProperties": {
+							"$ref": "#/components/schemas/InstrumentPrediction"
+						}
+					}
+				}
+			},
+			"SupportedDatasetDirTypeTrain": {
+				"title": "SupportedDatasetDirTypeTrain",
+				"enum": [
+					"irmastest",
+					"irmastrain",
+					"csv"
+				],
+				"description": "An enumeration."
+			},
+			"ValidationError": {
+				"title": "ValidationError",
+				"required": [
+					"loc",
+					"msg",
+					"type"
+				],
+				"type": "object",
+				"properties": {
+					"loc": {
+						"title": "Location",
+						"type": "array",
+						"items": {
+							"anyOf": [
+								{
+									"type": "string"
+								},
+								{
+									"type": "integer"
+								}
+							]
+						}
+					},
+					"msg": {
+						"title": "Message",
+						"type": "string"
+					},
+					"type": {
+						"title": "Error Type",
+						"type": "string"
+					}
+				}
+			}
+		}
+	},
+	"tags": [
+		{
+			"name": "Resources",
+			"description": "Models and datasets available for inference."
+		},
+		{
+			"name": "Model Inference",
+			"description": "Endpoints used for predicting audio data on trained models. Curl example for multiple audios:\n\n    curl -X 'POST' \\\n        'http://localhost:8090/model/predict-files?model_ckpt_path=models%2Fmy_model.ckpt' \\\n        -H 'accept: application/json' \\\n        -H 'Content-Type: multipart/form-data' \\\n        -F 'audio_files=@track_23.wav;type=audio/wav'\n"
+		}
+	]
+}

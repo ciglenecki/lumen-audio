@@ -5,7 +5,7 @@ from fastapi import HTTPException, UploadFile, status
 
 import src.config.config_defaults as config_defaults
 from src.enums.enums import SupportedDatasetDirType
-from src.server.interface import DatasetTypedPath
+from src.server.interface import DatasetTypedPath, SupportedDatasetDirTypeTrain
 from src.server.server_store import server_store
 
 
@@ -23,6 +23,8 @@ def dep_dataset_path(audio_path: Path = "data/my_dataset"):
                 status_code=406,
                 detail="Path that's not a directory has to be a .csv file",
             )
+        return audio_path
+
     glob_generators = chain(
         *[audio_path.rglob(glob_exp) for glob_exp in glob_expressions]
     )
@@ -41,7 +43,7 @@ def dep_dataset_paths(dataset_paths: list[Path] = ["data/my_dataset"]):
 
 def dep_typed_paths(typed_paths: DatasetTypedPath):
     if typed_paths.dataset_path.is_file():
-        if typed_paths.dataset_type != SupportedDatasetDirType.CSV:
+        if typed_paths.dataset_type != SupportedDatasetDirTypeTrain.CSV:
             raise HTTPException(
                 status_code=406,
                 detail="Path that's not a directory has to be a .csv file",

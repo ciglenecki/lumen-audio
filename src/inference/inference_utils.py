@@ -39,7 +39,7 @@ def validate_inference_args(config: ConfigDefault):
 
 def get_inference_model_objs(
     config: ConfigDefault, args, device: torch.DeviceObjType
-) -> tuple[SupportedModels, ConfigDefault, AudioTransformBase]:
+) -> tuple[ModelBase, ConfigDefault, AudioTransformBase]:
     model_constructor: pl.LightningModule = model_constructor_map[config.model]
     model = model_constructor.load_from_checkpoint(
         config.ckpt, strict=False, finetune_train_bn=True

@@ -309,6 +309,33 @@ def function_kwargs(func):
     return inspect.getfullargspec(func)
 
 
+def all_args(cls):
+    """
+    A decorator function that checks if all arguments are provided by the user when instantiating an object.
+    Args:
+        cls: The class to be wrapped.
+    Returns:
+        The wrapped class with argument checking.
+    Raises:
+        TypeError: If any of the required arguments are missing.
+    Notes:
+        - Required arguments are those that do not have a default value
+    """
+
+    def wrapper(*args, **kwargs):
+        sig = inspect.signature(cls.__init__)
+        params = sig.parameters
+        user_args = {**dict(zip(params.keys(), args)), **kwargs}
+        missing_args = set(params.keys()) - set(user_args.keys())
+        if missing_args:
+            missing_args_list = ", ".join(missing_args)
+            raise TypeError(f"Missing required argument(s): {missing_args_list}")
+
+        return cls(*args, **kwargs)
+
+    return wrapper
+
+
 def print_tensor(t, name=None):
     print(f"{name}: {t.shape}")
     print("Min:", t.min(), "Max", t.max())

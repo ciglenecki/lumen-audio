@@ -1,5 +1,4 @@
 ---
-title: Documentation
 mainfont: DejaVuSerif.ttf
 sansfont: DejaVuSans.ttf
 monofont: DejaVuSansMono.ttf
