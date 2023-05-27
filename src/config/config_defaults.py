@@ -711,7 +711,7 @@ class ConfigDefault(Serializable):
                 )
 
     def set_train_paths(self):
-        if self.train_paths is None:
+        if self.train_paths is not None:
             self.train_paths = parse_dataset_paths(self.train_paths)
             self.check_all_paths_non_inference(self.train_paths)
 

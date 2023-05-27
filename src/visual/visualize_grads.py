@@ -143,7 +143,7 @@ if __name__ == "__main__":
     plot_width, plot_height = args.plotsize
 
     model_type = get_model(config, torch.nn.BCEWithLogitsLoss())
-    model = model_type.load_from_checkpoint(args.path_to_model)
+    model = model_type.load_from_checkpoint(config.ckpt)
     model.eval()
 
     target_module = [operator.attrgetter(args.target_layer)(model)]
