@@ -325,6 +325,7 @@ class ConfigDefault(Serializable):
     path_background_noise: Path | None = create(None)
     path_figures: Path | None = create(None)
     path_embeddings: Path | None = create(None)
+    path_server: Path | None = create(None)
 
     train_paths: list[str] | None = create(None)
     """Dataset root directories that will be used for training in the following format: --train-paths irmastrain:/path/to/dataset or openmic:/path/to/dataset"""
@@ -565,6 +566,8 @@ class ConfigDefault(Serializable):
         self.path_background_noise = default_path(
             self.path_background_noise, Path("data", "ecs50")
         )
+
+        self.path_server = default_path(self.path_server, Path("src", "server"))
 
         self.output_dir = self.path_models
 

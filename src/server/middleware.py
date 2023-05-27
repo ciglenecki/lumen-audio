@@ -59,7 +59,7 @@ def dep_dataset_paths_with_type(dataset_paths_with_type: list[DatasetTypedPath])
 
 
 async def dep_model_ckpt_path(
-    model_ckpt_path: Path = server_store.config.path_models / "model.ckpt",
+    model_ckpt_path: Path,
 ):
     if (
         not model_ckpt_path.is_relative_to(server_store.args.model_dir)

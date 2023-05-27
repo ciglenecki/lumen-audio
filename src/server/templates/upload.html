@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title>File Upload and Result</title>
+</head>
+
+<body>
+	<h1>File Upload and Result</h1>
+
+	<!-- <iframe name="dummyframe" id="dummyframe" style="display: none;"></iframe> -->
+	<form action="/" method="post" enctype="multipart/form-data">
+
+		<label for="model_ckpt_path">Choose a model checkpoint:</label>
+		<select name="model_ckpt_path" id="model_ckpt_path">
+			{% for a_model in available_models %}
+			{% if loop.first %}
+			<option value="{{ a_model }}" selected>{{ a_model }}</option>
+			{% else %}
+			<option value="{{ a_model }}">{{ a_model }}</option>
+			{% endif %}
+			{% endfor %}
+		</select>
+
+		<input type="file" name="files" multiple>
+		<input type="submit" value="Upload">
+	</form>
+
+	{% if result %}
+	<h2>Result</h2>
+	<table>
+		<tr>
+			<th>Filename</th>
+			{% for ins in all_instruments %}
+			<th>{{ ins }}</th>
+			{% endfor %}
+		</tr>
+		{% for filename, dict_inst in preds.items() %}
+		<tr>
+			<td>{{ filename }}</td>
+			{% for value in dict_inst.values() %}
+			<td>{{ value }}</td>
+			{% endfor %}
+		</tr>
+		{% endfor %}
+	</table>
+	{% endif %}
+
+</body>
+
+</html>
