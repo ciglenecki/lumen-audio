@@ -82,7 +82,7 @@
 			"request": "launch",
 			"program": "src/visual/visualize_grads.py",
 			"console": "integratedTerminal",
-			"args": "--dataset-paths irmastest:data/irmas/test --ckpt models_quick/04-14-15-25-32_CalmAlan_resnext50_32x4d/checkpoints/04-14-15-25-32_CalmAlan_resnext50_32x4d_val_acc_0.0000_val_loss_1.1923.ckpt --target_layer backbone.avgpool --model RESNEXT50_32X4D --audio-transform MEL_SPECTROGRAM --label vio --batch-size 2",
+			"args": "--dataset-paths irmastest:data/irmas/test --ckpt models/05-08-01-28-32_SlickDelta_convnext_small_val_acc_0.4435_val_loss_0.2782.ckpt --target_layer backbone.avgpool --model RESNEXT50_32X4D --audio-transform MEL_SPECTROGRAM --label vio --batch-size 2",
 			"justMyCode": false
 		},
 		{

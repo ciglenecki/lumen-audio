@@ -325,8 +325,21 @@ def all_args(cls):
     def wrapper(*args, **kwargs):
         sig = inspect.signature(cls.__init__)
         params = sig.parameters
+
+        if cls.__init__.__qualname__ != object.__init__.__qualname__:
+            parent_sig = inspect.signature(super(cls).__init__)
+            parent_params = parent_sig.parameters
+            parent_args = parent_params.keys() - params.keys()
+        else:
+            parent_args = set()
+
         user_args = {**dict(zip(params.keys(), args)), **kwargs}
-        missing_args = set(params.keys()) - set(user_args.keys())
+        missing_args = (
+            set(params.keys()).union(parent_args)
+            - set(user_args.keys())
+            - {"self", "args", "kwargs"}
+        )
+
         if missing_args:
             missing_args_list = ", ".join(missing_args)
             raise TypeError(f"Missing required argument(s): {missing_args_list}")
