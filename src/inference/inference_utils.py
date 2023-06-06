@@ -166,7 +166,7 @@ def json_from_step_result(result: StepResult):
 
     for filename, y_pred_file in zip(filenames, y_pred_file):
         dict_pred = multihot_to_dict(y_pred_file)
-        json_dict[str(filename.stem)] = dict_pred
+        json_dict[str(filename)] = dict_pred
 
     return json_dict
 

@@ -115,7 +115,7 @@ class DatasetBase(Dataset[DatasetGetItem]):
     def __len__(self) -> int:
         return len(self.dataset_list)
 
-    def caculate_stats(self) -> dict:
+    def caculate_stats(self, get_seconds=True) -> dict:
         """Caculates dataset statistics.
 
         Number of audios per instrument, total size and number of instruments in audios
@@ -135,6 +135,20 @@ class DatasetBase(Dataset[DatasetGetItem]):
             if key not in num_of_instruments_per_sample:
                 num_of_instruments_per_sample[key] = 0
             num_of_instruments_per_sample[key] += 1
+
+        if get_seconds:
+            num_of_seconds_per_sample = {}
+            for audio_path, label in self.dataset_list:
+                instruments = decode_instruments(label)
+                duration = librosa.get_duration(filename=str(audio_path))
+                for i in instruments:
+                    i_fullname = config_defaults.INSTRUMENT_TO_FULLNAME[i]
+                    key = f"instrument sec {i_fullname}"
+                    if key not in num_of_seconds_per_sample:
+                        num_of_seconds_per_sample[key] = 0
+                    num_of_seconds_per_sample[key] += duration
+            stats.update(num_of_seconds_per_sample)
+
         stats.update(num_of_instruments_per_sample)
         stats.update({"total size": len(self.dataset_list)})
         return stats
