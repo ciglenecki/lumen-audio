@@ -62,17 +62,17 @@ INSTRUMENT_TO_IDX = {
 }
 
 INSTRUMENT_TO_FULLNAME = {
-    InstrumentEnums.CELLO.value: "cello",
-    InstrumentEnums.CLARINET.value: "clarinet",
-    InstrumentEnums.FLUTE.value: "flute",
-    InstrumentEnums.ACOUSTIC_GUITAR.value: "acoustic_guitar",
-    InstrumentEnums.ELECTRIC_GUITAR.value: "electric_guitar",
-    InstrumentEnums.ORGAN.value: "organ",
-    InstrumentEnums.PIANO.value: "piano",
-    InstrumentEnums.SAXOPHONE.value: "saxophone",
-    InstrumentEnums.TRUMPET.value: "trumpet",
-    InstrumentEnums.VIOLIN.value: "violin",
-    InstrumentEnums.VOICE.value: "human_voice",
+    InstrumentEnums.CELLO.value: "Cello",
+    InstrumentEnums.CLARINET.value: "Clarinet",
+    InstrumentEnums.FLUTE.value: "Flute",
+    InstrumentEnums.ACOUSTIC_GUITAR.value: "Acoustic guitar",
+    InstrumentEnums.ELECTRIC_GUITAR.value: "Electric guitar",
+    InstrumentEnums.ORGAN.value: "Organ",
+    InstrumentEnums.PIANO.value: "Piano",
+    InstrumentEnums.SAXOPHONE.value: "Saxophone",
+    InstrumentEnums.TRUMPET.value: "Trumpet",
+    InstrumentEnums.VIOLIN.value: "Violin",
+    InstrumentEnums.VOICE.value: "Human voice",
 }
 
 IDX_TO_INSTRUMENT = {v: k for k, v in INSTRUMENT_TO_IDX.items()}
