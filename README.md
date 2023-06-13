@@ -158,7 +158,6 @@ To remove pre-commit run: `rm -rf .git/hooks`
 ![](figures/pres_slides/2023-06-13-19-50-25.png)
 ![](figures/pres_slides/2023-06-13-19-50-31.png)
 ![](figures/pres_slides/2023-06-13-19-50-42.png)
-![](figures/pres_slides/2023-06-13-19-50-43.png)
 ![](figures/pres_slides/2023-06-13-19-50-47.png)
 ![](figures/pres_slides/2023-06-13-19-50-57.png)
 ![](figures/pres_slides/2023-06-13-19-51-02.png)
