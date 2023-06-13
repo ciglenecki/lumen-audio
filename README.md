@@ -1,9 +1,11 @@
 # 🎸 Lumen Data Science 2023 – Audio Classification (2nd place 🏆)
 
+<center>
+
 | [Presentation](https://docs.google.com/presentation/d/104knwYTg4bn7f_xXrl2EIPDAkFpRVZl5K32dCEBzHhM/edit?usp=sharing) | [Technical Documentation](docs/technical_doc/technical_docs.pdf) | [Project Documentation](https://docs.google.com/document/d/18Ds27Myu1UrBoEp-s2LuY4JIwpjVKbguecgBt9dB3Jc/edit?usp=sharing) | [Experiments](https://docs.google.com/spreadsheets/d/17wctX1I3rz1vQsjdwkBjo_iNFGvBCI7i6wYUDeliGBQ/edit#gid=0) |
 | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 
-![ ](docs/technical_doc/code_arch.png)
+</center>
 
 ## 🏆 Fast and Fourier team
 
@@ -57,6 +59,8 @@ To remove pre-commit run: `rm -rf .git/hooks`
 | [models](models/)         | model checkpoints, model metadata, training reports |
 | [references](references/) | research papers and competition guidelines          |
 | [src](src/)               | python source code                                  |
+
+![ ](docs/technical_doc/code_arch.png)
 
 ## Tasks
 
