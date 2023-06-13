@@ -1,12 +1,19 @@
-# 🎸 Lumen Data Science 2023 – Audio Classification
+# 🎸 Lumen Data Science 2023 – Audio Classification (2nd place 🏆)
 
-[Project Documentation](https://docs.google.com/document/d/18Ds27Myu1UrBoEp-s2LuY4JIwpjVKbguecgBt9dB3Jc/edit?usp=sharing)
-
-[Presentation](https://docs.google.com/presentation/d/104knwYTg4bn7f_xXrl2EIPDAkFpRVZl5K32dCEBzHhM/edit?usp=sharing)
-
-[Experiments](https://docs.google.com/spreadsheets/d/17wctX1I3rz1vQsjdwkBjo_iNFGvBCI7i6wYUDeliGBQ/edit#gid=0)
+| [Project Documentation](https://docs.google.com/document/d/18Ds27Myu1UrBoEp-s2LuY4JIwpjVKbguecgBt9dB3Jc/edit?usp=sharing) | [Presentation](https://docs.google.com/presentation/d/104knwYTg4bn7f_xXrl2EIPDAkFpRVZl5K32dCEBzHhM/edit?usp=sharing) | [Experiments](https://docs.google.com/spreadsheets/d/17wctX1I3rz1vQsjdwkBjo_iNFGvBCI7i6wYUDeliGBQ/edit#gid=0) |
+| ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 
 ![ ](docs/technical_doc/code_arch.png)
+
+## 🏆 Fast and Fourier team
+
+<table>
+  <tr>
+    <td align="center"><a href="https://github.com/VinkoGitHub"><img src="https://avatars.githubusercontent.com/u/32898681?v=4" width="100px;" alt=""/><br /><sub><b>Vinko Dragušica</b></sub><br /></td>
+    <td align="center"><a href="https://github.com/mirxonius"><img src="https://avatars.githubusercontent.com/u/102659128?v=4" width="100px;" alt=""/><br /><sub><b>Filip Mirković</b></sub></a><br /></td>
+   <td align="center"><a href="https://github.com/ir2718"><img src="https://avatars.githubusercontent.com/u/94498051?v=4" width="100px;" alt=""/><br /><sub><b>Ivan Rep</b></sub></a><br /></td>
+    <td align="center"><a href="https://github.com/ciglenecki"><img src="https://avatars.githubusercontent.com/u/12819849?v=4" width="100px;" alt=""/><br /><sub><b>Matej Ciglenečki</b></sub></a><br /></td>
+</table>
 
 ## Setup
 
@@ -17,7 +24,7 @@ Create and populate the [virtual environment](https://docs.python.org/3/library/
 **Step 1: Execute the following command:**
 
 ```bash
-python3 -m venv venv --prompt $(basename "$PWD")
+python3 -m venv venv
 source venv/bin/activate
 sleep 1
 pip install -r requirements.txt
@@ -50,6 +57,128 @@ To remove pre-commit run: `rm -rf .git/hooks`
 | [models](models/)         | model checkpoints, model metadata, training reports |
 | [references](references/) | research papers and competition guidelines          |
 | [src](src/)               | python source code                                  |
+
+## Tasks
+
+- [x] create eval script which will caculate ALL metrics for the whole dataset
+- y_true, y_pred
+  - [x] confusion matrix
+  - [x] distribution of prediction metrics (hammings score, f1, acc)
+  - [x] plot per instrument for each metric
+  - [x] roc curve
+- [x] multiple dataset distribution plotting
+- [x] instrument count histogram plot
+- [x] create backend API/inference
+  - [x] load model in inference, caculate metrics the whole test irmas dataset (analitics)
+    - [x] should reuse the train.py script, just use different modes?
+  - [x] http server with some loaded model which returns responses
+- [x]  technical documentation
+- [x] visualize embedded features: for each model with tensorboard embedder https://projector.tensorflow.org/
+- [x] add a feature that uses different features per channel - convolutional models expect a 3-channel tensor, so lets make full use of those 3 channels
+- [x] add fluffy support for all models
+- [x] try out focal loss and label smoothing: https://pytorch.org/vision/main/_modules/torchvision/ops/focal_loss.html
+- [x] convert all augmentations so they happen on the GPU
+  - remove audio transform from the dataset class
+  - implement on_after_batch_transfer
+  - both whole audio transform (along with augmentations) in the Model itself
+  - model then calls on_after_batch_trasnfer automatically and does the augmenations
+  - run experiments in both cases
+- [x] make sure augmetantions happen in batch
+- [x] Add ArcFace module in codebase
+- [x] **Rep vs IRMAS:** perform validation on Rep's corected dataset to check how many labels are correctly marked in the original dataset
+  - check if all instruments are correct
+  - check if at least one instrument is correct
+  - hamming distance between Rep's and original
+  - how dirty is the training set in terms of including non-predominant instruments
+- [x] **train with relabeled data (cleanlab):** (@matej has to provide csv) Include train override csv. No augmentations. Compare both models metrics.
+- [x] **Inference analysis**: run inference on single audio with multiple different durations (run on 10, 20, ..., 590, 600 seconds)
+- [x] **Train Wav2Vec2 CNN**: IRMAS only no aug
+- [x] **Fluffy**: Directly compare Fluffy Deep head CNN to standard Deep head  CNN
+- [x] Add Focal Loss, InstrumentFamilyLoss to `src/model/loss_functions.py` and add SupportedLosses
+- [x] check whatsup with pretrained weights (crop and resize) -> everything is fine
+  - turns out that the models use average pooling over the height and width which means that the final representation only has dimension (B, C)
+  - the model silently fails instead of breaking, so keep an eye out in case something doesn't work
+- [x] **train with relabeled data (rep):** Include Ivan's relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
+- [x] Train efficenet irmas only no aug with small `batch size=4`
+- [x] train  ResNeXt 50_32x4d on MelSpectrogram
+  - [x] Compare how augmentations affect the final metrics:
+    - [x] with no augmentations
+    - [x] with augmentations
+- [x] train  ResNeXt 50_32x4d on MFCC
+  - [x] Compare how augmentations affect the final metrics:
+    - [x] with no augmentations
+    - [x] with augmentations
+- [x] **OpenMIC guitars**: use cleanlab and Kmeans to find guitars. Openmic has 1 guitar label. Take pretrained AST and do feature extraction on IRMAS train only on electric and aucustic guitar examples. Create a script which takes the AST features and creates Kmeans between two classes. Cluster OpenMIC guitars, take the most confident examples and save the examples (and new labels).
+- [x] ⚠️ create a CSV which splits IRMAS validation to train and validation. First, group the .wav examples by the same song and find union of labels. Apply http://scikit.ml/stratification.html Multi-label data stratification to split the data.
+- [x] use validation examples in train (without data leakage), check what's the total time of audio in train and val
+- [x] **augmentations**: time shift, pitch shift, sox
+  - [x] add normalization after augmentations
+- [x] add gradient/activation visualization for a predicted image
+- [x] write summary of Wavelet transform and how it affects the results
+- [x] Wav2Vec results, and train
+- [x] write summary of LSTM results
+- [x] implement argument which accepts list of numbers [1000, 500, 4] and will create appropriate deep cnn
+  - use module called deep head and pass it as a argument
+- [x] finish experiments and interpretation of the wavelet transformation
+- [x] implement spectrogram cropping and zero padding instead of resizing
+- [x] implement SVM model which uses classical audio features for mutlilabel classification
+  - [x] research if SVM can perform multilabel classification or use 11 SVMs
+- [x] add more augmentations
+- [x] check if wavelet works
+- [x] implement chunking of the audio in inference and perform multiple forward pass
+- [x] implement saving the embeddings of each model for visualizations using dimensionality reduction
+- [x] think about and reserach what happens with variable sampling rate and how can we avoid issues with time length change, solution: chunking
+- [x] add explained variance percentage in PCA
+- [x] Create a script/notebook for plotting SVM results. There should be a total of 22 plots. You can reduce dimensionality with t-SNE and PCA from `sklearn`. Save the plots to .png so we can easily include it in the documentation
+- [x] find features which show the highest amount of variance!
+  - [x] itterate through whole dataset and caculated featuers and save them. Then caculate variance for whole dataset for each feature
+- [x] cleanup audio transform for spectrograms (remove repeat)
+  - [x] you still need to resize because the height isn't 224 (it's 128) but make sure the width is the same as the pretrained model image width
+- [x] use caculate_spectrogram_duration_in_seconds to dynamically determine the audio length.
+- [x] implement spectrogram normalization and std (norm,std) and use those paramters to preprocess the image before training.
+- [x] implement Fluffy nn.Module
+- [x] use Fluffy on Torch CNN, multi-head
+- [x] train some model Fluffy
+- [x] Wav2Vec2 feature extractor only
+- [x] move spectrogram chunking to collate
+- [x] prototype pretraining phase:
+  - Shuffle parts of the spectrogram in the following way: (16x16 grid)
+    - shuffle 15% of patches
+    - electra, is the patch shuffled?
+- [x] **ESC50:** download non instrument audio files and write data loader which are NOT instruments (@matej) this might not be important since the model usually gives [0,0,0,0,0] anyways: download ESC50 non instrument audio files and write data loader which are NOT instruments (@matej)
+- [x] any dataset/csv loader
+- [x] ⚠️ download the whole IRMAS dataset
+
+
+
+![](figures/pres_slides/2023-06-13-19-49-56.png)
+![](figures/pres_slides/2023-06-13-19-50-05.png)
+![](figures/pres_slides/2023-06-13-19-50-17.png)
+![](figures/pres_slides/2023-06-13-19-57-46.png)
+![](figures/pres_slides/2023-06-13-19-50-25.png)
+![](figures/pres_slides/2023-06-13-19-50-31.png)
+![](figures/pres_slides/2023-06-13-19-50-42.png)
+![](figures/pres_slides/2023-06-13-19-50-43.png)
+![](figures/pres_slides/2023-06-13-19-50-47.png)
+![](figures/pres_slides/2023-06-13-19-50-57.png)
+![](figures/pres_slides/2023-06-13-19-51-02.png)
+![](figures/pres_slides/2023-06-13-19-51-08.png)
+![](figures/pres_slides/2023-06-13-19-51-12.png)
+![](figures/pres_slides/2023-06-13-19-51-27.png)
+![](figures/pres_slides/2023-06-13-19-51-28.png)
+![](figures/pres_slides/2023-06-13-19-51-33.png)
+![](figures/pres_slides/2023-06-13-19-51-42.png)
+![](figures/pres_slides/2023-06-13-19-51-54.png)
+![](figures/pres_slides/2023-06-13-19-52-06.png)
+![](figures/pres_slides/2023-06-13-19-52-17.png)
+![](figures/pres_slides/2023-06-13-19-52-23.png)
+![](figures/pres_slides/2023-06-13-19-52-31.png)
+![](figures/pres_slides/2023-06-13-19-52-37.png)
+![](figures/pres_slides/2023-06-13-19-52-45.png)
+![](figures/pres_slides/2023-06-13-19-52-51.png)
+![](figures/pres_slides/2023-06-13-19-53-04.png)
+
+
 
 ## 📋 Notes
 
@@ -349,108 +478,3 @@ with a 25ms Hamming window every 10ms (hop)
 
 nfft = 1/(1 / 44100 * 1000) * 25 = 1102
 hop = 1/(1 / 44100 * 1000) * 10 = 441
-
-### Web
-
-https://github.com/janmyler/web-audio-editor
-
-## Tasks
-
-- [x] create eval script which will caculate ALL metrics for the whole dataset
-- y_true, y_pred
-  - [x] confusion matrix
-  - [x] distribution of prediction metrics (hammings score, f1, acc)
-  - [x] plot per instrument for each metric
-  - [x] roc curve
-- [x] multiple dataset distribution plotting
-- [x] instrument count histogram plot
-- [x] create backend API/inference
-  - [x] load model in inference, caculate metrics the whole test irmas dataset (analitics)
-    - [x] should reuse the train.py script, just use different modes?
-  - [x] http server with some loaded model which returns responses
-- [x]  technical documentation
-- [x] visualize embedded features: for each model with tensorboard embedder https://projector.tensorflow.org/
-- [x] add a feature that uses different features per channel - convolutional models expect a 3-channel tensor, so lets make full use of those 3 channels
-- [x] add fluffy support for all models
-- [x] try out focal loss and label smoothing: https://pytorch.org/vision/main/_modules/torchvision/ops/focal_loss.html
-- [x] convert all augmentations so they happen on the GPU
-  - remove audio transform from the dataset class
-  - implement on_after_batch_transfer
-  - both whole audio transform (along with augmentations) in the Model itself
-  - model then calls on_after_batch_trasnfer automatically and does the augmenations
-  - run experiments in both cases
-- [x] make sure augmetantions happen in batch
-- [x] Add ArcFace module in codebase
-- [x] **Rep vs IRMAS:** perform validation on Rep's corected dataset to check how many labels are correctly marked in the original dataset
-  - check if all instruments are correct
-  - check if at least one instrument is correct
-  - hamming distance between Rep's and original
-  - how dirty is the training set in terms of including non-predominant instruments
-- [x] **train with relabeled data (cleanlab):** (@matej has to provide csv) Include train override csv. No augmentations. Compare both models metrics.
-- [x] **Inference analysis**: run inference on single audio with multiple different durations (run on 10, 20, ..., 590, 600 seconds)
-- [x] **Train Wav2Vec2 CNN**: IRMAS only no aug
-- [x] **Fluffy**: Directly compare Fluffy Deep head CNN to standard Deep head  CNN
-- [x] Add Focal Loss, InstrumentFamilyLoss to `src/model/loss_functions.py` and add SupportedLosses
-- [x] check whatsup with pretrained weights (crop and resize) -> everything is fine
-  - turns out that the models use average pooling over the height and width which means that the final representation only has dimension (B, C)
-  - the model silently fails instead of breaking, so keep an eye out in case something doesn't work
-- [x] **train with relabeled data (rep):** Include Ivan's relabeled data and retrained some model to check performance boost (make sure to pick a model which already works)
-- [x] Train efficenet irmas only no aug with small `batch size=4`
-- [x] train  ResNeXt 50_32x4d on MelSpectrogram
-  - [x] Compare how augmentations affect the final metrics:
-    - [x] with no augmentations
-    - [x] with augmentations
-- [x] train  ResNeXt 50_32x4d on MFCC
-  - [x] Compare how augmentations affect the final metrics:
-    - [x] with no augmentations
-    - [x] with augmentations
-- [x] **OpenMIC guitars**: use cleanlab and Kmeans to find guitars. Openmic has 1 guitar label. Take pretrained AST and do feature extraction on IRMAS train only on electric and aucustic guitar examples. Create a script which takes the AST features and creates Kmeans between two classes. Cluster OpenMIC guitars, take the most confident examples and save the examples (and new labels).
-- [x] ⚠️ create a CSV which splits IRMAS validation to train and validation. First, group the .wav examples by the same song and find union of labels. Apply http://scikit.ml/stratification.html Multi-label data stratification to split the data.
-- [x] use validation examples in train (without data leakage), check what's the total time of audio in train and val
-- [x] **augmentations**: time shift, pitch shift, sox
-  - [x] add normalization after augmentations
-- [x] add gradient/activation visualization for a predicted image
-- [x] write summary of Wavelet transform and how it affects the results
-- [x] Wav2Vec results, and train
-- [x] write summary of LSTM results
-- [x] implement argument which accepts list of numbers [1000, 500, 4] and will create appropriate deep cnn
-  - use module called deep head and pass it as a argument
-- [x] finish experiments and interpretation of the wavelet transformation
-- [x] implement spectrogram cropping and zero padding instead of resizing
-- [x] implement SVM model which uses classical audio features for mutlilabel classification
-  - [x] research if SVM can perform multilabel classification or use 11 SVMs
-- [x] add more augmentations
-- [x] check if wavelet works
-- [x] implement chunking of the audio in inference and perform multiple forward pass
-- [x] implement saving the embeddings of each model for visualizations using dimensionality reduction
-- [x] think about and reserach what happens with variable sampling rate and how can we avoid issues with time length change, solution: chunking
-- [x] add explained variance percentage in PCA
-- [x] Create a script/notebook for plotting SVM results. There should be a total of 22 plots. You can reduce dimensionality with t-SNE and PCA from `sklearn`. Save the plots to .png so we can easily include it in the documentation
-- [x] find features which show the highest amount of variance!
-  - [x] itterate through whole dataset and caculated featuers and save them. Then caculate variance for whole dataset for each feature
-- [x] cleanup audio transform for spectrograms (remove repeat)
-  - [x] you still need to resize because the height isn't 224 (it's 128) but make sure the width is the same as the pretrained model image width
-- [x] use caculate_spectrogram_duration_in_seconds to dynamically determine the audio length.
-- [x] implement spectrogram normalization and std (norm,std) and use those paramters to preprocess the image before training.
-- [x] implement Fluffy nn.Module
-- [x] use Fluffy on Torch CNN, multi-head
-- [x] train some model Fluffy
-- [x] Wav2Vec2 feature extractor only
-- [x] move spectrogram chunking to collate
-- [x] prototype pretraining phase:
-  - Shuffle parts of the spectrogram in the following way: (16x16 grid)
-    - shuffle 15% of patches
-    - electra, is the patch shuffled?
-- [x] **ESC50:** download non instrument audio files and write data loader which are NOT instruments (@matej) this might not be important since the model usually gives [0,0,0,0,0] anyways: download ESC50 non instrument audio files and write data loader which are NOT instruments (@matej)
-- [x] any dataset/csv loader
-- [x] ⚠️ download the whole IRMAS dataset
-
-## 🏆 Team members
-
-<table>
-  <tr>
-    <td align="center"><a href="https://github.com/VinkoGitHub"><img src="https://avatars.githubusercontent.com/u/32898681?v=4" width="100px;" alt=""/><br /><sub><b>Vinko Dragušica</b></sub><br /></td>
-    <td align="center"><a href="https://github.com/mirxonius"><img src="https://avatars.githubusercontent.com/u/102659128?v=4" width="100px;" alt=""/><br /><sub><b>Filip Mirković</b></sub></a><br /></td>
-   <td align="center"><a href="https://github.com/ir2718"><img src="https://avatars.githubusercontent.com/u/94498051?v=4" width="100px;" alt=""/><br /><sub><b>Ivan Rep</b></sub></a><br /></td>
-    <td align="center"><a href="https://github.com/ciglenecki"><img src="https://avatars.githubusercontent.com/u/12819849?v=4" width="100px;" alt=""/><br /><sub><b>Matej Ciglenečki</b></sub></a><br /></td>
-</table>
