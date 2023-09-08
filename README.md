@@ -1,11 +1,15 @@
-# 🎸 Lumen Data Science 2023 – Audio Classification (2nd place 🏆)
+# 🎸 Lumen Data Science 2023 – Audio Classification (2nd place)
 
+<br>
+<br>
 <center>
 
 | [Presentation](https://docs.google.com/presentation/d/104knwYTg4bn7f_xXrl2EIPDAkFpRVZl5K32dCEBzHhM/edit?usp=sharing) | [Technical Documentation](docs/technical_doc/technical_docs.pdf) | [Project Documentation](https://docs.google.com/document/d/18Ds27Myu1UrBoEp-s2LuY4JIwpjVKbguecgBt9dB3Jc/edit?usp=sharing) | [Experiments](https://docs.google.com/spreadsheets/d/17wctX1I3rz1vQsjdwkBjo_iNFGvBCI7i6wYUDeliGBQ/edit#gid=0) |
 | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 
 </center>
+<br>
+<br>
 
 ## 🏆 Fast and Fourier team
 
