@@ -1,11 +1,17 @@
 # 🎸 Lumen Data Science 2023 – Audio Classification (2nd place)
 
+LUMEN Data Science is the largest machine learning competition in Croatia. The goal of the competition is to create a model that labels 11 musical instruments from an input audio signal, along with a detailed competition report and technical documentation.
+
+We trained and developed a model in PyTorch using deep learning, digital signal processing, audio feature engineering, and computer vision style spectrogram/image representations derived from raw audio.
+
+We won 2nd place and achieved 1st place in model performance.
+
 <br>
 <br>
 <br>
 <p align="center">
 
-| [Presentation](https://docs.google.com/presentation/d/104knwYTg4bn7f_xXrl2EIPDAkFpRVZl5K32dCEBzHhM/edit?usp=sharing) | [Technical Documentation](docs/technical_doc/technical_docs.pdf) | [Project Documentation](https://docs.google.com/document/d/18Ds27Myu1UrBoEp-s2LuY4JIwpjVKbguecgBt9dB3Jc/edit?usp=sharing) | [Experiments](https://docs.google.com/spreadsheets/d/17wctX1I3rz1vQsjdwkBjo_iNFGvBCI7i6wYUDeliGBQ/edit#gid=0) |
+| [Competition Report](./competition_report.pdf) | [Presentation](https://docs.google.com/presentation/d/104knwYTg4bn7f_xXrl2EIPDAkFpRVZl5K32dCEBzHhM/edit?usp=sharing) | [Technical Documentation](docs/technical_doc/technical_docs.pdf) | [Experiments](https://docs.google.com/spreadsheets/d/17wctX1I3rz1vQsjdwkBjo_iNFGvBCI7i6wYUDeliGBQ/edit#gid=0) |
 | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 
 </p>
