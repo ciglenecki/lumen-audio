@@ -1,4 +1,4 @@
-# 🎸 Lumen Data Science 2023 – Audio Classification (2nd place)
+# 🎸 ML Competition – Musical Instruments – Lumen Data Science 2023 (2nd place)
 
 
 <p align="center">
@@ -14,6 +14,12 @@ We trained and developed a model in PyTorch using deep learning, digital signal 
 
 We won 2nd place and achieved 1st place in model performance.
 
+Simplified, high level problem and solution:
+```
+audio file
+short-time fourier transform (audio file) -> spectrogram    # 2D image
+spectrogram transformer(spectrogram) -> probabilities [11]  # {🎹: 0.89, 🪈: 0.83, 🎸: 0.03, ... 🥁: 0.93}
+```
 
 ## 🏆 Fast and Fourier team
 
@@ -40,6 +46,8 @@ sleep 1
 pip install -r requirements.txt
 pip install -r requirements-dev.txt
 ```
+
+
 
 **Step 2: Install current directory as a editable Python module:**
 
