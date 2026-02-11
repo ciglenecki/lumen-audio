@@ -1,4 +1,4 @@
-# 🎸 ML Competition – Musical Instruments – Lumen Data Science 2023 (2nd place)
+# 🎸 ML Competition – Audio Instruments Classification – Lumen Data Science 2023 (2nd place)
 
 
 <p align="center">
